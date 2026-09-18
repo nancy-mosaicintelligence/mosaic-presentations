@@ -27,7 +27,7 @@ The header and the closing lockup use the official Mosaic logo, embedded from
 
 ## Deploy
 
-- Production: <https://mosaic-itw-keynote.netlify.app>
+- Production: <https://mosaic-ventowave2026keynote.netlify.app>
 - Source: <https://github.com/nancy-mosaicintelligence/mosaic-itw-keynote> (private)
 
 This repository keeps the keynote source and internal project documentation

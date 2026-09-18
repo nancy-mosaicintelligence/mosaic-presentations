@@ -71,7 +71,7 @@ The current Phase 4A keynote selected for release has SHA-256:
 ## Production release
 
 - Private GitHub repository: `https://github.com/nancy-mosaicintelligence/mosaic-itw-keynote`
-- Public Netlify site: `https://mosaic-itw-keynote.netlify.app`
+- Public Netlify site: `https://mosaic-ventowave2026keynote.netlify.app`
 - GitHub `main` is connected to Netlify continuous deployment.
 - Initial production deploy ID: `6aada511d3d661b4004652de`
 - The live HTML matched the release source byte for byte at SHA-256 `815abd721ca278d1f5b671f98a56c0344477cf5036a586a0750ebf966ec49616`.
