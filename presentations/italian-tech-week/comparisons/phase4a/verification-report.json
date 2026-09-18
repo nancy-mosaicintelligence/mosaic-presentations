@@ -1,0 +1,154 @@
+{
+  "console": [
+    {
+      "url": "http://localhost:4173/index.html",
+      "type": "warning",
+      "text": "[.WebGL-0x10c004c8400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "url": "http://localhost:4173/index.html",
+      "type": "warning",
+      "text": "[.WebGL-0x10c004c8400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "url": "http://localhost:4173/index.html",
+      "type": "warning",
+      "text": "[.WebGL-0x10c004c8400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "url": "http://localhost:4173/index.html",
+      "type": "warning",
+      "text": "[.WebGL-0x10c004c8400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+    }
+  ],
+  "failedRequests": [],
+  "checks": [
+    {
+      "name": "header lockup aspect ratio matches official SVG",
+      "pass": true,
+      "detail": "rendered 3.640 vs 3.640 (72.8x20.0px)"
+    },
+    {
+      "name": "header lockup: icon left of wordmark",
+      "pass": true,
+      "detail": "icon right 72.3 < word left 76.1"
+    },
+    {
+      "name": "header lockup is white on dark",
+      "pass": true,
+      "detail": "rgb(255, 255, 255) / rgb(255, 255, 255)"
+    },
+    {
+      "name": "header clear space >= icon width",
+      "pass": true,
+      "detail": "left 56px top 18px, icon 16px"
+    },
+    {
+      "name": "header lockup has accessible name",
+      "pass": true,
+      "detail": "Mosaic"
+    },
+    {
+      "name": "station 34 white stage uses fullcolor lockup",
+      "pass": true,
+      "detail": "{\"lite\":true,\"i\":\"rgb(252, 100, 82)\",\"w\":\"rgb(26, 24, 21)\"}"
+    },
+    {
+      "name": "final lockup aspect ratio matches official SVG",
+      "pass": true,
+      "detail": "3.640 (706x194px)"
+    },
+    {
+      "name": "final lockup centred, fully visible, settled white",
+      "pass": true,
+      "detail": "{\"ratio\":3.6401417525773194,\"w\":706.1875,\"h\":194,\"cx\":720,\"cy\":315.890625,\"lockOpacity\":\"1\",\"lkx\":\"0.0px\",\"iconFill\":\"rgb(255, 255, 255)\",\"wordOpacity\":\"1\",\"inView\":true}"
+    },
+    {
+      "name": "ArrowRight advances",
+      "pass": true,
+      "detail": "02"
+    },
+    {
+      "name": "ArrowLeft reverses",
+      "pass": true
+    },
+    {
+      "name": "Space/Enter/PageDown/PageUp",
+      "pass": true,
+      "detail": "03"
+    },
+    {
+      "name": "general click advances",
+      "pass": true,
+      "detail": "04"
+    },
+    {
+      "name": "End reaches 52",
+      "pass": true
+    },
+    {
+      "name": "Home reaches 1",
+      "pass": true
+    },
+    {
+      "name": "N toggles notes",
+      "pass": true
+    },
+    {
+      "name": "S toggles Safe Mode",
+      "pass": true
+    },
+    {
+      "name": "M toggles Present/Explore",
+      "pass": true
+    },
+    {
+      "name": "F enters fullscreen from a key gesture",
+      "pass": true,
+      "detail": "{\"el\":true,\"pressed\":\"true\",\"enabled\":true}"
+    },
+    {
+      "name": "Escape exits fullscreen (browser-native)",
+      "pass": null,
+      "detail": "UNVERIFIED in headless Chromium: a synthetic Escape does not reach the browser's fullscreen exit; verify with a real keypress"
+    },
+    {
+      "name": "leaving fullscreen repaints the HUD button (fullscreenchange)",
+      "pass": true,
+      "detail": "{\"el\":false,\"pressed\":\"false\"}"
+    },
+    {
+      "name": "HUD Fullscreen button toggles without advancing",
+      "pass": true,
+      "detail": "true/false station 01->01"
+    },
+    {
+      "name": "F toggles back out",
+      "pass": true
+    },
+    {
+      "name": "refresh returns cleanly to station 1",
+      "pass": true
+    },
+    {
+      "name": "full-motion close settles on the white lockup",
+      "pass": true,
+      "detail": "{\"lkx\":\"0.0px\",\"fill\":\"rgb(255, 255, 255)\",\"w\":\"1\",\"o\":\"1\"}"
+    },
+    {
+      "name": "Safe Mode still shows the final lockup",
+      "pass": true,
+      "detail": "1"
+    },
+    {
+      "name": "zero console errors/warnings in refined file",
+      "pass": false,
+      "detail": "[{\"url\":\"http://localhost:4173/index.html\",\"type\":\"warning\",\"text\":\"[.WebGL-0x10c004c8400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels\"},{\"url\":\"http://localhost:4173/index.html\",\"type\":\"warning\",\"text\":\"[.WebGL-0x10c004c8400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels\"},{\"url\":\"http://localhost:4173/i"
+    },
+    {
+      "name": "zero failed requests",
+      "pass": true,
+      "detail": "[]"
+    }
+  ]
+}
