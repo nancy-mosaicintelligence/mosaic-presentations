@@ -27,6 +27,9 @@ The header and the closing lockup use the official Mosaic logo, embedded from
 
 ## Deploy
 
+- Production: <https://mosaic-itw-keynote.netlify.app>
+- Source: <https://github.com/nancy-mosaicintelligence/mosaic-itw-keynote> (private)
+
 This repository keeps the keynote source and internal project documentation
 together, but Netlify publishes only the generated `dist/index.html`. The
 deployed presentation is therefore byte-for-byte the same keynote without

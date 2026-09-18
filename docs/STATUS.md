@@ -9,7 +9,7 @@ Last updated: 2026-09-18
 - Phase 3: complete with known baseline failures
 - Phase 4A: complete and verified (official logo integration and fullscreen controls)
 - Phases 5 through 9: planned only
-- GitHub and Netlify release: in progress
+- GitHub and Netlify release: complete
 
 ## Inspected
 
@@ -68,6 +68,16 @@ The current Phase 4A keynote selected for release has SHA-256:
 - Preserved presentation motion, navigation, safe mode, notes, and view-mode behavior.
 - Added matched before-and-after captures and a machine-readable verification report under `presentations/italian-tech-week/comparisons/phase4a/`.
 
+## Production release
+
+- Private GitHub repository: `https://github.com/nancy-mosaicintelligence/mosaic-itw-keynote`
+- Public Netlify site: `https://mosaic-itw-keynote.netlify.app`
+- GitHub `main` is connected to Netlify continuous deployment.
+- Initial production deploy ID: `6aada511d3d661b4004652de`
+- The live HTML matched the release source byte for byte at SHA-256 `815abd721ca278d1f5b671f98a56c0344477cf5036a586a0750ebf966ec49616`.
+- Internal documentation and baseline paths returned HTTP 404 on the public site.
+- Live keyboard, click, mode, notes, safe-mode, fullscreen, refresh, console, and network checks passed.
+
 ## Verification performed
 
 - Byte comparison of root and preserved keynote
@@ -103,7 +113,6 @@ The current Phase 4A keynote selected for release has SHA-256:
 - External invitation and access-code behavior
 - Draft persistence and version history
 - Clean-checkout install and production application build
-- Deployed production behavior
 - Native `Escape` exit from fullscreen could not be asserted in the headless verification environment.
 
 ## Current risks
