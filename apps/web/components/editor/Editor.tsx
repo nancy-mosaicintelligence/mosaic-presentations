@@ -165,7 +165,7 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
 
   return <div className={"editor" + (inPreview ? " preview" : "")}>
     <header className="bar">
-      <div className="left"><span className="brand">Mosaic</span><span className="title">{title}</span></div>
+      <div className="left"><a className="brand" href="/" title="Library">Mosaic</a><span className="title">{title}</span></div>
       <div className="mid">
         {!inPreview && <>
           <button type="button" onClick={undo} disabled={!hist.undo} title="Undo (⌘Z)">Undo</button>

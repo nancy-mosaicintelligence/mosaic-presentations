@@ -3,7 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseServer, supabaseAdmin } from "./server";
 import { authConfig, fileMode } from "./config";
-import { getPresentation, PRESENTATIONS } from "../presentations";
+import { getPresentation, SEEDS } from "../presentations";
 import { StoreError } from "../store";
 
 export type Role = "owner" | "editor" | "viewer";
@@ -22,22 +22,16 @@ export async function currentUser(): Promise<SessionUser | null> {
   return { id: data.user.id, email: data.user.email.toLowerCase(), name: (data.user.user_metadata?.full_name as string) || (data.user.user_metadata?.name as string) || null };
 }
 
-/** The presentation row for a registry slug, created on first use (service role: the row is not user data). */
+/** The presentation row for a slug (seeded decks are created on first use; the row is not user data). */
 export async function presentationRow(slug: string): Promise<{ id: string; slug: string } | null> {
-  const def = getPresentation(slug); if (!def) return null;
-  const admin = supabaseAdmin();
-  const { data } = await admin.from("presentations").select("id, slug").eq("slug", slug).maybeSingle();
-  if (data) return data;
-  const { data: made, error } = await admin.from("presentations").insert({ slug, title: def.title, renderer: def.renderer }).select("id, slug").single();
-  if (error) throw error;
-  return made;
+  const p = await getPresentation(slug, supabaseAdmin()); return p ? { id: p.id, slug: p.slug } : null;
 }
 
 /** On sign-in: a company owner listed in OWNER_EMAILS becomes an owner of every registered presentation. */
 export async function bootstrapOwner(user: SessionUser): Promise<void> {
   if (!authConfig.ownerEmails.includes(user.email) || !user.email.endsWith("@" + authConfig.companyDomain)) return;
   const admin = supabaseAdmin();
-  for (const slug of Object.keys(PRESENTATIONS)) {
+  for (const slug of Object.keys(SEEDS)) {
     const row = await presentationRow(slug); if (!row) continue;
     const { data: existing } = await admin.from("presentation_memberships").select("role").eq("presentation_id", row.id).eq("user_id", user.id).maybeSingle();
     if (existing?.role === "owner") continue;
@@ -61,11 +55,13 @@ export async function accessFor(slug: string): Promise<Access> {
 export async function requireRole(slug: string, min: Role): Promise<Access & { user: SessionUser; presentationId: string }> {
   const a = await accessFor(slug);
   if (!a.user) throw new StoreError(401, "sign in first");
-  if (!getPresentation(slug)) throw new StoreError(404, "unknown presentation");
+  if (!(await getPresentation(slug))) throw new StoreError(404, "unknown presentation");
   if (!atLeast(a.role, min) || !a.presentationId) throw new StoreError(403, `this needs the ${min} role`);
   return a as Access & { user: SessionUser; presentationId: string };
 }
 
+/** A company account: may sign in without an invitation and may create presentations of its own. */
+export const isCompany = (email: string) => email.endsWith("@" + authConfig.companyDomain);
 /** Does this signed-in account belong on the company path, or hold any membership or open invitation? Decided once, after sign-in. */
 export async function admitted(user: SessionUser): Promise<{ ok: boolean; reason?: string }> {
   if (user.email.endsWith("@" + authConfig.companyDomain)) return { ok: true };

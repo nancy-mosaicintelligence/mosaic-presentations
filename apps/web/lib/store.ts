@@ -7,7 +7,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { join } from "node:path";
 import { validate, migrate, contentHash, SCHEMA_VERSION } from "@mosaic/presentation-core";
 import { repoRoot } from "./repo";
-import { getPresentation } from "./presentations";
+import { SEEDS, RENDERERS } from "./presentations";
 
 export interface VersionMeta { id: string; presentationId: string; schemaVersion: number; name: string; note?: string; author: string; createdAt: string; contentHash: string; duplicatedFrom?: string; }
 export interface Version extends VersionMeta { document: unknown; }
@@ -44,7 +44,7 @@ function checked(document: unknown): { doc: any; hash: string } {
 
 export class FileStore implements Store {
   constructor(private root = process.env.ITW_DATA_DIR || join(repoRoot(), "apps/web/data")) {}
-  private dir(id: string) { if (!getPresentation(id)) throw new StoreError(404, "unknown presentation"); return join(this.root, id); }
+  private dir(id: string) { if (!SEEDS[id]) throw new StoreError(404, "unknown presentation"); return join(this.root, id); }
   private async readJSON<T>(p: string): Promise<T | null> { try { return JSON.parse(await fs.readFile(p, "utf8")) as T; } catch (e: any) { if (e.code === "ENOENT") return null; throw e; } }
   private async writeJSON(p: string, v: unknown) { await fs.mkdir(join(p, ".."), { recursive: true }); const tmp = p + "." + randomBytes(3).toString("hex") + ".tmp"; await fs.writeFile(tmp, JSON.stringify(v, null, 2)); await fs.rename(tmp, p); }
   private async log(id: string, ev: AuditEvent) { const p = join(this.dir(id), "audit.jsonl"); await fs.mkdir(this.dir(id), { recursive: true }); await fs.appendFile(p, JSON.stringify(ev) + "\n"); }
@@ -59,7 +59,7 @@ export class FileStore implements Store {
       return existing;
     }
     // first use: the committed document seeds the draft
-    const def = getPresentation(id)!;
+    const def = { contentFile: RENDERERS[SEEDS[id].renderer].templateContent };
     const seed = JSON.parse(await fs.readFile(join(repoRoot(), def.contentFile), "utf8"));
     const { doc, hash } = checked(seed);
     const draft: Draft = { document: doc, contentHash: hash, updatedAt: nowISO(), basedOn: "source" };

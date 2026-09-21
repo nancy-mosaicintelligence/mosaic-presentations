@@ -46,9 +46,9 @@ before(async () => {
 }, { timeout: 180000 });
 after(async () => { await browser?.close(); server?.kill(); rmSync(data, { recursive: true, force: true }); });
 
-test("the root sends the operator to the editor", async () => {
+test("the root is the library, and the keynote is in it", async () => {
   const r = await page.request.get(BASE + "/", { maxRedirects: 0 });
-  assert.equal(r.status(), 307); assert.equal(r.headers()["location"], "/presentations/" + ID + "/edit");
+  assert.equal(r.status(), 200); assert.ok((await r.text()).includes("Italian Tech Week"));
 });
 
 test("the draft is seeded from the committed document and an invalid draft never replaces it", async () => {

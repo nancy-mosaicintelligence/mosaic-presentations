@@ -339,3 +339,20 @@
   3. **Double press detected in the bridge.** The bridge cancels the first press (so the deck does not step), which makes the browser's own `dblclick` unreliable; two presses on the same line within half a second open it.
 - Proof: `apps/web/tests/e2e/inline.test.mjs` (4: filmstrip/arrows/keys, typing with marks kept, toolbar marks + size + alignment + undo, a list item on another station); the editor and access suites unchanged; deck parity (layout + 55 stations) and 54/54 behavioural checks re-proven — the bridge stays inert unframed.
 - Next in this line: home + library + import (static HTML / links), then images (element, library, editor), then the create harness (D-038 onward).
+
+## D-038: The platform, step 2 — the library: home, create, import, links (2026-09-21)
+
+- Status: accepted
+- What changed:
+  - **Home is the library**: every presentation the signed-in person holds a role on, as cards (kind, role, published state, note, source), with Edit / Open / Present / People / Archive by role. The editor and the people page link back to it.
+  - **Three kinds of presentation** (`presentations.kind`): `deck` — our structured document on a renderer (editable; the only kind the editor opens); `html` — a finished HTML file kept in the private `decks` bucket, presented as is; `link` — a URL kept elsewhere (Drive, Slides, a site). Each has the same roles, invitations and publication rules; `/p/[slug]` presents all three (deck → published version; html → a full-window frame of `/raw/[slug]`; link → sent on).
+  - **Static HTML runs in a sandbox.** `/raw/[slug]` serves the file byte for byte under `Content-Security-Policy: sandbox allow-scripts allow-pointer-lock; frame-ancestors 'self'` inside an iframe that is itself sandboxed, so the file executes with an opaque origin: it cannot read this application's cookies or storage (the test proves `document.cookie` is empty inside), and only we may frame it. Imports by link are fetched server-side with a size cap and an SSRF guard (http(s) only, no local or private hosts).
+  - **Create** makes an editable deck from a renderer's template document (today: the keynote engine with the Italian Tech Week document) — its own draft, versions and people; the creator is its owner. Company accounts create; guests only see what they were invited to. Titles become slugs, uniquified.
+  - **Archive** (owners) removes a presentation from the library without deleting anything; the audit trail records creations and archivals. `updated_at` follows drafts, versions and publications.
+  - The registry became data: `presentations` rows (seeded once for the committed keynote) plus a code-side `RENDERERS` table (deck file + template). Access checks, stores and routes read the row.
+- Choices:
+  1. **Editable means our format.** An imported HTML or a link is presented and shared, never edited: there is nothing structured to edit in it, and pretending otherwise would be a lie in the interface. The card says so.
+  2. **Company accounts may create their own presentations.** Domain membership still grants no role on anyone else's; it grants a library of your own. Creation goes through the service role after the server's domain check, and is audited.
+  3. **Sandbox rather than trust.** A user-supplied HTML file on our origin would be a script injection into the platform; the CSP sandbox removes the origin instead of trying to sanitise the file.
+- Proof: `apps/web/tests/e2e/library.test.mjs` (5): the empty library and who may create; a new deck with its own draft and owner, separate from the keynote's; an HTML import stored privately, served in the sandbox with no cookies visible inside, refused to non-members, no editor for it; a link kept as a redirect; private addresses and non-HTML refused; archive by owners only, audited; the browser form creates and opens a deck. The editor, access and inline suites still pass.
+- Next: images (step 3), then the create harness (step 4), where "New presentation" stops starting from the keynote's words.

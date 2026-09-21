@@ -241,7 +241,8 @@ Sixth pass (D-027, D-028): the room recedes for the whole run of text and never 
 ## The platform (branch `platform`)
 
 - Step 1 (2026-09-21, D-037): filmstrip with live text cards, arrows and keys; typing on the stage with a floating toolbar (marks, size, alignment, colour); 4 browser tests; deck parity and 54/54 re-proven
-- Planned, in order: home + library + import (static HTML and links present-only), images (element, library, editor), the create harness (V2 engine as a template with beat types)
+- Step 2 (2026-09-21, D-038): home = the library; three kinds (editable deck, static HTML in a CSP sandbox, link); create from the engine's template; import by file or link; archive; 5 browser tests; migration `20260921100000_library.sql` applied locally and to the hosted project
+- Planned, in order: images (element, library, editor), the create harness (V2 engine as a template with beat types)
 
 ## Deployment (2026-09-21)
 

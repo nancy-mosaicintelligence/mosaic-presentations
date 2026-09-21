@@ -282,3 +282,8 @@ Production cannot be marked complete until the deployed URL has been opened and 
 | The floating toolbar applies marks, size and alignment, all undoable | PASS | `inline.test.mjs`: highlight on a selection, size +2px, align right, ⌘Z restores |
 | List items and lines on other stations edit the same way | PASS | `inline.test.mjs` |
 | The deck stays identical for an audience | PASS | parity layout + 55 stations; 54/54 behavioural checks (`verify-inline`) |
+| The home page lists every presentation with a role; company accounts create, guests only see | PASS | `library.test.mjs` |
+| A new editable deck has its own draft, versions and owner | PASS | `library.test.mjs`: separate draft from the keynote's; the keynote's owner has no role on it |
+| An imported HTML deck is stored privately and runs in a sandbox with no access to the platform | PASS | `library.test.mjs`: CSP `sandbox`, `document.cookie` empty inside, members only, no editor |
+| Links are kept and shared, not edited; private addresses and non-HTML refused | PASS | `library.test.mjs` |
+| Archiving hides without deleting, owners only, audited | PASS | `library.test.mjs` |

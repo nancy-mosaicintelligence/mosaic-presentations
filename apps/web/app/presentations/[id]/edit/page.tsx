@@ -6,10 +6,11 @@ import { Editor } from "@/components/editor/Editor";
 export const dynamic = "force-dynamic";
 export default async function EditPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const def = getPresentation(id);
+  const def = await getPresentation(id);
   if (!def) notFound();
+  if (def.kind !== "deck") redirect(`/p/${id}`);
   const a = await accessFor(id);
   if (!a.user) redirect(`/sign-in?next=${encodeURIComponent(`/presentations/${id}/edit`)}`);
   if (!atLeast(a.role, "editor")) redirect(atLeast(a.role, "viewer") ? `/p/${id}` : `/no-access?reason=${encodeURIComponent(`${a.user.email} has no editor role on this presentation`)}`);
-  return <Editor id={def.id} title={def.title} role={a.role!} email={a.user.email} />;
+  return <Editor id={def.slug} title={def.title} role={a.role!} email={a.user.email} />;
 }
