@@ -2,8 +2,7 @@
 import {
   SCHEMA_VERSION, PRESENTATION_FIELDS, TOKEN_FIELDS, SECTION_FIELDS, ELEMENT_FIELDS,
   RUN_FIELDS, REVEAL_FIELDS, STATION_FIELDS, COPY_FIELDS, CUSTOM_SCENES,
-  COLOR_RE, FONT_STACK_RE, LAYOUT_FIELDS, ANIMATION_FIELDS, STYLE_KEYS, SAFE_CSS_RE
-} from "./schema.js";
+  COLOR_RE, FONT_STACK_RE, LAYOUT_FIELDS, ANIMATION_FIELDS, STYLE_KEYS, SAFE_CSS_RE, ASSET_FIELDS, ASSET_PATH_FIELDS, ASSET_SOURCE_FIELDS } from "./schema.js";
 
 /**
  * @typedef {{ path: string, message: string }} Issue
@@ -52,6 +51,19 @@ export function validate(doc) {
     if (isObj(d.copy.hud)) checkFields(d.copy.hud, { safe: { type: "string", req: true }, notes: { type: "string", req: true }, present: { type: "string", req: true }, explore: { type: "string", req: true }, fullscreen: { type: "string", req: true } }, "copy.hud", err);
   }
 
+  // assets: a closed kind, path data and a viewBox matched against strict grammars, sources as repo-relative files with hashes
+  if (d.assets !== undefined) {
+    if (!isObj(d.assets)) err("assets", "must be an object");
+    else for (const [id, a] of Object.entries(d.assets)) {
+      const ap = `assets.${id}`;
+      if (!/^[a-z][a-z0-9-]*$/.test(id)) err(ap, "asset ids are lower-case kebab");
+      if (!isObj(a)) { err(ap, "must be an object"); continue; }
+      checkFields(a, ASSET_FIELDS, ap, err);
+      if (Array.isArray(a.paths)) { if (!a.paths.length) err(`${ap}.paths`, "needs at least one path"); a.paths.forEach((pt, i) => { if (!isObj(pt)) return err(`${ap}.paths[${i}]`, "must be an object"); checkFields(pt, ASSET_PATH_FIELDS, `${ap}.paths[${i}]`, err); }); }
+      if (Array.isArray(a.sources)) { if (!a.sources.length) err(`${ap}.sources`, "needs at least one source file"); a.sources.forEach((src, i) => { if (!isObj(src)) return err(`${ap}.sources[${i}]`, "must be an object"); checkFields(src, ASSET_SOURCE_FIELDS, `${ap}.sources[${i}]`, err); }); }
+    }
+  }
+
   // animation
   if (d.animation !== undefined) {
     if (!isObj(d.animation)) err("animation", "must be an object");
@@ -91,6 +103,9 @@ export function validate(doc) {
             if (it.reveal !== undefined) checkReveal(it.reveal, `${ip}.reveal`, err);
           });
           if (e.runs !== undefined) err(`${ep}.runs`, `${e.type} does not take runs`);
+          break;
+        case "group":
+          if (e.runs !== undefined || e.items !== undefined) err(ep, "a group carries no copy of its own");
           break;
         case "custom-scene": {
           if (typeof e.scene !== "string" || !(e.scene in CUSTOM_SCENES)) err(`${ep}.scene`, "unknown custom scene");

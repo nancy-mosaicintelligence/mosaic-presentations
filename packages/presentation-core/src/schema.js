@@ -9,7 +9,7 @@
  * by renderer id with a closed set of parameters.
  */
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 /** Inline marks a run may carry. The renderer maps each to fixed markup. */
 export const MARKS = Object.freeze(["em", "strong", "i", "hl", "lead", "x2"]);
@@ -18,7 +18,7 @@ export const MARKS = Object.freeze(["em", "strong", "i", "hl", "lead", "x2"]);
 export const ICONS = Object.freeze(["drugs", "radiation", "energy", "embolic-agents", "other-therapies"]);
 
 /** Element types a section may contain. */
-export const ELEMENT_TYPES = Object.freeze(["text", "list", "chips", "chain", "loop-labels", "custom-scene"]);
+export const ELEMENT_TYPES = Object.freeze(["text", "list", "chips", "chain", "loop-labels", "custom-scene", "group"]);
 
 /** Custom scenes the Italian Tech Week renderer provides. Parameters are closed per scene. */
 export const CUSTOM_SCENES = Object.freeze({
@@ -40,7 +40,7 @@ export const WIDTH_RE = /^min\(\d{2,4}px,\d{1,3}%\)$/;
 
 /** Typographic and structural roles an element may carry (its class tokens); each is a rule in the stylesheet. */
 export const ROLES = Object.freeze(["hero", "strong", "big", "huge", "lede", "lead-in", "ask", "askline", "senseh", "sensenote", "btitle", "bsynth", "loopcap", "src", "x2line", "mk",
-  "vopen", "vhero", "c1", "c2", "c3", "lp", "lp1", "lp2", "lp3", "pts", "chips", "chain", "loop", "impchart", "icons", "sensetie", "boardsk", "rv"]);
+  "vopen", "vhero", "c1", "c2", "c3", "lp", "lp1", "lp2", "lp3", "acts", "sense", "nature", "eng", "mnode", "marrow", "up", "down", "mv1", "pts", "chips", "chain", "loop", "impchart", "icons", "sensetie", "boardsk", "rv"]);
 
 /** Inline style overrides an element may carry, and the shape a value must have (no urls, no expressions, no delimiters). */
 export const STYLE_KEYS = Object.freeze(["maxWidth", "margin", "marginTop", "marginBottom", "textAlign", "fontSize", "lineHeight", "color"]);
@@ -78,6 +78,7 @@ export const PRESENTATION_FIELDS = Object.freeze({
   tokens: { type: "object", req: true },
   copy: { type: "object", req: true },
   animation: { type: "object" },
+  assets: { type: "object" },
   sections: { type: "array", req: true },
   stations: { type: "array", req: true }
 });
@@ -153,4 +154,19 @@ export const COPY_FIELDS = Object.freeze({
   notesLabel: { type: "string", req: true },
   safeNote: { type: "string", req: true },
   hud: { type: "object", req: true }
+});
+
+/** Assets: vector geometry the renderer draws itself, with the files it was taken from. */
+export const ASSET_KINDS = Object.freeze(["svg-paths"]);
+export const ASSET_FIELDS = Object.freeze({
+  kind: { type: { enum: ASSET_KINDS }, req: true },
+  use: { type: "string" },
+  viewBox: { type: { re: /^-?\d+(\.\d+)? -?\d+(\.\d+)? \d+(\.\d+)? \d+(\.\d+)?$/ }, req: true },
+  paths: { type: "array", req: true },
+  sources: { type: "array", req: true }
+});
+export const ASSET_PATH_FIELDS = Object.freeze({ d: { type: { re: /^[MmZzLlHhVvCcSsQqTtAa0-9,.\-+eE \n]+$/ }, req: true } });
+export const ASSET_SOURCE_FIELDS = Object.freeze({
+  path: { type: { re: /^(?!\/)(?!.*(^|\/)\.\.(\/|$))[A-Za-z0-9_\-./]+\.svg$/ }, req: true },
+  sha256: { type: { re: /^[0-9a-f]{64}$/ }, req: true }
 });

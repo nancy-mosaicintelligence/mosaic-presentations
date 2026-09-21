@@ -6,6 +6,7 @@
 // guessed from regexes over markup; stations, tokens and JS-authored lists are read
 // from the source text. Run with PW_EXEC/NODE_PATH as documented in docs/STATUS.md.
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -153,7 +154,9 @@ const dom = await page.evaluate(() => {
       if (el.matches("#icoEng")) { add(el, "custom-scene", { scene: "itw-sense-icons", params: { set: "engineering" } }); handled.add(el); continue; }
       if (el.matches(".sensetie")) { add(el, "custom-scene", { scene: "itw-sense-tie" }); handled.add(el); continue; }
       if (el.matches(".boardsk")) { add(el, "custom-scene", { scene: "itw-chalkboard" }); handled.add(el); continue; }
-      if (el.matches(".bub, .marrow")) { handled.add(el); continue; }   /* drawn by the chalkboard scene */
+      if (el.matches(".bub")) { handled.add(el); continue; }   /* drawn by the chalkboard scene */
+      /* a structural container with its own reveal: a group; its children follow as elements of their own */
+      if (el.matches(".acts, .sense, .mnode, .marrow, .mv1")) { add(el, "group", {}); continue; }
       if (tag === "p" || el.matches("span.mk") || el.matches(".cue")) { add(el, "text", { runs: runsOf(el) }); handled.add(el); continue; }
     }
     sections.push({ key, layout, elements });
@@ -171,21 +174,37 @@ const dom = await page.evaluate(() => {
   };
   // the cue lives inside the open section but is chrome, not copy of the section: drop it from the section's elements
   for (const s of sections) s.elements = s.elements.filter(e => !(s.key === "open" && e.type === "text" && e.runs.length === 1 && e.runs[0].t === copy.cue));
-  return { sections, bindings, copy };
+  const psvg = document.querySelector("#partner svg");
+  const partner = { viewBox: psvg.getAttribute("viewBox"), paths: [...psvg.querySelectorAll("path")].map(p => ({ d: p.getAttribute("d") })) };
+  return { sections, bindings, copy, partner };
 });
+
+/* ---------- assets: the geometry the renderer draws, from the embedded document once bound, else from the source constants
+   and the rendered header; the files each was taken from are hashed from disk either way ---------- */
+const ASSET_SOURCES = {
+  "mosaic-lockup": ["presentations/italian-tech-week/assets/brand/mosaic_logo_white.svg", "presentations/italian-tech-week/assets/brand/mosaic_logo_fullcolor.svg"],
+  "wave-by-vento-w": ["presentations/italian-tech-week/assets/partners/wave-by-vento-w.svg"]
+};
+const str = (name) => { const m = html.match(new RegExp(`  var ${name} = "([^"]*)";`)); if (!m) throw new Error(`no ${name} constant`); return m[1]; };
+const assets = EMBEDDED && EMBEDDED.assets ? EMBEDDED.assets : {
+  "mosaic-lockup": { kind: "svg-paths", use: "the header lockup on both stages and the closing lockup; the icon then the wordmark, filled per surface", viewBox: str("LOGO_VB"), paths: [{ d: str("LOGO_ICON_D") }, { d: str("LOGO_WORD_D") }], sources: [] },
+  "wave-by-vento-w": { kind: "svg-paths", use: "the event mark in the header", viewBox: dom.partner.viewBox, paths: dom.partner.paths, sources: [] }
+};
+for (const [id, files] of Object.entries(ASSET_SOURCES)) assets[id].sources = files.map(path => ({ path, sha256: createHash("sha256").update(readFileSync(join(REPO, path))).digest("hex") }));
 await browser.close();
 
 // the cue was numbered in the walk; renumber the open section so ids stay dense
 const bindingsOut = dom.bindings.filter(b => !(b.section === "open" && !dom.sections[0].elements.some(e => e.id === b.id)));
 
 const doc = {
-  schemaVersion: 2,
+  schemaVersion: 3,
   id: "italian-tech-week-2026",
   title: "The Room and the Vessel",
   renderer: "itw-keynote",
   meta: { extractedFrom: "index.html", extractedAt: new Date().toISOString().slice(0, 10) },
   tokens,
   animation,
+  assets,
   copy: {
     road: jsCopy.road,
     team: jsCopy.team,

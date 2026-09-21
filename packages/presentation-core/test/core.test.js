@@ -2,6 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, existsSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { validate, migrate, contentHash, canonicalJSON, renderRuns, SCHEMA_VERSION } from "../src/index.js";
@@ -21,7 +22,11 @@ function minimal() {
       hud: { safe: "Safe", notes: "Notes", present: "Present", explore: "Explore", fullscreen: "Fullscreen" }
     },
     animation: { revealSpacing: .46, revealFade: .8, stepMin: 480, stepMax: 1900, stepPerUnit: 16000, stepEaseOut: .72 },
-    sections: [{ key: "open", layout: { variants: ["mid"], width: "min(940px,76%)", until: 0.05 }, elements: [{ id: "open.1", type: "text", role: ["hero", "strong"], style: { maxWidth: "17ch", margin: "22px 0 0" }, runs: [{ t: "Hello " }, { t: "world", marks: ["em"] }] }] }],
+    assets: { "mark": { kind: "svg-paths", use: "t", viewBox: "0 0 10 10", paths: [{ d: "M0 0L10 10Z" }], sources: [{ path: "presentations/x/mark.svg", sha256: "a".repeat(64) }] } },
+    sections: [{ key: "open", layout: { variants: ["mid"], width: "min(940px,76%)", until: 0.05 }, elements: [
+      { id: "open.1", type: "text", role: ["hero", "strong"], style: { maxWidth: "17ch", margin: "22px 0 0" }, runs: [{ t: "Hello " }, { t: "world", marks: ["em"] }] },
+      { id: "open.2", type: "group", role: ["acts", "rv"], reveal: { p: 0.03 } }
+    ] }],
     stations: [{ p: 0, section: "open", camera: "none", chapter: "Open", note: "n" }, { p: 0.03, section: "", camera: "acc", chapter: "Open", note: "n", dur: 2400, black: true }]
   };
 }
@@ -36,7 +41,7 @@ test("unknown element type is rejected", () => {
   const d = minimal(); d.sections[0].elements.push({ id: "x", type: "video", runs: [] });
   const r = validate(d);
   assert.equal(r.ok, false);
-  assert.ok(r.errors.some(e => e.path === "sections[0].elements[1].type"));
+  assert.ok(r.errors.some(e => e.path === "sections[0].elements[2].type"));
 });
 
 test("unsupported properties are rejected at every level", () => {
@@ -60,8 +65,8 @@ test("markup in text, unknown marks, unknown icons and unknown scenes are reject
   assert.ok(paths.includes("sections[0].elements[0].runs[0].t"));
   assert.ok(paths.includes("sections[0].elements[0].runs[1].marks[0]"));
   assert.ok(paths.includes("sections[0].elements[0].runs[2].icon"));
-  assert.ok(paths.includes("sections[0].elements[1].scene"));
-  assert.ok(paths.includes("sections[0].elements[2].params.code"));
+  assert.ok(paths.includes("sections[0].elements[2].scene"));
+  assert.ok(paths.includes("sections[0].elements[3].params.code"));
 });
 
 test("stations must reference sections and increase in progress", () => {
@@ -92,13 +97,24 @@ test("layout, role, style and animation are allow-listed and range-checked", () 
   for (const p of ["sections[0].layout.variants[1]", "sections[0].layout.width", "sections[0].layout.box", "sections[0].elements[0].role[2]", "sections[0].elements[0].style.background", "sections[0].elements[0].style.color", "animation.stepEaseOut", "animation.stepMax", "animation.bounce"]) assert.ok(paths.includes(p), p);
 });
 
-test("a v1 document migrates to v2 unchanged apart from the version, deterministically", () => {
-  const v1 = minimal(); v1.schemaVersion = 1; delete v1.animation; delete v1.sections[0].layout; delete v1.sections[0].elements[0].role; delete v1.sections[0].elements[0].style;
+test("a v1 document migrates to the current version unchanged apart from the version, deterministically", () => {
+  const v1 = minimal(); v1.schemaVersion = 1; delete v1.animation; delete v1.assets; delete v1.sections[0].layout; delete v1.sections[0].elements[0].role; delete v1.sections[0].elements[0].style; v1.sections[0].elements.pop();
   const a = migrate(v1), b = migrate(v1);
   assert.deepEqual(a, b);
-  assert.equal(a.schemaVersion, 2);
+  assert.equal(a.schemaVersion, SCHEMA_VERSION);
   assert.deepEqual({ ...a, schemaVersion: 1 }, v1);
   assert.equal(validate(a).ok, true);
+  const v2 = { ...minimal(), schemaVersion: 2 }; delete v2.assets;
+  assert.equal(validate(migrate(v2)).ok, true);
+});
+
+test("assets and groups are checked: path grammar, hashes, repo-relative files, no copy on a group", () => {
+  const d = minimal();
+  d.assets.mark.paths[0].d = "M0 0<script>"; d.assets.mark.sources[0].sha256 = "xyz"; d.assets.mark.sources.push({ path: "../../etc/passwd.svg", sha256: "b".repeat(64) });
+  d.assets["Bad Id"] = { kind: "png", viewBox: "x", paths: [], sources: [] };
+  d.sections[0].elements[1].runs = [{ t: "no" }];
+  const paths = validate(d).errors.map(e => e.path);
+  for (const p of ["assets.mark.paths[0].d", "assets.mark.sources[0].sha256", "assets.mark.sources[1].path", "assets.Bad Id", "assets.Bad Id.kind", "assets.Bad Id.viewBox", "assets.Bad Id.paths", "assets.Bad Id.sources", "sections[0].elements[1]"]) assert.ok(paths.includes(p), p);
 });
 
 test("migrate is deterministic, returns a copy, and refuses future versions", () => {
@@ -146,4 +162,21 @@ test("the extracted Italian Tech Week document validates", { skip: !existsSync(j
   assert.deepEqual(r.errors, []);
   assert.equal(doc.stations.length, 55);
   assert.equal(doc.sections.length, 27);
+  assert.equal(doc.sections.reduce((a, s) => a + s.elements.length, 0), 70);
+  assert.equal(doc.sections.reduce((a, s) => a + s.elements.filter(e => e.type === "group").length, 0), 11);
+});
+
+test("the extracted document's assets are the geometry of the files they name, and the hashes match", { skip: !existsSync(join(REPO, "presentations/italian-tech-week/content/presentation.json")) }, () => {
+  const doc = JSON.parse(readFileSync(join(REPO, "presentations/italian-tech-week/content/presentation.json"), "utf8"));
+  assert.deepEqual(Object.keys(doc.assets), ["mosaic-lockup", "wave-by-vento-w"]);
+  for (const [id, a] of Object.entries(doc.assets)) {
+    assert.ok(a.sources.length >= 1, id);
+    for (const src of a.sources) {
+      const file = readFileSync(join(REPO, src.path));
+      assert.equal(createHash("sha256").update(file).digest("hex"), src.sha256, `${id}: ${src.path} hash`);
+      const svg = file.toString("utf8");
+      assert.equal(svg.match(/viewBox="([^"]+)"/)[1], a.viewBox, `${id}: ${src.path} viewBox`);
+      assert.deepEqual([...svg.matchAll(/<path[^>]*\sd="([^"]+)"/g)].map(m => m[1]), a.paths.map(p => p.d), `${id}: ${src.path} paths`);
+    }
+  }
 });

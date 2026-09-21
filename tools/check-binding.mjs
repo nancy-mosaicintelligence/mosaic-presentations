@@ -15,6 +15,8 @@ const open = doc.sections.find(s => s.key === "open"), nx2 = doc.sections.find(s
 open.layout.variants = ["right", "lowcol"]; open.layout.until = 0.0123; open.layout.width = "min(500px,40%)";
 open.elements[0].role = ["lede"]; open.elements[0].style = { color: "rgb(1, 2, 3)", maxWidth: "9ch" };
 nx2.elements[2].style = {};                       // drop its inline overrides entirely
+const acts = open.elements.find(e => e.type === "group"); acts.reveal = { p: 0.777, seq: 4 };   // the container's own reveal
+doc.assets["wave-by-vento-w"].viewBox = "0 0 10 10"; doc.assets["mosaic-lockup"].viewBox = "0 0 20 20";
 doc.animation.revealSpacing = 3; doc.animation.revealFade = 0.2; doc.animation.stepMin = 3000;
 const html = readFileSync(REPO + "/index.html", "utf8").replace(/<script type="application\/json" id="itw-content">[\s\S]*?<\/script>/, () => `<script type="application/json" id="itw-content">${JSON.stringify(doc).replace(/<\//g, "<\\/")}</script>`);
 writeFileSync(REPO + "/output/mutation/index.html", html);
@@ -24,7 +26,9 @@ async function probe(url) {
   await page.goto(url + "?watchdog=off"); await page.evaluate(() => document.fonts.ready); await page.waitForTimeout(400);
   const r = await page.evaluate(() => {
     const sec = document.querySelector('#stagec section.beat[data-k="open"]'), mv = sec.querySelector(":scope > .mv"), h = document.querySelector('[data-id="open.1"]'), n = document.querySelector('[data-id="nx2.3"]');
-    return { secClass: sec.className, until: sec.dataset.until, mvWidth: mv.style.width, heroClass: h.className, heroColor: getComputedStyle(h).color, heroMax: getComputedStyle(h).maxWidth, nx2Margin: n.style.margin, nx2Font: n.style.fontSize };
+    const g = sec.querySelector(".acts"), pm = document.querySelector("#partner svg"), bm = document.querySelector("#brand svg");
+    return { secClass: sec.className, until: sec.dataset.until, mvWidth: mv.style.width, heroClass: h.className, heroColor: getComputedStyle(h).color, heroMax: getComputedStyle(h).maxWidth, nx2Margin: n.style.margin, nx2Font: n.style.fontSize,
+      groupReveal: g.dataset.p + "/" + (g.dataset.seq || ""), partnerVB: pm.getAttribute("viewBox"), brandVB: bm && bm.getAttribute("viewBox") };
   });
   // animation: walk to the station where the therapy pills (a chips element, seq 1.3, 2.1, …) land; once the first pill
   // has fully faded in, wait 1 s: with the deck's spacing (.46 s) the second pill is at 1, with 3 s it is still 0
@@ -39,6 +43,6 @@ async function probe(url) {
 }
 const control = await probe("http://localhost:4173/index.html"), mutated = await probe("http://localhost:4173/output/mutation/index.html");
 console.log("control:", JSON.stringify(control)); console.log("mutated:", JSON.stringify(mutated));
-const ok = mutated.secClass === "beat right lowcol" && mutated.until === "0.0123" && mutated.mvWidth === "min(500px, 40%)" && mutated.heroClass === "lede" && mutated.heroColor === "rgb(1, 2, 3)" && parseFloat(mutated.heroMax) < 200 && mutated.nx2Margin === "" && mutated.nx2Font === "" && parseFloat(control.seq1Opacity) >= 1 && parseFloat(mutated.seq1Opacity) === 0;
-console.log(ok ? "BINDING: layout, role, style and reveal spacing all follow the document" : "BINDING FAILED: a mutated value did not reach the page");
+const ok = mutated.secClass === "beat right lowcol" && mutated.until === "0.0123" && mutated.mvWidth === "min(500px, 40%)" && mutated.heroClass === "lede" && mutated.heroColor === "rgb(1, 2, 3)" && parseFloat(mutated.heroMax) < 200 && mutated.nx2Margin === "" && mutated.nx2Font === "" && mutated.groupReveal === "0.777/4" && mutated.partnerVB === "0 0 10 10" && mutated.brandVB === "0 0 20 20" && parseFloat(control.seq1Opacity) >= 1 && parseFloat(mutated.seq1Opacity) === 0;
+console.log(ok ? "BINDING: layout, role, style, group reveals, assets and reveal spacing all follow the document" : "BINDING FAILED: a mutated value did not reach the page");
 await browser.close(); process.exit(ok ? 0 : 1);

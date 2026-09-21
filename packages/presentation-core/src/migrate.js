@@ -10,7 +10,11 @@ const STEPS = {
   // 1 → 2: sections gained an optional `layout`, elements optional `role` and `style`, the document an
   // optional `animation`. All optional, so the upgrade is the version stamp alone; a v1 document renders
   // with the layout the markup already carries.
-  1: (doc) => ({ ...doc, schemaVersion: 2 })
+  1: (doc) => ({ ...doc, schemaVersion: 2 }),
+  // 2 → 3: elements gained the `group` type (a container with its own reveal) and the document an optional
+  // `assets` map. Optional again, so the upgrade is the version stamp; a v2 document keeps the geometry its
+  // renderer embeds.
+  2: (doc) => ({ ...doc, schemaVersion: 3 })
 };
 
 /**

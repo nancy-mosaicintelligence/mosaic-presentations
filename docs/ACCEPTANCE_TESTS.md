@@ -180,12 +180,13 @@ Fluoroscopy integration additionally requires:
 
 Step 1 (copy, tokens, stations) verified 2026-09-20. Evidence: `packages/presentation-core/test/`, `tools/check-parity.mjs`, D-031.
 Step 2 (layout, roles, inline overrides, animation) verified 2026-09-20. Evidence: the same tests (13), `tools/check-parity.mjs` (layout signature + 55 stations), `tools/check-binding.mjs`, D-032.
+Step 3 (group reveals, assets) verified 2026-09-20. Evidence: the same tests (15), `tools/check-parity.mjs` (layout signature incl. both marks + 55 stations), `tools/check-binding.mjs`, D-033.
 
 | Test | Status | Evidence |
 |---|---|---|
 | A versioned schema validates the Italian Tech Week presentation | PASS | `presentation.json` (schema 1, 27 sections, 59 elements, 55 stations) passes `validate()` with no errors |
 | Invalid element types and unsupported properties are rejected | PASS | unit tests: unknown type, unknown fields at document/element/station/run level, markup in text, unknown marks, icons, scenes and scene parameters, bad tokens, out-of-order or dangling stations |
-| Content, tokens, layout, animation, assets and renderer code remain separate | PARTIAL | copy, tokens and stations (step 1), section layout, element roles and inline overrides, and the global animation values (step 2) are in the document; the structural containers' reveals stay in the markup; assets are not yet modelled (only the two logo SVGs exist, embedded as paths) |
+| Content, tokens, layout, animation, assets and renderer code remain separate | PASS | copy, tokens and stations (step 1), section layout, element roles and inline overrides, and the global animation values (step 2), the structural containers' reveals and the two vector assets with their source hashes (step 3) are in the document; the renderer's drawings and the CSS stay in the deck by design (D-033) |
 | Structured-data output matches approved baseline states | PASS | re-extracting the bound deck reproduces the document byte for byte; `check-parity` finds all 55 stations identical to the pre-binding snapshot (`snapshots/phase4d/`) |
 | Schema migrations are deterministic and covered by tests | PASS | `migrate()` identity at v1, refuses future/unknown versions, returns a copy; unit-tested |
 | Custom scenes accept validated parameters without accepting arbitrary code | PASS | scenes are references with closed parameter lists; a `code` parameter is rejected in tests |
@@ -203,6 +204,19 @@ Step 2 additions:
 | Re-extraction reproduces the document | PASS | extracting from the bound deck yields the same document byte for byte (24,166 characters) |
 | The values are read from the document, not the markup | PASS | `check-binding`: a mutated variant, exit progress, box width, role, colour, measure, removed overrides and a 3 s reveal spacing each reach the page; the control deck is unchanged |
 | Deck behaviour unchanged after step 2 | PASS | full verification run on the step-2 deck: 54 of 54 checks (rail, chrome, reversals, chain, station 21, close, header, tags, bounds and clipping at four viewports, console and requests clean) |
+
+Step 3 additions:
+
+| Test | Status | Evidence |
+|---|---|---|
+| Group elements and assets validate and are allow-listed | PASS | unit test: a `<` in path data, a malformed hash, a `..` source path, an unknown asset kind/id, and copy on a group are each rejected at their path |
+| A v1 and a v2 document migrate to v3 deterministically and validate | PASS | unit test |
+| Assets are the geometry of the brand files, hashes included | PASS | unit test reads `assets/brand/mosaic_logo_white.svg`, `mosaic_logo_fullcolor.svg` and `assets/partners/wave-by-vento-w.svg`, compares SHA-256, viewBox and every `d` attribute with the document |
+| Layout and marks unchanged after binding | PASS | `check-parity` layout signature (sections, 68 bound elements, both marks' viewBox and path data) identical to `snapshots/phase4d/` |
+| Every station unchanged after binding | PASS | `check-parity`: 55 of 55 identical |
+| Re-extraction reproduces the document | PASS | byte for byte (63,431 characters) |
+| Group reveals and assets are read from the document | PASS | `check-binding`: a mutated group reveal (`p`/`seq`) and both assets' viewBoxes reach the page; the control is unchanged |
+| Deck behaviour unchanged after step 3 | PASS | full verification run on the step-3 deck: 54 of 54 checks, including the header lockup and event-mark geometry checks from Phase 4A/4D |
 
 ## Phase 6 editor MVP
 

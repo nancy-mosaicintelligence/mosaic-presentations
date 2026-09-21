@@ -26,7 +26,8 @@ async function snapshot(url) {
       if (!e) return b.id + "~missing";
       const c = getComputedStyle(e); return [b.id, e.className, c.fontFamily.split(",")[0], c.fontWeight, c.fontSize, c.maxWidth, c.margin, c.textAlign, c.lineHeight, c.color].join("~");
     });
-    return secs.concat(els);
+    const marks = [...document.querySelectorAll("#brand svg, #partner svg")].map(s => s.getAttribute("viewBox") + "|" + [...s.querySelectorAll("path")].map(p => { const d = p.getAttribute("d") || ""; return d.length + ":" + d.slice(0, 32); }).join(","));
+    return secs.concat(els, marks);
   }, BINDINGS);
   const out = [{ layout }];
   for (let n = 1; n <= total; n++) {
