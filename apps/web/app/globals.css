@@ -80,3 +80,4 @@ code { font: 12px/1.4 "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, mono
 .members .tag { margin-left: 8px; }
 .invite { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; margin-top: 12px; }
 .link { margin-top: 12px; padding: 12px; border: 1px solid rgba(252,100,82,.4); border-radius: 6px; } .link code { display: block; overflow-wrap: anywhere; margin: 6px 0 10px; color: var(--ink); }
+.local-signin { display: grid; gap: 6px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--hair); }
