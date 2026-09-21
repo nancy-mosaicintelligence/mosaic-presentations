@@ -316,3 +316,11 @@
   3. **Invitations over codes.** Attributable, single-use, bound to an address, revocable. Codes can come later behind the same tables if an event needs them.
   4. **Google itself is configured in the hosted project**, not here: the OAuth client id and secret belong in Google Cloud and the Supabase dashboard, never in the repository. `README.md` lists the steps.
 - Evidence-quality note: PostgREST refused an ambiguous embed (`presentation_memberships` has two foreign keys to `profiles`) — the join is now named. The last-owner trigger initially also blocked the test fixture's cascade delete of a presentation; it now steps aside when the presentation itself is gone.
+
+## D-036: The clean presentation deck is frozen; the platform continues on its own branch (2026-09-21)
+
+- Status: accepted (the user's instruction)
+- What is frozen: the deck served at https://mosaic-ventowave2026keynote-v2.netlify.app/ — `index.html` `2fcec3ce63739e27…`, commit `3185c2a`, tag `presentation-clean-2026-09-21`, byte-for-byte copy in `presentations/italian-tech-week/snapshots/frozen-v2/`. This is the deck to present from if the platform is not used.
+- Rules: no deploy to the v2 Netlify site again (it is a manual-deploy site with no repository link, so only a deliberate upload could change it; the dashboard's "lock to published deploy" is the belt to these braces); no further commits to branch `v2`; the snapshot is never edited.
+- Where work continues: branch `platform`, taken from that commit. The platform serves the deck itself (`/player`, `/p/[slug]`), so it needs no static site; if a new standalone deck is ever wanted it gets a new snapshot name and a new site.
+- The three lines now: `main` → the original deck (untouched since the start); `v2` → the clean refined deck (frozen); `platform` → the editable, invite-only system.

@@ -238,10 +238,11 @@ Sixth pass (D-027, D-028): the room recedes for the whole run of text and never 
 - Tests: 21 unit; 17 browser (access 7, editor 10) against the local stack
 - Pending for the hosted project: create it, apply the migration, configure Google (client id/secret in Google Cloud and the Supabase dashboard), set the environment; then Phase 8/9 verify Google sign-in on the deployed system
 
-## Deployment (2026-09-20)
+## Deployment (2026-09-21)
 
-- Old version: `main` → https://mosaic-ventowave2026keynote.netlify.app (unchanged)
-- New version: branch `v2` → https://mosaic-ventowave2026keynote-v2.netlify.app (manual deploy of the deck only; see D-030 for linking the branch so pushes redeploy)
+- Original: `main` → https://mosaic-ventowave2026keynote.netlify.app (untouched since the start)
+- Clean presentation deck: branch `v2`, tag `presentation-clean-2026-09-21` → https://mosaic-ventowave2026keynote-v2.netlify.app — **frozen** (D-036); snapshot in `snapshots/frozen-v2/`
+- Platform: branch `platform` (from the same commit) — the app, deployed in Phase 8 to a host of the user's choice; it serves the deck itself
 
 ## Next recommended work
 
