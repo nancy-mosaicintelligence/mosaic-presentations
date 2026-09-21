@@ -7,15 +7,18 @@ Last updated: 2026-09-18
 - Phase 1: complete
 - Phase 2: complete
 - Phase 3: complete with known baseline failures
-- Phase 4A: complete and verified (official logo integration and fullscreen controls)
+- Phase 4A (brand and controls): complete, one item unverified in automation
+- Phase 4B (typography pair and the white act): complete
+- Phase 4C (navigation, AV lesson, thesis): complete, partly reversed by 4D
+- Phase 4D (the review pass: type system, presenter chrome, vessel rail, reversals, chain, close): complete
+- Phase 4E: blocked on the fluoroscopy frames
 - Phases 5 through 9: planned only
-- GitHub and Netlify release: complete
 
 ## Inspected
 
 - Complete root keynote source and deployment files
 - Original WhatsApp export
-- All 52 presentation stations and 26 beat sections
+- All presentation stations (52 at inspection; 54 since D-024) and 26 beat sections
 - Brand visual and voice guides
 - Sixteen official Mosaic SVG and PNG assets
 - Code motion references and their missing dependencies
@@ -53,30 +56,73 @@ Created:
 - `presentations/italian-tech-week/baseline/README.md`
 - Complete 1440x810 screenshot set under `presentations/italian-tech-week/baseline/screenshots/1440x810/`
 
-The preserved copy has SHA-256:
+The preserved copy and root baseline both have SHA-256:
 
 `60a128e668c02f7d41df6607c1c773b839ecaf9825acf9b562b8fe952eed7837`
 
-The current Phase 4A keynote selected for release has SHA-256:
-
-`815abd721ca278d1f5b671f98a56c0344477cf5036a586a0750ebf966ec49616`
-
 ## Phase 4A changes
 
-- Replaced reconstructed wordmark treatments with official horizontal Mosaic SVG artwork.
-- Added a visible `Fullscreen · F` control and implemented the `F` keyboard shortcut.
-- Preserved presentation motion, navigation, safe mode, notes, and view-mode behavior.
-- Added matched before-and-after captures and a machine-readable verification report under `presentations/italian-tech-week/comparisons/phase4a/`.
+Changed:
 
-## Production release
+- `index.html`: header now carries the official horizontal lockup at the left (`#brand`), the centred icon and text wordmark are gone; the close uses the same official lockup; `Fullscreen · F` HUD button and `F` key handler; `MARK_AR` matches the official icon; hand-traced `MARK_D` and `WORD_D` removed. 936,282 bytes, 3,070 lines.
+- `README.md`: controls table notes the HUD button and `Esc`.
 
-- Private GitHub repository: `https://github.com/nancy-mosaicintelligence/mosaic-itw-keynote`
-- Public Netlify site: `https://mosaic-ventowave2026keynote.netlify.app`
-- GitHub `main` is connected to Netlify continuous deployment.
-- Initial production deploy ID: `6aada511d3d661b4004652de`
-- The live HTML matched the release source byte for byte at SHA-256 `815abd721ca278d1f5b671f98a56c0344477cf5036a586a0750ebf966ec49616`.
-- Internal documentation and baseline paths returned HTTP 404 on the public site.
-- Live keyboard, click, mode, notes, safe-mode, fullscreen, refresh, console, and network checks passed.
+Created:
+
+- `presentations/italian-tech-week/assets/brand/` — `mosaic_logo_white.svg`, `mosaic_logo_fullcolor.svg` (unchanged copies, hashes in its README)
+- `presentations/italian-tech-week/comparisons/phase4a/` — matched before/after captures at 1440x810 (all 52 stations), 1366x768, 1280x800, 1512x982 (stations 1, 23, 34, 52), a full-motion close sequence, and `verification-report.json`
+
+Untouched: the immutable baseline (hash still `60a128e6…`) and the Phase 3 screenshot set.
+
+Decisions recorded: D-014 (embed, don't link), D-015 (close animation), D-016 (HUD fullscreen control).
+
+## Phase 4B changes
+
+Changed:
+
+- `index.html`: Hanken Grotesk's four faces replaced by two variable OFL fonts, Fraunces (display) and DM Sans (body), embedded as base64; `--f-display` replaced by `--f-serif` and `--f-body`; `.hero`, `p.huge`, `p.big`, `.qq` and the ×2 numerals move to the serif, everything else to DM Sans with weights remapped (200→300, 300→350); `.hero` measure 19ch→21ch; the white act's paragraph rhythm ×1.5; station 29 recomposed as an asymmetric grid, station 30's count paragraph stepped in, the ×2 chips removed, station 32's measure widened. 1,034,796 bytes, 3,080 lines. Stations, notes, timings, and copy unchanged.
+- `docs/DECISIONS.md`: D-017 (type pair, resolves D-012), D-018 (white-act composition).
+
+Created:
+
+- `presentations/italian-tech-week/snapshots/phase4a/` — exact copy of the 4A result, the "before" for this phase
+- `presentations/italian-tech-week/comparisons/phase4b/` — matched before/after captures, all 52 stations at all four viewports, plus a full-motion white-act sequence and `verification-report.json`
+- `output/typography/` — the font comparison (`sheet.html`, `compare.html`, screenshots, fetched OFL subsets with manifest)
+
+Incident during the phase: the first font fetch pulled latin-ext subsets, so the first comparison and first embed rendered system fallbacks. Detected by a coverage check, corrected, and the pair re-confirmed by the user on real renders (see D-017).
+
+## Phase 4C changes
+
+Changed:
+
+- `index.html`: stations 34–37 recomposed (dominant question, nature-then-engineering on a 12-column grid, one hand-drawn tie line with an orange node, no equals sign or columns); 38–39 lose the chalkboard for an eyebrow, one serif statement and a three-step stair; 41 loses the 01/02/03 columns for a claim-and-reason diagonal; `.vopen`/`.vhero` move to Fraunces; board CSS/JS, duo/moves CSS and the Architects Daughter face removed. Speaker notes for 38 and 39 updated. 1,011,962 bytes, 2,972 lines. Station order, timings and reveal points unchanged; copy changes are punctuation and case only (D-019).
+- `docs/DECISIONS.md`: D-019, D-020.
+
+Created:
+
+- `presentations/italian-tech-week/snapshots/phase4b/` — the "before" for this phase
+- `presentations/italian-tech-week/comparisons/phase4c/` — matched before/after captures, all 52 stations at four viewports, a full-motion 34–41 sequence, `verification-report.json`
+
+## Phase 4D changes (2026-09-20)
+
+Driven by the user's station-by-station review of the 4C build (D-021).
+
+Changed in `index.html` (1,040,939 bytes, 3,138 lines):
+
+- One type system: mono only for the counter/clock and room annotations; every other label in DM Sans sentence case at reading size; body copy 400 weight, ~18–20px; team labels and chart labels redrawn at ≥13px; pills removed from the organ tags and the therapy list.
+- Presenter chrome: plain-word buttons that hide until the mouse moves; counter, chapter, clock at 13px; a fixed-width meter so the rail never moves.
+- Vessel rail: the deck's route drawn as a straight, symmetric vessel spanning the bar, one diamond per chapter, a white trace and tip; click or drag to navigate; scaled so the last station is the vessel's end.
+- Reversals: 29 (lead-in above, one voice, sequenced), 34 (flush left, sequenced), 38–39 (chalkboard restored from the 4B snapshot, bubbles sequenced), 41 (three stages restored, legible, sequenced).
+- 21 as one serif sentence; 46 as a serif crescendo with the earlier lines stepping back; the close lengthened to 9 s in three stages.
+- Architects Daughter embedded again.
+
+Created: `snapshots/phase4c/`, `comparisons/phase4d/` (416 matched captures, timestamped close frames, rail and tag-motion stills, `verification-report.json`), `assets/partners/wave-by-vento-w.svg`.
+
+Second review, same day (D-022): the rail redrawn as a straight symmetric vessel spanning the bar; organ tags landing 1.1 s apart with a ring; the Wave by Vento W mark in place of the venue line; the lockup at 30px; the therapies as icon pills arriving in turn; the two questions equal on one line; station 29's lead-in back to a small sans line; the tunnel lines one under the other. File 1,045,522 bytes.
+
+Third pass (D-023, D-024): station 21 as setup-then-point with the point landing large; the chain split into three counter-driven stations (46–48) with wider spacing and compounding fade. The deck is now **54 stations**. Fourth pass (D-025): the chain climbs — each new point takes the centre at full size while the earlier ones move up, shrink and fade; "October 2026, Italy" under the event mark.
+Fifth pass (D-026): orange on the nature/engineering headings and questions; larger date line with room under the mark (bar 78px); the penultimate sentence solid until the next step; the C-arm label on the gantry and the C-arm gone at station 16; station 21 split so the point lands on its own step (the deck is now **55 stations**).
+Sixth pass (D-027, D-028): the room recedes for the whole run of text and never flickers between stations; the tree drawn thicker and complete at 9; the orange box drops onto "vascular system"; station 18 in sequence; the C-arm label at its leader's end. Inputs and feel (D-029): ease-out steps (480–1900 ms), Tab/Shift+Tab, Backspace, right-click, trackpad/wheel, touch; `?watchdog=off` for automated capture.
 
 ## Verification performed
 
@@ -90,6 +136,7 @@ The current Phase 4A keynote selected for release has SHA-256:
 - Reduced-motion behavior
 - All-station screenshot capture at 1440x810
 - Active-beat viewport-bound checks at 1440x810, 1366x768, 1280x800, and 1512x982 during Phase 1
+- Phase 4A: matched before/after captures at all four viewports; computed logo geometry, fills, clear space, and accessible name; keyboard, click, Home, End, Notes, Safe, Present/Explore, fullscreen enter and exit, refresh; active-beat bounds at all four viewports; console, page-error, and request capture; reduced-motion and full-motion close compared
 
 ## Passed
 
@@ -100,10 +147,38 @@ The current Phase 4A keynote selected for release has SHA-256:
 - The presentation runs at approximately 60 frames per second in the sampled desktop baseline
 - Reduced-motion behavior is present
 - All active beats remained within viewport bounds in the tested sizes
+- Phase 4A: header and final lockup render at the official 3.640 aspect ratio, icon left of wordmark, white on dark and full colour on the white stage, with clear space above one icon width
+- Phase 4A: `F` and the HUD button enter fullscreen from a user gesture and the button state follows `fullscreenchange`
+- Phase 4A: every navigation control listed above still works; refresh returns to station 1; zero page errors and zero failed requests
 
 ## Failed
 
-- Direct station links do not exist.
+- Direct station links do not exist (unchanged, outside Phase 4)
+
+## Passed in Phase 4D
+
+- 54 of 54 automated checks on the final file (`96e32502…`, 1,053,118 bytes, 55 stations): 53 in one clean full run plus the station-18 pill check re-run in isolation after its expected sequence was updated to D-027's (the deck was right; the expectation was stale). Matched captures before (52 stations, 4C snapshot) and after (55) at four viewports., covering rail click/drag/End mapping, chrome auto-hide, every reversal, the climbing chain across 46–48, station 21's setup-then-point, the close timeline, the header mark and date line in both motion modes, and the tag landing sequence; matched captures before (52 stations) and after (54) at four viewports
+- No beat overflow or text clipping at any of the four viewports across all 52 stations
+
+## Passed in Phase 4C
+
+- All 4C composition checks (34, 37, 39, 41), role resolution, removals confirmed
+- No beat overflow or text clipping at any of the four viewports across all 52 stations
+- All controls, refresh, console, and requests clean; 25 of 26 automated checks, the 26th a threshold artefact documented in the acceptance table
+
+## Passed in Phase 4B
+
+- Embedded fonts cover ASCII, weight axes vary, roles resolve to the intended faces
+- No beat overflow or text clipping at any of the four viewports across all 52 stations
+- All controls, refresh, console, and requests clean; 24 of 24 automated checks
+
+## Unverified after Phases 4A–4D
+
+- Canvas-drawn team labels (31–32) are confirmed by capture, not by automation.
+
+- `Esc` leaving fullscreen: headless Chromium cannot deliver the browser-native Escape, so only the API exit path was checked. Press `F` then `Esc` in a real browser once.
+- Sharpness at projector scale was checked by geometry (vector SVG at the source ratio), not on a projector.
+- The only console message in the automated run was a Chromium GL driver performance notice caused by the screenshot ReadPixels; it reproduced on the untouched baseline and is not a page defect.
 
 ## Blocked or unverified
 
@@ -113,7 +188,7 @@ The current Phase 4A keynote selected for release has SHA-256:
 - External invitation and access-code behavior
 - Draft persistence and version history
 - Clean-checkout install and production application build
-- Native `Escape` exit from fullscreen could not be asserted in the headless verification environment.
+- Deployed production behavior
 
 ## Current risks
 
@@ -126,4 +201,5 @@ The current Phase 4A keynote selected for release has SHA-256:
 
 ## Next recommended work
 
-Publish the current Phase 4A build, verify the live production URL, and then defer larger visual or architectural changes until the approved typography and real fluoroscopy assets are available.
+Walk the whole deck once in a real browser with the projector in mind (fullscreen, `Esc`, the rail under a mouse, the 9 s close). Then either Phase 4E when the fluoroscopy frames arrive, or Phase 5 (the structured content schema) — the 4D review also surfaced that the copy still carries the unsupported claims listed in the design audit, which a copy pass should settle before publication.
+

@@ -1,0 +1,132 @@
+{
+  "console": [
+    {
+      "url": "http://localhost:4173/presentations/italian-tech-week/snapshots/phase4a/index.html",
+      "type": "warning",
+      "text": "[.WebGL-0x11400468400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "url": "http://localhost:4173/presentations/italian-tech-week/snapshots/phase4a/index.html",
+      "type": "warning",
+      "text": "[.WebGL-0x11400468400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "url": "http://localhost:4173/presentations/italian-tech-week/snapshots/phase4a/index.html",
+      "type": "warning",
+      "text": "[.WebGL-0x11400468400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "url": "http://localhost:4173/presentations/italian-tech-week/snapshots/phase4a/index.html",
+      "type": "warning",
+      "text": "[.WebGL-0x11400468400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+    }
+  ],
+  "failedRequests": [],
+  "checks": [
+    {
+      "name": "bounds + clipping clean at 1440x810, stations 1-52",
+      "pass": true
+    },
+    {
+      "name": "bounds + clipping clean at 1366x768, stations 1-52",
+      "pass": true
+    },
+    {
+      "name": "bounds + clipping clean at 1280x800, stations 1-52",
+      "pass": true
+    },
+    {
+      "name": "bounds + clipping clean at 1512x982, stations 1-52",
+      "pass": true
+    },
+    {
+      "name": "embedded faces: Fraunces + DM Sans + Plex Mono + Architects Daughter, all loaded, no Hanken",
+      "pass": true,
+      "detail": "Fraunces 300 500 loaded | DM Sans 300 500 loaded | IBM Plex Mono 400 loaded | IBM Plex Mono 500 unloaded | Architects Daughter 400 loaded"
+    },
+    {
+      "name": "DM Sans weight axis live (300 < 350 < 500 widths)",
+      "pass": true,
+      "detail": "{\"dm300\":369.125,\"dm350\":373.203125,\"dm500\":386.09375,\"fr300\":402.625,\"fr400\":418.46875,\"fr500\":426.375}"
+    },
+    {
+      "name": "Fraunces weight axis live (300 < 400 < 500 widths)",
+      "pass": true,
+      "detail": "{\"dm300\":369.125,\"dm350\":373.203125,\"dm500\":386.09375,\"fr300\":402.625,\"fr400\":418.46875,\"fr500\":426.375}"
+    },
+    {
+      "name": "roles: hero/huge/big/qq serif; body/lede/x2line DM Sans; HUD mono; chalk untouched",
+      "pass": true,
+      "detail": "{\"body\":\"DM Sans/350\",\"hero\":\"Fraunces/400\",\"huge\":\"Fraunces/400\",\"big\":\"Fraunces/300\",\"qq\":\"Fraunces/300\",\"lede\":\"DM Sans/300\",\"x2\":\"Fraunces/400\",\"x2line\":\"DM Sans/350\",\"mono\":\"IBM Plex Mono/350\",\"chalk\":\"Architects Daughter/400\"}"
+    },
+    {
+      "name": "×2 is bare serif type, no chip border",
+      "pass": true,
+      "detail": "{\"border\":\"none\",\"radius\":\"0px\",\"fam\":\"Fraunces\",\"color\":\"rgb(252, 100, 82)\"}"
+    },
+    {
+      "name": "sc1: lede sits right of centre above the hero; hero left-anchored",
+      "pass": true,
+      "detail": "{\"ledeLeft\":822,\"ledeTop\":238,\"heroLeft\":250,\"heroTop\":388,\"heroRight\":1124}"
+    },
+    {
+      "name": "sc3: phrase sets in at most 3 lines",
+      "pass": true,
+      "detail": "{\"lines\":3,\"text\":\"Bound by a linear labor-to-output relationship.\"}"
+    },
+    {
+      "name": "ArrowRight",
+      "pass": true
+    },
+    {
+      "name": "ArrowLeft",
+      "pass": true
+    },
+    {
+      "name": "click advances",
+      "pass": true
+    },
+    {
+      "name": "End",
+      "pass": true
+    },
+    {
+      "name": "Home",
+      "pass": true
+    },
+    {
+      "name": "N notes",
+      "pass": true
+    },
+    {
+      "name": "S safe",
+      "pass": true
+    },
+    {
+      "name": "M mode",
+      "pass": true
+    },
+    {
+      "name": "F fullscreen",
+      "pass": true
+    },
+    {
+      "name": "refresh → station 1",
+      "pass": true
+    },
+    {
+      "name": "full-motion white act captured (29-33)",
+      "pass": true
+    },
+    {
+      "name": "zero console errors/warnings (GL screenshot notice excluded)",
+      "pass": true,
+      "detail": "[]"
+    },
+    {
+      "name": "zero failed requests",
+      "pass": true,
+      "detail": "[]"
+    }
+  ]
+}

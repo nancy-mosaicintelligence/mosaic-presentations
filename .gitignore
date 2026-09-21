@@ -11,4 +11,5 @@ coverage/
 .env
 .env.*
 !.env.example
-
+# the per-viewport comparison screenshot sets stay local (182 MB); their READMEs and verification reports are committed
+presentations/italian-tech-week/comparisons/**/*.png

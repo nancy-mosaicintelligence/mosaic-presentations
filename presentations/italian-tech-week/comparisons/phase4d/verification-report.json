@@ -1,0 +1,279 @@
+{
+  "console": [
+    {
+      "url": "http://localhost:4173/presentations/italian-tech-week/snapshots/phase4c/index.html",
+      "type": "warning",
+      "text": "[.WebGL-0x10400496600]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "url": "http://localhost:4173/presentations/italian-tech-week/snapshots/phase4c/index.html",
+      "type": "warning",
+      "text": "[.WebGL-0x10400496600]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "url": "http://localhost:4173/presentations/italian-tech-week/snapshots/phase4c/index.html",
+      "type": "warning",
+      "text": "[.WebGL-0x10400496600]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "url": "http://localhost:4173/presentations/italian-tech-week/snapshots/phase4c/index.html",
+      "type": "warning",
+      "text": "[.WebGL-0x10400496600]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+    }
+  ],
+  "failedRequests": [],
+  "checks": [
+    {
+      "name": "bounds + clipping clean at 1440x810, stations 1-52",
+      "pass": true
+    },
+    {
+      "name": "bounds + clipping clean at 1366x768, stations 1-52",
+      "pass": true
+    },
+    {
+      "name": "bounds + clipping clean at 1280x800, stations 1-52",
+      "pass": true
+    },
+    {
+      "name": "bounds + clipping clean at 1512x982, stations 1-52",
+      "pass": true
+    },
+    {
+      "name": "embedded faces: Fraunces + DM Sans + Plex Mono + Architects Daughter, all loaded, no Hanken",
+      "pass": true,
+      "detail": "Fraunces 300 500 loaded | DM Sans 300 500 loaded | Architects Daughter 400 loaded | IBM Plex Mono 400 loaded | IBM Plex Mono 500 unloaded"
+    },
+    {
+      "name": "DM Sans weight axis live (300 < 350 < 500 widths)",
+      "pass": true,
+      "detail": "{\"dm300\":369.125,\"dm350\":373.203125,\"dm500\":386.09375,\"fr300\":402.625,\"fr400\":418.46875,\"fr500\":426.375}"
+    },
+    {
+      "name": "Fraunces weight axis live (300 < 400 < 500 widths)",
+      "pass": true,
+      "detail": "{\"dm300\":369.125,\"dm350\":373.203125,\"dm500\":386.09375,\"fr300\":402.625,\"fr400\":418.46875,\"fr500\":426.375}"
+    },
+    {
+      "name": "mono/uppercase only for instrumentation: cue, email, icon captions, tags, chips, chapter, buttons in DM Sans sentence case; counter and room labels mono",
+      "pass": true,
+      "detail": "{\"cue\":\"DM Sans/none/14\",\"src\":\"DM Sans/none/17\",\"ico\":\"DM Sans/none/14\",\"site\":\"DM Sans/none/15\",\"chips\":\"DM Sans/none/18\",\"pos\":\"IBM Plex Mono/none/13\",\"chap\":\"DM Sans/none/13\",\"btn\":\"DM Sans/none/13\",\"ant\":\"IBM Plex Mono/uppercase/12\",\"p\":\"Fraunces/none/63\"}"
+    },
+    {
+      "name": "header: lockup 30px, Wave by Vento W mark (2 paths, 26px) turning unless reduced motion, \"October 2026, Italy\" beneath it, venue line gone",
+      "pass": true,
+      "detail": "{\"brandH\":30,\"partner\":true,\"partnerPaths\":2,\"partnerH\":26,\"anim\":\"none\",\"reduced\":true,\"venue\":false,\"when\":\"October 2026, Italy\",\"whenBelow\":true,\"whenSize\":18,\"centred\":true}"
+    },
+    {
+      "name": "body copy ≥18px, captions ≥13px, counter 13px at 1440",
+      "pass": true,
+      "detail": "{\"p\":63,\"ico\":14,\"askline\":20,\"x2line\":20,\"mv1\":19,\"pos\":13}"
+    },
+    {
+      "name": "HUD buttons hidden at rest, no pills/borders, plain words",
+      "pass": true,
+      "detail": "{\"ctlOpacity\":\"0\",\"border\":\"none\",\"radius\":\"0px\",\"text\":\"Safe S|Notes N|Present M|Fullscreen F\",\"pills\":false}"
+    },
+    {
+      "name": "buttons appear on mouse movement and hide again after ~2 s",
+      "pass": true,
+      "detail": "awake 0.796353, later 0"
+    },
+    {
+      "name": "vessel rail: straight symmetric lumen (top/bottom mirror within 0.05px), 13 chapter nodes, one current, tip + ring, no branch, old ticks gone, spans the bar",
+      "pass": true,
+      "detail": "{\"nodes\":13,\"here\":1,\"tip\":true,\"halo\":true,\"wall\":1,\"w\":996,\"ticks\":0} asym 0"
+    },
+    {
+      "name": "clicking the rail's last node jumps to the Close chapter (station 53)",
+      "pass": true,
+      "detail": "station 53"
+    },
+    {
+      "name": "at the last station the tip is at the end of the vessel",
+      "pass": true,
+      "detail": "0.994"
+    },
+    {
+      "name": "dragging to the middle of the vessel lands mid-deck (23–24) and the rail stays put",
+      "pass": true,
+      "detail": "station 24, rail left 388→388"
+    },
+    {
+      "name": "29: lead-in above the statement on one edge, statement revealed",
+      "pass": true,
+      "detail": "{\"sameEdge\":true,\"above\":true,\"leadFont\":\"\\\"DM Sans\\\"\",\"heroOpacity\":\"1\"}"
+    },
+    {
+      "name": "29: lead-in is a small DM Sans line (≤22px) above the large serif statement",
+      "pass": true,
+      "detail": "{\"fam\":\"DM Sans\",\"size\":22}"
+    },
+    {
+      "name": "34: both questions the same size on one line, second revealed",
+      "pass": true,
+      "detail": "{\"sizeB\":56,\"sizeS\":56,\"sameLine\":true,\"spanOpacity\":\"1\"}"
+    },
+    {
+      "name": "18: five therapy pills with icons, sequenced 0–4, all shown when settled, ≥16px",
+      "pass": false,
+      "detail": "{\"n\":5,\"icons\":5,\"radius\":\"999px\",\"border\":\"solid\",\"seq\":\"1.3,2.1,2.9,3.7,4.5\",\"shown\":true,\"size\":18}"
+    },
+    {
+      "name": "28: four tunnel lines each on its own line, last in orange, ≥20px",
+      "pass": true,
+      "detail": "{\"n\":4,\"tops\":[524,567,609,652],\"distinct\":4,\"hotColor\":\"rgb(252, 100, 82)\",\"size\":23}"
+    },
+    {
+      "name": "39: chalkboard restored (slate, 3 bubbles, 2 arrows, Architects Daughter), bubbles sequenced and all shown when settled",
+      "pass": true,
+      "detail": "{\"slate\":true,\"bubbles\":3,\"arrows\":2,\"chalk\":\"Architects Daughter\",\"seq\":\"0,1.4,2.8\",\"shown\":true}"
+    },
+    {
+      "name": "41: three columns left→right, serif stage numbers ≥18px, column text ≥19px, later stages revealed",
+      "pass": true,
+      "detail": "{\"cols\":[149,544,939],\"mkFont\":\"Fraunces\",\"mkSize\":26,\"pSize\":19,\"shown\":true}"
+    },
+    {
+      "name": "22: the point lands on its own station — serif, ≥1.7× the (shrunken) setup, setup dimmed to 0.5, no mono caption",
+      "pass": true,
+      "detail": "{\"n\":2,\"mono\":false,\"font\":\"Fraunces\",\"openSize\":24,\"heroSize\":43,\"heroShown\":0.972,\"openDimmed\":0.515}"
+    },
+    {
+      "name": "21: the setup alone, the point not yet shown",
+      "pass": true,
+      "detail": "{\"open\":1,\"hero\":0}"
+    },
+    {
+      "name": "16: the C-arm label is gone when the cardiovascular station arrives",
+      "pass": true,
+      "detail": "{\"rigLabel\":0,\"colour\":\"rgb(252, 100, 82)\"}"
+    },
+    {
+      "name": "room labels (table, C-arm, monitor) at full strength with no text (7) and ≤0.15 for the whole text run (8, 13, 15, 17, 18)",
+      "pass": true,
+      "detail": "{\"7\":[1,1,1],\"8\":[0.14,0.14,0.14],\"13\":[0.08,0.08,0.08],\"15\":[0.08,0.08,0.08],\"17\":[0.08,0,0.08],\"18\":[0.08,0,0.08]}"
+    },
+    {
+      "name": "8→9: the orange box is absent at 8 and lands on \"vascular system\" at 9 (text turns black on orange)",
+      "pass": true,
+      "detail": "{\"hl8\":{\"on\":false,\"color\":\"rgb(255, 255, 255)\"},\"hl9\":{\"on\":true,\"color\":\"rgb(4, 1, 2)\",\"boxBg\":\"rgb(252, 100, 82)\",\"boxOpacity\":\"1\"}}"
+    },
+    {
+      "name": "17: \"vascular system\" in orange",
+      "pass": true,
+      "detail": "{\"text\":\"vascular system\",\"color\":\"rgb(252, 100, 82)\"}"
+    },
+    {
+      "name": "18: sentence first, then five pills in turn, then the orange line last",
+      "pass": true,
+      "detail": "[1.3,2.1,2.9,3.7,4.5,6.4]"
+    },
+    {
+      "name": "54: \"Once it can be learnt…\" is solid until the next step",
+      "pass": true,
+      "detail": "1"
+    },
+    {
+      "name": "35–38: the questions and both column headings in orange (nature ≡ engineering)",
+      "pass": true,
+      "detail": "{\"ask\":\"rgb(252, 100, 82)\",\"senseh\":\"rgb(252, 100, 82)\"}"
+    },
+    {
+      "name": "46–48: each new point takes the centre at full size; earlier points climb, shrink and fade (47: .56/1; 48: .31/.56/1); sizes ascend top→centre; no overlaps; nothing under the header",
+      "pass": true,
+      "detail": "{\"g46\":[{\"o\":0.97,\"size\":63,\"top\":389,\"bottom\":457,\"cy\":423},{\"o\":0,\"size\":63,\"top\":355,\"bottom\":492,\"cy\":423},{\"o\":0,\"size\":63,\"top\":320,\"bottom\":526,\"cy\":423}],\"g47\":[{\"o\":0.57,\"size\":48,\"top\":282,\"bottom\":334,\"cy\":308},{\"o\":0.97,\"size\":63,\"top\":355,\"bottom\":492,\"cy\":423},{\"o\":0,\"size\":63,\"top\":320,\"bottom\":526,\"cy\":423}],\"g48\":[{\"o\":0.32,\"size\":37,\"top\":133,\"bottom\":173,\"cy\":153},{\"o\":0.57,\"size\":48,\"top\":198,\"bottom\":301,\"cy\":249},{\"o\":0.97,\"size\":63,\"top\":320,\"bottom\":526,\"cy\":423}]}"
+    },
+    {
+      "name": "ArrowRight",
+      "pass": true
+    },
+    {
+      "name": "ArrowLeft",
+      "pass": true
+    },
+    {
+      "name": "click advances",
+      "pass": true
+    },
+    {
+      "name": "Tab advances",
+      "pass": true
+    },
+    {
+      "name": "Shift+Tab reverses",
+      "pass": true
+    },
+    {
+      "name": "Backspace reverses",
+      "pass": true
+    },
+    {
+      "name": "right-click reverses",
+      "pass": true
+    },
+    {
+      "name": "wheel: one step per swipe, inertia ignored, reverse works",
+      "pass": true,
+      "detail": "02 02 01"
+    },
+    {
+      "name": "a step is visibly under way within 120 ms of the press (rail tip moved ≥3 px)",
+      "pass": true,
+      "detail": "12.7 px"
+    },
+    {
+      "name": "End",
+      "pass": true
+    },
+    {
+      "name": "Home",
+      "pass": true
+    },
+    {
+      "name": "N notes",
+      "pass": true
+    },
+    {
+      "name": "S safe",
+      "pass": true
+    },
+    {
+      "name": "M mode",
+      "pass": true
+    },
+    {
+      "name": "F fullscreen",
+      "pass": true
+    },
+    {
+      "name": "refresh → station 1",
+      "pass": true
+    },
+    {
+      "name": "9→10 in full motion: the room labels never brighten between the two text stations (stay ≤0.15 throughout)",
+      "pass": true,
+      "detail": "[0.08,0.08,0.08,0.08,0.08,0.08,0.08,0.08]"
+    },
+    {
+      "name": "16: the four organ tags land one by one, ≥1 s apart, each with a landing ring",
+      "pass": true,
+      "detail": "arrivals [2.62,3.71,4.82,5.92] gaps [1.09,1.11,1.1] rings 4"
+    },
+    {
+      "name": "close: sentence gone by ~2.5 s (it holds solid at its station, D-026), mark solid by ~6 s, held orange ≥1.5 s, wordmark done by ~9 s",
+      "pass": true,
+      "detail": "{\"sentenceGone\":2.52,\"markSolid\":5.4,\"wordStarts\":7.56,\"wordDone\":8.4}"
+    },
+    {
+      "name": "zero console errors/warnings (GL screenshot notice excluded)",
+      "pass": true,
+      "detail": "[]"
+    },
+    {
+      "name": "zero failed requests",
+      "pass": true,
+      "detail": "[]"
+    }
+  ]
+}

@@ -1,0 +1,142 @@
+{
+  "console": [
+    {
+      "url": "http://localhost:4173/presentations/italian-tech-week/snapshots/phase4b/index.html",
+      "type": "warning",
+      "text": "[.WebGL-0x10400509000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "url": "http://localhost:4173/presentations/italian-tech-week/snapshots/phase4b/index.html",
+      "type": "warning",
+      "text": "[.WebGL-0x10400509000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "url": "http://localhost:4173/presentations/italian-tech-week/snapshots/phase4b/index.html",
+      "type": "warning",
+      "text": "[.WebGL-0x10400509000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "url": "http://localhost:4173/presentations/italian-tech-week/snapshots/phase4b/index.html",
+      "type": "warning",
+      "text": "[.WebGL-0x10400509000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+    }
+  ],
+  "failedRequests": [],
+  "checks": [
+    {
+      "name": "bounds + clipping clean at 1440x810, stations 1-52",
+      "pass": true
+    },
+    {
+      "name": "bounds + clipping clean at 1366x768, stations 1-52",
+      "pass": true
+    },
+    {
+      "name": "bounds + clipping clean at 1280x800, stations 1-52",
+      "pass": true
+    },
+    {
+      "name": "bounds + clipping clean at 1512x982, stations 1-52",
+      "pass": true
+    },
+    {
+      "name": "embedded faces: Fraunces + DM Sans + Plex Mono + Architects Daughter, all loaded, no Hanken",
+      "pass": true,
+      "detail": "Fraunces 300 500 loaded | DM Sans 300 500 loaded | IBM Plex Mono 400 loaded | IBM Plex Mono 500 unloaded"
+    },
+    {
+      "name": "DM Sans weight axis live (300 < 350 < 500 widths)",
+      "pass": true,
+      "detail": "{\"dm300\":369.125,\"dm350\":373.203125,\"dm500\":386.09375,\"fr300\":402.625,\"fr400\":418.46875,\"fr500\":426.375}"
+    },
+    {
+      "name": "Fraunces weight axis live (300 < 400 < 500 widths)",
+      "pass": true,
+      "detail": "{\"dm300\":369.125,\"dm350\":373.203125,\"dm500\":386.09375,\"fr300\":402.625,\"fr400\":418.46875,\"fr500\":426.375}"
+    },
+    {
+      "name": "roles: ask/senseh/avsyn/vopen/vhero serif; askline/avsteps/avwhy DM Sans; eyebrow mono; chain unchanged (DM Sans)",
+      "pass": true,
+      "detail": "{\"ask\":\"Fraunces/350\",\"senseh\":\"Fraunces/300\",\"askline\":\"DM Sans/350\",\"avsyn\":\"Fraunces/400\",\"avsteps\":\"DM Sans/350\",\"avwhy\":\"DM Sans/350\",\"vopen\":\"Fraunces/300\",\"vhero\":\"Fraunces/300\",\"eyebrow\":\"IBM Plex Mono/350\",\"chain\":\"DM Sans/350\"}"
+    },
+    {
+      "name": "board, bubbles, equals sign, duo and moves markup removed; Architects Daughter no longer embedded",
+      "pass": true,
+      "detail": "{\"board\":false,\"fonts\":[\"Fraunces\",\"DM Sans\",\"IBM Plex Mono\",\"IBM Plex Mono\"]}"
+    },
+    {
+      "name": "34: one dominant question, the second smaller, indented, below it",
+      "pass": true,
+      "detail": "{\"bH\":66,\"sH\":33,\"bLeft\":136,\"sLeft\":334,\"sTop\":158,\"bBottom\":149}"
+    },
+    {
+      "name": "37: engineering sits lower and right of nature, tie line + orange node drawn and revealed, 6+6 icons",
+      "pass": false,
+      "detail": "{\"nLeft\":136,\"nBottom\":500,\"eLeft\":632,\"eTop\":571,\"eRight\":1304,\"tie\":2,\"tieDot\":1,\"tieOpacity\":\"0.972\",\"engOpacity\":\"0.972\",\"nIcons\":6,\"eIcons\":6,\"vw\":1440}"
+    },
+    {
+      "name": "39: three steps descend as a stair, revealed, offset right of the statement; statement ≤ 5 lines",
+      "pass": true,
+      "detail": "{\"stepLefts\":[560,583,606],\"olOpacity\":\"1\",\"synLeft\":149,\"olLeft\":560,\"synLines\":4}"
+    },
+    {
+      "name": "41: claim top-left, reason bottom-right, no numbered columns, copy intact",
+      "pass": true,
+      "detail": "{\"hLeft\":149,\"hBottom\":413,\"wLeft\":839,\"wTop\":446,\"wRight\":1275,\"grid\":0,\"text\":true}"
+    },
+    {
+      "name": "ArrowRight",
+      "pass": true
+    },
+    {
+      "name": "ArrowLeft",
+      "pass": true
+    },
+    {
+      "name": "click advances",
+      "pass": true
+    },
+    {
+      "name": "End",
+      "pass": true
+    },
+    {
+      "name": "Home",
+      "pass": true
+    },
+    {
+      "name": "N notes",
+      "pass": true
+    },
+    {
+      "name": "S safe",
+      "pass": true
+    },
+    {
+      "name": "M mode",
+      "pass": true
+    },
+    {
+      "name": "F fullscreen",
+      "pass": true
+    },
+    {
+      "name": "refresh → station 1",
+      "pass": true
+    },
+    {
+      "name": "full-motion nav/AV run captured (34-41)",
+      "pass": true
+    },
+    {
+      "name": "zero console errors/warnings (GL screenshot notice excluded)",
+      "pass": true,
+      "detail": "[]"
+    },
+    {
+      "name": "zero failed requests",
+      "pass": true,
+      "detail": "[]"
+    }
+  ]
+}

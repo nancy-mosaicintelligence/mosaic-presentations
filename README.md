@@ -1,7 +1,7 @@
 # Mosaic — Italian Tech Week keynote
 
 One self-contained `index.html`. No build step, no dependencies, no network.
-Fonts (Hanken Grotesk, IBM Plex Mono, Architects Daughter) and three.js r128
+Fonts (Fraunces, DM Sans, IBM Plex Mono, Architects Daughter — all SIL OFL) and three.js r128
 are embedded in the file, so it renders identically offline and on any host.
 
 ## Run it locally
@@ -12,28 +12,29 @@ Open `index.html` in a browser. (Double-clicking works; a local server is not ne
 
 | Key | Action |
 |---|---|
-| → / Space / click anywhere | next station |
-| ← | previous station |
+| → / ↓ / Space / Enter / Page Down / Tab / click / tap / swipe left / scroll down | next station |
+| ← / ↑ / Page Up / Backspace / Shift+Tab / right-click / swipe right / scroll up | previous station |
+| Home / End | first / last station |
 | `M` | Present ↔ Explore mode |
 | `N` | speaker notes |
 | `S` | safe mode (3D scene off, all text intact) |
-| `F` | fullscreen (also the `Fullscreen · F` button in the bottom bar; `Esc` leaves) |
+| `F` | fullscreen (`Esc` leaves) |
 
-52 stations. Advancing works on a general click anywhere on the screen —
-nothing has to be targeted.
+55 stations. Advancing works on a general click anywhere on the screen —
+nothing has to be targeted — and on a presentation clicker (Page Down / Page
+Up), a trackpad swipe, or the mouse wheel. The bar at the bottom shows the route as a
+vessel with one node per chapter; click or drag along it to go anywhere.
+The Safe / Notes / Present / Fullscreen buttons appear when the mouse moves
+and hide again after a couple of seconds.
+
+If the frame rate is low for the first few seconds the deck switches itself
+to Safe mode (`S` toggles it back). Append `?watchdog=off` to the URL to keep
+that guard out of automated screenshot runs.
 
 The header and the closing lockup use the official Mosaic logo, embedded from
 `presentations/italian-tech-week/assets/brand/`.
 
 ## Deploy
-
-- Production: <https://mosaic-ventowave2026keynote.netlify.app>
-- Source: <https://github.com/nancy-mosaicintelligence/mosaic-itw-keynote> (private)
-
-This repository keeps the keynote source and internal project documentation
-together, but Netlify publishes only the generated `dist/index.html`. The
-deployed presentation is therefore byte-for-byte the same keynote without
-exposing `docs/` or the preserved baseline files as public routes.
 
 ```bash
 cd itw-keynote
@@ -48,11 +49,7 @@ git push -u origin main
 **Vercel** — import the repo, framework preset **Other**, leave build command
 and output directory empty. It serves `index.html` at the root.
 
-**Netlify** — import the repository. `netlify.toml` copies the current
-`index.html` into `dist/` and publishes only that directory.
+**Netlify** — import the repo, leave build command empty, publish directory `.`.
 
-For a verified production deploy with the CLI:
-
-```bash
-npx netlify-cli deploy --build --prod
-```
+Either one can also take the file by drag-and-drop without GitHub:
+Netlify Drop (app.netlify.com/drop) or `vercel deploy` from this folder.
