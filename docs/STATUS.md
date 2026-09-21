@@ -199,6 +199,11 @@ Sixth pass (D-027, D-028): the room recedes for the whole run of text and never 
 - Invite-only access cannot be enforced by the current static host configuration.
 - The motion-reference directory contains missing assets and cannot serve as a production dependency.
 
+## Deployment (2026-09-20)
+
+- Old version: `main` → https://mosaic-ventowave2026keynote.netlify.app (unchanged)
+- New version: branch `v2` → https://mosaic-ventowave2026keynote-v2.netlify.app (manual deploy of the deck only; see D-030 for linking the branch so pushes redeploy)
+
 ## Next recommended work
 
 Walk the whole deck once in a real browser with the projector in mind (fullscreen, `Esc`, the rail under a mouse, the 9 s close). Then either Phase 4E when the fluoroscopy frames arrive, or Phase 5 (the structured content schema) — the 4D review also surfaced that the copy still carries the unsupported claims listed in the design audit, which a copy pass should settle before publication.
