@@ -220,14 +220,19 @@ Step 3 additions:
 
 ## Phase 6 editor MVP
 
-- Authorized editors can select and edit supported text.
-- Typography, alignment, spacing, visibility, asset, and supported animation controls update the draft.
-- Undo and redo cover all supported editing commands.
-- Autosave protects the working draft without creating named versions.
-- Preview hides editor controls and returns without data loss.
-- A named version stores a complete immutable snapshot.
-- Prior versions can be previewed, duplicated, and restored.
-- Restoration retains versions created after the restored version.
+Verified 2026-09-21. Evidence: `apps/web/tests/e2e/editor.test.mjs` (10 browser tests against a temporary store), `packages/presentation-core/test/` (21), D-034. "Authorized" is Phase 7's word: until then every operator is `local`.
+
+| Test | Status | Evidence |
+|---|---|---|
+| Authorized editors can select and edit supported text | PASS | e2e: a pointer press on the stage selects `open.1`, the inspector shows its runs, an edit reaches the draft and the stage live, and survives a reload |
+| Typography, alignment, spacing, visibility, asset, and supported animation controls update the draft | PASS | e2e: visibility (hidden → `display:none` on the stage), a measure override (`12ch`), a refused `url(x)`; motion value saved and an out-of-range one refused; an SVG upload becomes an `svg-paths` asset (viewBox + paths only) and a path-less SVG is refused. Roles, alignment, size, leading, colour and section layout use the same command path (unit-tested grammar) |
+| Undo and redo cover all supported editing commands | PASS | every edit is a path command with a recorded inverse (unit tests: apply/undo/redo, coalescing, removal of absent keys); e2e: ⌘Z / ⇧⌘Z and the buttons walk a copy edit, the draft follows |
+| Autosave protects the working draft without creating named versions | PASS | e2e: "Saved hh:mm:ss" within 700 ms of the last change, the draft on disk matches, the version list stays empty until a version is named; an invalid draft is refused (422 with issues) and the last valid one stands |
+| Preview hides editor controls and returns without data loss | PASS | e2e: `Preview` removes both side panels and sets `?preview=1`; `Back to editor` restores them and the draft is unchanged |
+| A named version stores a complete immutable snapshot | PASS | e2e: a version created with name and note holds the full document; a later edit and a later version leave it untouched |
+| Prior versions can be previewed, duplicated, and restored | PASS | e2e: previewing frames the player with `?source=version:<id>` read-only and returns to the draft; duplicate adds a copy; restore replaces the draft (`basedOn` = the version) |
+| Restoration retains versions created after the restored version | PASS | e2e: after restoring "First cut", "Second cut" (made later) is still listed and still holds its own document |
+| Deck unchanged for the audience | PASS | the bridge is inert unframed: `check-parity` layout signature and 55 stations identical to `snapshots/phase4d/`; 54/54 behavioural checks on `e6c772a5…` |
 
 ## Phase 7 authentication and permissions
 

@@ -25,7 +25,7 @@ function minimal() {
     assets: { "mark": { kind: "svg-paths", use: "t", viewBox: "0 0 10 10", paths: [{ d: "M0 0L10 10Z" }], sources: [{ path: "presentations/x/mark.svg", sha256: "a".repeat(64) }] } },
     sections: [{ key: "open", layout: { variants: ["mid"], width: "min(940px,76%)", until: 0.05 }, elements: [
       { id: "open.1", type: "text", role: ["hero", "strong"], style: { maxWidth: "17ch", margin: "22px 0 0" }, runs: [{ t: "Hello " }, { t: "world", marks: ["em"] }] },
-      { id: "open.2", type: "group", role: ["acts", "rv"], reveal: { p: 0.03 } }
+      { id: "open.2", type: "group", role: ["acts", "rv"], reveal: { p: 0.03 }, hidden: false }
     ] }],
     stations: [{ p: 0, section: "open", camera: "none", chapter: "Open", note: "n" }, { p: 0.03, section: "", camera: "acc", chapter: "Open", note: "n", dur: 2400, black: true }]
   };
@@ -91,10 +91,11 @@ test("bad tokens are rejected", () => {
 test("layout, role, style and animation are allow-listed and range-checked", () => {
   const d = minimal();
   d.sections[0].layout.variants.push("float"); d.sections[0].layout.width = "min(10px,5%) url(x)"; d.sections[0].layout.box = "grid";
-  d.sections[0].elements[0].role.push("btn-primary"); d.sections[0].elements[0].style.background = "red"; d.sections[0].elements[0].style.color = "url(javascript:x)";
+  d.sections[0].elements[0].role.push("btn-primary"); d.sections[0].elements[0].style.background = "red"; d.sections[0].elements[0].style.color = "url(javascript:x)"; d.sections[0].elements[0].style.maxWidth = "url(x)"; d.sections[0].elements[0].style.fontSize = "clamp(22px, 2.6vw, 38px)";
   d.animation.stepEaseOut = 2; d.animation.stepMax = 100; d.animation.bounce = 1;
   const paths = validate(d).errors.map(e => e.path);
-  for (const p of ["sections[0].layout.variants[1]", "sections[0].layout.width", "sections[0].layout.box", "sections[0].elements[0].role[2]", "sections[0].elements[0].style.background", "sections[0].elements[0].style.color", "animation.stepEaseOut", "animation.stepMax", "animation.bounce"]) assert.ok(paths.includes(p), p);
+  assert.ok(!paths.includes("sections[0].elements[0].style.fontSize"), "clamp() is allowed");
+  for (const p of ["sections[0].layout.variants[1]", "sections[0].layout.width", "sections[0].layout.box", "sections[0].elements[0].role[2]", "sections[0].elements[0].style.background", "sections[0].elements[0].style.color", "sections[0].elements[0].style.maxWidth", "animation.stepEaseOut", "animation.stepMax", "animation.bounce"]) assert.ok(paths.includes(p), p);
 });
 
 test("a v1 document migrates to the current version unchanged apart from the version, deterministically", () => {
@@ -106,6 +107,8 @@ test("a v1 document migrates to the current version unchanged apart from the ver
   assert.equal(validate(a).ok, true);
   const v2 = { ...minimal(), schemaVersion: 2 }; delete v2.assets;
   assert.equal(validate(migrate(v2)).ok, true);
+  const v3 = { ...minimal(), schemaVersion: 3 };
+  assert.equal(migrate(v3).schemaVersion, 4); assert.equal(validate(migrate(v3)).ok, true);
 });
 
 test("assets and groups are checked: path grammar, hashes, repo-relative files, no copy on a group", () => {
@@ -125,6 +128,12 @@ test("migrate is deterministic, returns a copy, and refuses future versions", ()
   assert.equal(a.schemaVersion, SCHEMA_VERSION);
   assert.throws(() => migrate({ ...d, schemaVersion: SCHEMA_VERSION + 1 }));
   assert.throws(() => migrate({ ...d, schemaVersion: undefined }));
+});
+
+test("the package's SHA-256 agrees with Node's crypto", async () => {
+  const { sha256Hex } = await import("../src/hash.js");
+  for (const s of ["", "abc", "The quick brown fox jumps over the lazy dog", "é ü 日本語 🚀", "x".repeat(55), "y".repeat(56), "z".repeat(64), "w".repeat(1000), canonicalJSON(minimal())])
+    assert.equal(sha256Hex(s), createHash("sha256").update(s, "utf8").digest("hex"), JSON.stringify(s.slice(0, 20)));
 });
 
 test("contentHash is stable and independent of key order", () => {

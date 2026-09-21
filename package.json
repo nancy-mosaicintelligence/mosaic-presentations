@@ -1,0 +1,13 @@
+{
+  "name": "mosaic-itw-keynote",
+  "private": true,
+  "description": "The Italian Tech Week keynote, its structured content and the editor application.",
+  "scripts": {
+    "dev": "pnpm --filter @mosaic/web dev",
+    "build": "pnpm --filter @mosaic/web build",
+    "test": "pnpm --filter @mosaic/presentation-core test",
+    "test:e2e": "pnpm --filter @mosaic/web test:e2e"
+  },
+  "engines": { "node": ">=20" },
+  "packageManager": "pnpm@11.5.2"
+}

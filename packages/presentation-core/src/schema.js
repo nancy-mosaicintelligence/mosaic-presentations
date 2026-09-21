@@ -1,4 +1,3 @@
-// @ts-check
 /**
  * Presentation schema, version 1.
  *
@@ -9,7 +8,7 @@
  * by renderer id with a closed set of parameters.
  */
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 /** Inline marks a run may carry. The renderer maps each to fixed markup. */
 export const MARKS = Object.freeze(["em", "strong", "i", "hl", "lead", "x2"]);
@@ -45,6 +44,14 @@ export const ROLES = Object.freeze(["hero", "strong", "big", "huge", "lede", "le
 /** Inline style overrides an element may carry, and the shape a value must have (no urls, no expressions, no delimiters). */
 export const STYLE_KEYS = Object.freeze(["maxWidth", "margin", "marginTop", "marginBottom", "textAlign", "fontSize", "lineHeight", "color"]);
 export const SAFE_CSS_RE = /^[A-Za-z0-9#.,%()\- ]+$/;
+/** The only CSS functions an inline override may call; anything else with a "(" — url(), image(), expression() — is refused. */
+export const CSS_FUNCTIONS = Object.freeze(["clamp", "min", "max", "calc", "rgb", "rgba", "hsl", "hsla", "var"]);
+/** @param {unknown} v */
+export function safeCss(v) {
+  if (typeof v !== "string" || !v || v.length > 120 || !SAFE_CSS_RE.test(v)) return false;
+  for (const m of v.matchAll(/([A-Za-z-]*)\(/g)) if (!CSS_FUNCTIONS.includes(m[1].toLowerCase())) return false;
+  return true;
+}
 
 /** Global animation values the renderer reads. Ranges keep an edit from breaking the deck. */
 export const ANIMATION_FIELDS = Object.freeze({
@@ -107,6 +114,7 @@ export const ELEMENT_FIELDS = Object.freeze({
   runs: { type: "runs" },        // text
   items: { type: "array" },      // list, chips, chain, loop-labels: each item is runs (+ reveal)
   reveal: { type: "reveal" },
+  hidden: { type: "boolean" },
   role: { type: { arrayOf: { enum: ROLES } } },
   style: { type: "object" },
   scene: { type: { enum: Object.keys(CUSTOM_SCENES) } },

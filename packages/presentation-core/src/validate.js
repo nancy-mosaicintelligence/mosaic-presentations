@@ -1,8 +1,7 @@
-// @ts-check
 import {
   SCHEMA_VERSION, PRESENTATION_FIELDS, TOKEN_FIELDS, SECTION_FIELDS, ELEMENT_FIELDS,
   RUN_FIELDS, REVEAL_FIELDS, STATION_FIELDS, COPY_FIELDS, CUSTOM_SCENES,
-  COLOR_RE, FONT_STACK_RE, LAYOUT_FIELDS, ANIMATION_FIELDS, STYLE_KEYS, SAFE_CSS_RE, ASSET_FIELDS, ASSET_PATH_FIELDS, ASSET_SOURCE_FIELDS } from "./schema.js";
+  COLOR_RE, FONT_STACK_RE, LAYOUT_FIELDS, ANIMATION_FIELDS, STYLE_KEYS, safeCss, ASSET_FIELDS, ASSET_PATH_FIELDS, ASSET_SOURCE_FIELDS } from "./schema.js";
 
 /**
  * @typedef {{ path: string, message: string }} Issue
@@ -123,7 +122,7 @@ export function validate(doc) {
         if (!isObj(e.style)) err(`${ep}.style`, "must be an object");
         else for (const [k, v] of Object.entries(e.style)) {
           if (!STYLE_KEYS.includes(k)) err(`${ep}.style.${k}`, "style property not allowed");
-          else if (typeof v !== "string" || !SAFE_CSS_RE.test(v) || v.length > 120) err(`${ep}.style.${k}`, "malformed style value");
+          else if (!safeCss(v)) err(`${ep}.style.${k}`, "malformed style value");
         }
       }
     });

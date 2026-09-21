@@ -1,4 +1,3 @@
-// @ts-check
 import { SCHEMA_VERSION } from "./schema.js";
 
 /**
@@ -14,7 +13,9 @@ const STEPS = {
   // 2 → 3: elements gained the `group` type (a container with its own reveal) and the document an optional
   // `assets` map. Optional again, so the upgrade is the version stamp; a v2 document keeps the geometry its
   // renderer embeds.
-  2: (doc) => ({ ...doc, schemaVersion: 3 })
+  2: (doc) => ({ ...doc, schemaVersion: 3 }),
+  // 3 → 4: elements gained an optional `hidden` (the editor's visibility control). Version stamp.
+  3: (doc) => ({ ...doc, schemaVersion: 4 })
 };
 
 /**

@@ -1,4 +1,3 @@
-// @ts-check
 /**
  * Runs → HTML. This is the reference implementation; the keynote embeds an
  * identical copy (its `renderRuns`) because it must stay a single file, and a

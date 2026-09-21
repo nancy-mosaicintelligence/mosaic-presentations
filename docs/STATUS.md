@@ -13,7 +13,8 @@ Last updated: 2026-09-18
 - Phase 4D (the review pass: type system, presenter chrome, vessel rail, reversals, chain, close): complete
 - Phase 4E: blocked on the fluoroscopy frames
 - Phase 5 (structured content): complete for this deck — copy, tokens and stations (D-031); section layout, element roles, inline overrides and the global animation values (D-032); the structural containers' reveals and the two vector assets with source hashes (D-033) — all extracted to a validated document (schema v3) and the deck bound to it with proven parity at every step. Renderer drawings and CSS stay in the deck by design
-- Phases 5 through 9: planned only
+- Phase 6 (editor MVP): complete for the supported scope — `apps/web` (Next.js) frames the unchanged deck through a versioned bridge; select-and-edit copy, roles, overrides, visibility, timing, section layout, motion values, renderer copy and marks; undo/redo, autosave, preview, named versions with restore/duplicate/preview; file-backed store behind the `Store` interface (D-034)
+- Phases 7 through 9: planned only
 
 ## Inspected
 
@@ -219,6 +220,14 @@ Sixth pass (D-027, D-028): the room recedes for the whole run of text and never 
 - Schema v3: `group` elements (containers with their own reveal) and `assets` (`svg-paths` with viewBox, path data and hashed source files); migration 2→3 = version stamp; 15 unit tests, one of which checks the document's assets against the brand files on disk
 - `presentation.json`: 11 groups (10 with reveals), 2 assets, 70 elements, 68 bindings (content `c7fc141655dc`); the lockup and event-mark geometry left the script for the document (`applyContent()` and the `LOGO_*` constants read it)
 - Parity: re-extraction identical; layout signature (now including both marks) and all 55 stations identical to `snapshots/phase4d/`; `check-binding` covers group reveals and assets; the full behavioural verification (54 checks) passes on the step-3 deck (`890e30bc…`, 1,079,487 bytes); `node --test` 15/15
+
+## Phase 6 (2026-09-21)
+
+- `apps/web/` — Next.js 15 + TypeScript, pnpm workspace; `pnpm dev` then http://localhost:3000 → the editor. Data in `apps/web/data/` (ignored); `ITW_DATA_DIR` points it elsewhere
+- The deck: editor bridge v1 (inert unframed) and schema v4 `hidden`; `1,085,778` bytes, `e6c772a5…`; parity and 54/54 behavioural checks re-proven
+- `packages/presentation-core`: `history.js` (commands, undo/redo, coalescing), self-contained SHA-256, `safeCss()`; 21 unit tests
+- `apps/web/tests/e2e/editor.test.mjs`: 10 browser tests, all passing (`pnpm test:e2e` with `PW_EXEC`/`PW_MODULES` set)
+- Not in the MVP: adding/removing stations or elements, raster media, authentication (Phase 7)
 
 ## Deployment (2026-09-20)
 

@@ -53,3 +53,14 @@ and output directory empty. It serves `index.html` at the root.
 
 Either one can also take the file by drag-and-drop without GitHub:
 Netlify Drop (app.netlify.com/drop) or `vercel deploy` from this folder.
+
+## The editor
+
+`apps/web` is the editor and player application (Next.js, TypeScript). It frames the deck and edits the structured document behind it — copy, roles, overrides, visibility, timing, layout, motion, renderer copy, marks — with undo/redo, autosave, preview and named versions.
+
+```bash
+pnpm install
+pnpm dev
+```
+
+Then open http://localhost:3000. Drafts, versions and uploads live in `apps/web/data/` (not committed). Unit tests: `pnpm test`; browser tests: `pnpm test:e2e` (needs `PW_EXEC` and `PW_MODULES`, see `tools/README.md`). The deck at the root of the repository is unchanged for an audience: the bridge the editor uses is inert unless the deck is framed by the editor on the same origin.

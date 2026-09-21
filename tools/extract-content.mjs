@@ -137,7 +137,7 @@ const dom = await page.evaluate(() => {
     if (mv) { if (mv.style.width) layout.width = mv.style.width.replace(/\s+/g, ""); const box = [...mv.classList].find(c => c !== "mv"); if (box) layout.box = box; }
     const bind = (el, id) => { const { tag, nth } = tagNth(sec, el); bindings.push({ id, section: key, tag, nth }); };
     const add = (el, type, extra) => { const id = key + "." + (++n); const e = { id, type, ...extra }; const rv = reveal(el); if (rv && type !== "chips") e.reveal = rv;
-      const role = [...el.classList].filter(Boolean); if (role.length) e.role = role; const st = styleOf(el); if (st) e.style = st;
+      const role = [...el.classList].filter(Boolean); if (role.length) e.role = role; const st = styleOf(el); if (st) e.style = st; if (el.style.display === "none") e.hidden = true;
       elements.push(e); bind(el, id); return e; };
     // document order over the copy-bearing and scene elements
     const walker = document.createTreeWalker(sec, NodeFilter.SHOW_ELEMENT);
@@ -197,7 +197,7 @@ await browser.close();
 const bindingsOut = dom.bindings.filter(b => !(b.section === "open" && !dom.sections[0].elements.some(e => e.id === b.id)));
 
 const doc = {
-  schemaVersion: 3,
+  schemaVersion: 4,
   id: "italian-tech-week-2026",
   title: "The Room and the Vessel",
   renderer: "itw-keynote",

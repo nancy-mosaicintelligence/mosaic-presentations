@@ -13,3 +13,10 @@ coverage/
 !.env.example
 # the per-viewport comparison screenshot sets stay local (182 MB); their READMEs and verification reports are committed
 presentations/italian-tech-week/comparisons/**/*.png
+# the local file store behind the editor (drafts, versions, uploads) — never source
+apps/web/data/
+.next/
+next-env.d.ts
+.next-e2e/
+# desktop-app launch config, local
+.claude/
