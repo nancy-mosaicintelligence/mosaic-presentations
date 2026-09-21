@@ -1,0 +1,23 @@
+import "server-only";
+import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { authConfig } from "./config";
+
+/** The user-scoped client: the anon key plus the session from the cookies, so row-level security applies to every query. */
+export async function supabaseServer(): Promise<SupabaseClient> {
+  const store = await cookies();
+  return createServerClient(authConfig.url, authConfig.anonKey, {
+    cookies: {
+      getAll: () => store.getAll(),
+      setAll: (all) => { try { for (const { name, value, options } of all) store.set(name, value, options); } catch { /* a server component cannot set cookies; the middleware refreshes them */ }
+      }
+    }
+  });
+}
+
+/** The service-role client: server only, used for the sign-in bootstrap and invitation lookup, never for user data paths. */
+export function supabaseAdmin(): SupabaseClient {
+  if (!authConfig.serviceRoleKey) throw new Error("SUPABASE_SERVICE_ROLE_KEY is not set");
+  return createClient(authConfig.url, authConfig.serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
+}

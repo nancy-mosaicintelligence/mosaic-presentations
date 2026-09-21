@@ -12,7 +12,7 @@ import { VersionsPanel, type VersionMeta } from "./Versions";
 type SaveState = { kind: "idle" } | { kind: "dirty" } | { kind: "saving" } | { kind: "saved"; at: string } | { kind: "error"; message: string; issues?: { path: string; message: string }[] };
 type Tab = "element" | "motion" | "copy" | "assets" | "versions";
 
-export function Editor({ id, title }: { id: string; title: string }) {
+export function Editor({ id, title, role, email }: { id: string; title: string; role: "owner" | "editor" | "viewer"; email: string }) {
   const api = `/api/presentations/${id}`;
   const history = useRef(createHistory(null as Doc | null)).current;
   const [doc, setDoc] = useState<Doc | null>(null);
@@ -25,6 +25,7 @@ export function Editor({ id, title }: { id: string; title: string }) {
   const [preview, setPreview] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("preview") === "1");
   const [previewVersion, setPreviewVersion] = useState<VersionMeta | null>(null);
   const [versions, setVersions] = useState<VersionMeta[]>([]);
+  const [published, setPublished] = useState<{ versionId: string; publishedAt: string; name: string } | null>(null);
   const [playerKey, setPlayerKey] = useState(0);
   const [ready, setReady] = useState(false);
   const [notes, setNotes] = useState(false);
@@ -62,7 +63,10 @@ export function Editor({ id, title }: { id: string; title: string }) {
     if (!r.ok) { setSave({ kind: "error", message: d.error }); return; }
     history.reset(d.document); setDoc(d.document); setDraftBasedOn(d.basedOn); setHist({ undo: false, redo: false }); setSave({ kind: "saved", at: d.updatedAt });
   }, [api, history]);
-  const loadVersions = useCallback(async () => { const r = await fetch(`${api}/versions`, { cache: "no-store" }); if (r.ok) setVersions(await r.json()); }, [api]);
+  const loadVersions = useCallback(async () => {
+    const [r, p] = await Promise.all([fetch(`${api}/versions`, { cache: "no-store" }), fetch(`${api}/publication`, { cache: "no-store" })]);
+    if (r.ok) setVersions(await r.json()); if (p.ok) setPublished(await p.json());
+  }, [api]);
   useEffect(() => { loadDraft(); loadVersions(); }, [loadDraft, loadVersions]);
 
   const persist = useCallback(async () => {
@@ -83,8 +87,9 @@ export function Editor({ id, title }: { id: string; title: string }) {
     if (path && needsReload(path)) setPendingReload(true); else if (ready) bridge.send({ type: "itw:load", doc: next });
   }, [history, scheduleSave, ready, bridge]);
   const apply = useCallback((c: Command) => { const next = history.apply(c) as Doc; afterChange(next, c.path); }, [history, afterChange]);
-  const undo = useCallback(() => { if (!history.canUndo) return; afterChange(history.undo() as Doc); setPendingReload(true); }, [history, afterChange]);
-  const redo = useCallback(() => { if (!history.canRedo) return; afterChange(history.redo() as Doc); setPendingReload(true); }, [history, afterChange]);
+  // undo and redo re-apply live unless the step they walk touched what the stage reads at start-up
+  const undo = useCallback(() => { const e = history.peekUndo(); if (!e) return; afterChange(history.undo() as Doc, e.path); }, [history, afterChange]);
+  const redo = useCallback(() => { const e = history.peekRedo(); if (!e) return; afterChange(history.redo() as Doc, e.path); }, [history, afterChange]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey; if (!mod || e.key.toLowerCase() !== "z") return;
@@ -107,6 +112,12 @@ export function Editor({ id, title }: { id: string; title: string }) {
     setPreviewVersion(null); await loadDraft(); reloadPlayer();
   };
   const previewVersionToggle = (v: VersionMeta | null) => { setPreviewVersion(v); setSelected(null); reloadPlayer(); };
+  const publish = async (v: VersionMeta) => {
+    if (!window.confirm(`Publish “${v.name}”? Everyone with access will see it at /p/${id}.`)) return;
+    const r = await fetch(`${api}/publication`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ versionId: v.id }) });
+    if (!r.ok) { setSave({ kind: "error", message: (await r.json()).error }); return; }
+    await loadVersions();
+  };
 
   const hash = useMemo(() => (doc ? contentHash(doc) : ""), [doc]);
   const issues = useMemo(() => (doc ? validate(doc).errors : []), [doc]);
@@ -128,6 +139,8 @@ export function Editor({ id, title }: { id: string; title: string }) {
         {previewVersion && <span className="save">Previewing “{previewVersion.name}” — read only</span>}
       </div>
       <div className="right">
+        {role === "owner" && !inPreview && <a className="btn ghost" href={`/presentations/${id}/people`}>People</a>}
+        {!inPreview && <form method="post" action="/auth/sign-out" className="inline"><button type="submit" className="ghost" title={email}>Sign out</button></form>}
         <button type="button" className="ghost" onClick={() => { bridge.send({ type: "itw:notes", on: !notes }); setNotes(n => !n); }}>{notes ? "Hide notes" : "Notes"}</button>
         <button type="button" className="ghost" onClick={() => bridge.send({ type: "itw:fullscreen", on: true })}>Fullscreen</button>
         {previewVersion
@@ -154,7 +167,7 @@ export function Editor({ id, title }: { id: string; title: string }) {
       {tab === "motion" && <AnimationPanel doc={doc} apply={apply} />}
       {tab === "copy" && <CopyPanel doc={doc} apply={apply} />}
       {tab === "assets" && <AssetsPanel doc={doc} apply={apply} presentationId={id} />}
-      {tab === "versions" && <VersionsPanel versions={versions} currentHash={hash} draftBasedOn={draftBasedOn} previewing={null} onPreview={previewVersionToggle} onDuplicate={duplicate} onRestore={restore} />}
+      {tab === "versions" && <VersionsPanel versions={versions} currentHash={hash} draftBasedOn={draftBasedOn} previewing={null} onPreview={previewVersionToggle} onDuplicate={duplicate} onRestore={restore} published={published} onPublish={role === "owner" ? publish : undefined} />}
     </aside>}
   </div>;
 }

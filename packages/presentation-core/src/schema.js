@@ -8,7 +8,7 @@
  * by renderer id with a closed set of parameters.
  */
 
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 /** Inline marks a run may carry. The renderer maps each to fixed markup. */
 export const MARKS = Object.freeze(["em", "strong", "i", "hl", "lead", "x2"]);
@@ -175,6 +175,7 @@ export const ASSET_FIELDS = Object.freeze({
 });
 export const ASSET_PATH_FIELDS = Object.freeze({ d: { type: { re: /^[MmZzLlHhVvCcSsQqTtAa0-9,.\-+eE \n]+$/ }, req: true } });
 export const ASSET_SOURCE_FIELDS = Object.freeze({
-  path: { type: { re: /^(?!\/)(?!.*(^|\/)\.\.(\/|$))[A-Za-z0-9_\-./]+\.svg$/ }, req: true },
+  // a file in the repository (relative, no "..") or an object in the application's private storage
+  path: { type: { re: /^(?!\/)(?!.*(^|\/)\.\.(\/|$))(storage:\/\/[a-z0-9-]+\/)?[A-Za-z0-9_\-./]+\.svg$/ }, req: true },
   sha256: { type: { re: /^[0-9a-f]{64}$/ }, req: true }
 });

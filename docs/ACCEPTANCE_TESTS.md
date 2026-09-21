@@ -236,15 +236,19 @@ Verified 2026-09-21. Evidence: `apps/web/tests/e2e/editor.test.mjs` (10 browser 
 
 ## Phase 7 authentication and permissions
 
-- Google sign-in accepts the approved company domain path.
-- Domain membership alone does not grant editor access.
-- Owners can assign and revoke roles.
-- Viewers cannot enter editor routes.
-- Viewers and unauthenticated users receive denied responses from write APIs.
-- Private draft, history, administrative, and asset requests require authorization.
-- External invitations are individually revocable.
-- Shared access codes, if enabled, are hashed, scoped, expiring, and rotatable.
-- Security boundaries have browser-based end-to-end coverage.
+Verified 2026-09-21 against the local Supabase stack. Evidence: `apps/web/tests/e2e/access.test.mjs` (7) and `editor.test.mjs` (10, signed in, database store), `supabase/migrations/20260921000000_init.sql`, D-035. Google itself is exercised on the hosted project (Phase 9); locally a password sign-in through the same admission stands in.
+
+| Test | Status | Evidence |
+|---|---|---|
+| Google sign-in accepts the approved company domain path | PASS (admission) / PENDING (Google on the hosted project) | admission: a `mosaicintelligence.xyz` account passes; the sign-in page requests Google with `hd=mosaicintelligence.xyz`; `/auth/callback` exchanges the code and applies the same `admitted()` decision the tests exercise |
+| Domain membership alone does not grant editor access | PASS | e2e: `colleague@mosaicintelligence.xyz` signs in, is redirected to `/no-access` from the editor, gets 403 from the draft, versions, members and publication APIs and from `/p/` |
+| Owners can assign and revoke roles | PASS | e2e: the bootstrapped owner lists members, cannot demote or remove the last owner (409), invites an editor and a viewer, changes and removes memberships; the people page is owner-only |
+| Viewers cannot enter editor routes | PASS | e2e: the viewer is redirected from `/presentations/…/edit` to `/p/…`; the player's draft and version sources answer 403 |
+| Viewers and unauthenticated users receive denied responses from write APIs | PASS | e2e: signed out → 401 on every API and `PUT draft`; viewer → 403 on draft, versions, a version, members |
+| Private draft, history, administrative, and asset requests require authorization | PASS | route gates plus RLS: drafts/versions readable by editors and owners only, publication by members, members/invitations/audit by owners; storage bucket policies by role; the viewer cannot read a version except the published one |
+| External invitations are individually revocable | PASS | e2e: a revoked invitation's link reports "revoked"; a removed viewer loses `/p/` at once; both audited |
+| Shared access codes, if enabled, are hashed, scoped, expiring, and rotatable | NOT BUILT | optional in the plan; not enabled (D-035 choice 3) |
+| Security boundaries have browser-based end-to-end coverage | PASS | 17 browser tests across signed out, stranger, colleague, owner, editor, viewer, invitation acceptance with the wrong and the right account, single use, publication before/after, revocation, deep links |
 
 ## Phase 8 build and deployment readiness
 

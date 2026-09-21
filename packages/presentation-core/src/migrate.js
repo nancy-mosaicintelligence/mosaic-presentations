@@ -15,7 +15,10 @@ const STEPS = {
   // renderer embeds.
   2: (doc) => ({ ...doc, schemaVersion: 3 }),
   // 3 → 4: elements gained an optional `hidden` (the editor's visibility control). Version stamp.
-  3: (doc) => ({ ...doc, schemaVersion: 4 })
+  3: (doc) => ({ ...doc, schemaVersion: 4 }),
+  // 4 → 5: asset sources may also be objects in the application's private storage (`storage://bucket/path.svg`).
+  // A relaxation of the grammar only; every v4 document is a v5 document.
+  4: (doc) => ({ ...doc, schemaVersion: 5 })
 };
 
 /**

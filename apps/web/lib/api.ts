@@ -7,5 +7,3 @@ export function fail(e: unknown) {
   console.error(e);
   return NextResponse.json({ error: "internal error" }, { status: 500, headers: { "Cache-Control": "no-store" } });
 }
-/** The acting user. Phase 7 replaces this with the authenticated session; until then every write is attributed to the local operator. */
-export function actor(): string { return "local"; }

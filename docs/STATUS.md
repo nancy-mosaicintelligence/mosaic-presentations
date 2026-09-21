@@ -14,7 +14,8 @@ Last updated: 2026-09-18
 - Phase 4E: blocked on the fluoroscopy frames
 - Phase 5 (structured content): complete for this deck — copy, tokens and stations (D-031); section layout, element roles, inline overrides and the global animation values (D-032); the structural containers' reveals and the two vector assets with source hashes (D-033) — all extracted to a validated document (schema v3) and the deck bound to it with proven parity at every step. Renderer drawings and CSS stay in the deck by design
 - Phase 6 (editor MVP): complete for the supported scope — `apps/web` (Next.js) frames the unchanged deck through a versioned bridge; select-and-edit copy, roles, overrides, visibility, timing, section layout, motion values, renderer copy and marks; undo/redo, autosave, preview, named versions with restore/duplicate/preview; file-backed store behind the `Store` interface (D-034)
-- Phases 7 through 9: planned only
+- Phase 7 (auth, roles, invitations, publication): complete against the local Supabase stack — admission rules, owner/editor/viewer enforced in routes and RLS, named invitations, publication with `/p/[slug]` and station deep links, private uploads; Google itself awaits the hosted project (D-035)
+- Phases 8 and 9: planned only
 
 ## Inspected
 
@@ -228,6 +229,14 @@ Sixth pass (D-027, D-028): the room recedes for the whole run of text and never 
 - `packages/presentation-core`: `history.js` (commands, undo/redo, coalescing), self-contained SHA-256, `safeCss()`; 21 unit tests
 - `apps/web/tests/e2e/editor.test.mjs`: 10 browser tests, all passing (`pnpm test:e2e` with `PW_EXEC`/`PW_MODULES` set)
 - Not in the MVP: adding/removing stations or elements, raster media, authentication (Phase 7)
+
+## Phase 7 (2026-09-21)
+
+- `supabase/` — config and the initial migration (tables, trigger, `has_role()`, RLS, private `assets` bucket); local stack via `supabase start` (Docker/colima)
+- `apps/web`: middleware session gate; `lib/auth/` (session, admission, bootstrap, roles, members, invitations); `lib/store-supabase.ts` behind the same `Store` interface; sign-in, callback, sign-out, no-access, `/invite/[token]`, `/p/[slug]`, people page; publication API; the editor knows the role
+- The deck: `#s=<n>` deep link (read, clamped, never written); document at schema v5 (`cb9da1dbf67d`); `2fcec3ce…`, 1086036 bytes; parity re-proven, 54/54 behavioural checks
+- Tests: 21 unit; 17 browser (access 7, editor 10) against the local stack
+- Pending for the hosted project: create it, apply the migration, configure Google (client id/secret in Google Cloud and the Supabase dashboard), set the environment; then Phase 8/9 verify Google sign-in on the deployed system
 
 ## Deployment (2026-09-20)
 

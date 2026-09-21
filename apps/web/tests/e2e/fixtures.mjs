@@ -1,0 +1,55 @@
+// Shared fixtures for the browser tests: the local Supabase stack's service role creates the test accounts
+// and clears the presentation's data so every run starts from the committed document. Local keys only.
+import { createClient } from "@supabase/supabase-js";
+
+export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "http://127.0.0.1:54321";
+export const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0";
+export const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU";
+export const PASSWORD = "itw-test-password-1";
+export const USERS = {
+  owner: "owner@mosaicintelligence.xyz",      // listed in OWNER_EMAILS: becomes owner on first sign-in
+  editor: "editor@mosaicintelligence.xyz",    // company account, granted editor by the owner in the tests
+  colleague: "colleague@mosaicintelligence.xyz", // company account with no role: may sign in, may not edit or view
+  guest: "guest@example.com",                 // external, invited as viewer in the tests
+  stranger: "stranger@example.com"            // external, never invited: refused at sign-in
+};
+export const admin = () => createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+
+/** Ensure every test account exists (confirmed, password set). */
+export async function ensureUsers() {
+  const sb = admin();
+  const { data } = await sb.auth.admin.listUsers({ perPage: 1000 });
+  const byEmail = new Map((data?.users || []).map(u => [u.email, u]));
+  const out = {};
+  for (const [key, email] of Object.entries(USERS)) {
+    let u = byEmail.get(email);
+    if (!u) { const r = await sb.auth.admin.createUser({ email, password: PASSWORD, email_confirm: true, user_metadata: { full_name: key[0].toUpperCase() + key.slice(1) } }); if (r.error) throw r.error; u = r.data.user; }
+    out[key] = { id: u.id, email };
+  }
+  return out;
+}
+
+/** Delete the presentation row (everything under it cascades: memberships, invitations, draft, versions, publication, assets, audit); the app recreates it on first access. */
+export async function resetPresentation(slug = "italian-tech-week") {
+  const sb = admin();
+  const { data: p } = await sb.from("presentations").select("id").eq("slug", slug).maybeSingle();
+  if (!p) return;
+  const { error } = await sb.storage.from("assets").list(p.id); if (!error) { const { data: files } = await sb.storage.from("assets").list(p.id); if (files?.length) await sb.storage.from("assets").remove(files.map(f => `${p.id}/${f.name}`)); }
+  const { error: e2 } = await sb.from("presentations").delete().eq("id", p.id); if (e2) throw e2;
+}
+
+/** Sign a test account into a Playwright page through the app's own admission path. */
+export async function signIn(page, base, email) {
+  const r = await page.request.post(base + "/auth/test-sign-in", { data: { email, password: PASSWORD } });
+  return { status: r.status(), body: await r.json().catch(() => ({})) };
+}
+export async function signOut(page, base) { await page.request.post(base + "/auth/sign-out", { maxRedirects: 0 }); }
+
+/** Start the app on `port` with the local stack and its own build directory; resolve when the API answers. */
+export async function startApp(spawn, appDir, port, extraEnv = {}) {
+  const server = spawn(appDir + "/node_modules/.bin/next", ["dev", "-p", String(port)], { cwd: appDir, env: { ...process.env, NEXT_PUBLIC_SUPABASE_URL: SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY: ANON_KEY, SUPABASE_SERVICE_ROLE_KEY: SERVICE_KEY, COMPANY_DOMAIN: "mosaicintelligence.xyz", OWNER_EMAILS: USERS.owner, ITW_STORE: "supabase", ITW_TEST_AUTH: "1", NEXT_DIST_DIR: ".next-e2e", NEXT_TELEMETRY_DISABLED: "1", ...extraEnv }, stdio: ["ignore", "pipe", "pipe"] });
+  server.stderr.on("data", d => { const s = String(d); if (/error/i.test(s) && !/Fast Refresh/.test(s)) process.stderr.write(s); });
+  const t0 = Date.now();
+  while (true) { try { const r = await fetch(`http://localhost:${port}/sign-in`); if (r.ok) break; } catch {} if (Date.now() - t0 > 90000) throw new Error("dev server did not start"); await new Promise(r => setTimeout(r, 500)); }
+  return server;
+}

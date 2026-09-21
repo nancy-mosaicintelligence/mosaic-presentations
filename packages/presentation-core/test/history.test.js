@@ -22,7 +22,9 @@ test("apply, undo and redo walk the same path; a new command clears the redo sta
   h.apply({ path: ["a", "b", 0], value: 5 });
   assert.equal(h.present.k, "w"); assert.equal(h.present.a.b[0], 5);
   assert.deepEqual(h.undoLabels, ["", "rename"]);
+  assert.deepEqual(h.peekUndo(), { path: ["a", "b", 0], label: undefined });
   h.undo(); assert.equal(h.present.a.b[0], 1); assert.equal(h.canRedo, true);
+  assert.deepEqual(h.peekRedo(), { path: ["a", "b", 0], label: undefined });
   h.undo(); assert.equal(h.present.k, "v"); assert.equal(h.canUndo, false);
   h.redo(); assert.equal(h.present.k, "w");
   h.apply({ path: ["k"], value: "z" });

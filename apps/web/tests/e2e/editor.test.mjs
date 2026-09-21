@@ -10,12 +10,15 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
+import { startApp, ensureUsers, resetPresentation, signIn, USERS } from "./fixtures.mjs";
 const { chromium } = createRequire((process.env.PW_MODULES || process.env.NODE_PATH || "") + "/")("playwright");
 
 const here = dirname(fileURLToPath(import.meta.url)), APP = join(here, "..", "..");
 const PORT = 3123, BASE = `http://localhost:${PORT}`, ID = "italian-tech-week";
 let server, browser, page, data; const answers = [];
-const api = async (path, init) => { const r = await fetch(BASE + "/api/presentations/" + ID + path, init); return { status: r.status, body: await r.json() }; };
+// API calls go through the signed-in page's context so they carry the session cookies
+const api = async (path, init = {}) => { const r = await page.request.fetch(BASE + "/api/presentations/" + ID + path, { method: init.method || "GET", headers: init.headers, data: init.body }); return { status: r.status(), body: await r.json().catch(() => ({})) }; };
+const get = async (path) => { const r = await page.request.get(BASE + path); return { status: r.status(), text: await r.text() }; };
 const json = (o) => ({ method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(o) });
 const frame = () => page.frame({ url: /\/player\// });
 const savedSoon = async () => { await page.waitForFunction(() => /^Saved /.test(document.querySelector(".bar .save")?.textContent || ""), null, { timeout: 15000 }); };
@@ -32,25 +35,25 @@ const stageReady = async () => { await page.waitForSelector(".loading", { state:
 
 before(async () => {
   data = mkdtempSync(join(tmpdir(), "itw-editor-"));
-  server = spawn(join(APP, "node_modules/.bin/next"), ["dev", "-p", String(PORT)], { cwd: APP, env: { ...process.env, ITW_DATA_DIR: data, NEXT_DIST_DIR: ".next-e2e", NEXT_TELEMETRY_DISABLED: "1" }, stdio: ["ignore", "pipe", "pipe"] });
-  server.stderr.on("data", d => { const s = String(d); if (/error/i.test(s)) process.stderr.write(s); });
-  const t0 = Date.now();
-  while (true) { try { const r = await fetch(BASE + "/api/presentations/" + ID + "/draft"); if (r.ok) break; } catch {} if (Date.now() - t0 > 90000) throw new Error("dev server did not start"); await new Promise(r => setTimeout(r, 500)); }
+  server = await startApp(spawn, APP, PORT, { ITW_DATA_DIR: data });
   browser = await chromium.launch({ executablePath: process.env.PW_EXEC });
   page = await (await browser.newContext({ viewport: { width: 1600, height: 900 } })).newPage();
   page.on("pageerror", e => console.error("pageerror:", e.message));
   page.on("dialog", d => d.accept(answers.shift() ?? ""));
-}, { timeout: 120000 });
+  // a clean presentation; the owner signs in (bootstrapped from OWNER_EMAILS) and works as the editor here
+  await ensureUsers(); await resetPresentation();
+  const r = await signIn(page, BASE, USERS.owner); assert.equal(r.status, 200, JSON.stringify(r.body));
+}, { timeout: 180000 });
 after(async () => { await browser?.close(); server?.kill(); rmSync(data, { recursive: true, force: true }); });
 
 test("the root sends the operator to the editor", async () => {
-  const r = await fetch(BASE + "/", { redirect: "manual" });
-  assert.equal(r.status, 307); assert.equal(r.headers.get("location"), "/presentations/" + ID + "/edit");
+  const r = await page.request.get(BASE + "/", { maxRedirects: 0 });
+  assert.equal(r.status(), 307); assert.equal(r.headers()["location"], "/presentations/" + ID + "/edit");
 });
 
 test("the draft is seeded from the committed document and an invalid draft never replaces it", async () => {
   const d = await api("/draft");
-  assert.equal(d.status, 200); assert.equal(d.body.document.schemaVersion, 4); assert.equal(d.body.document.stations.length, 55); assert.equal(d.body.basedOn, "source");
+  assert.equal(d.status, 200); assert.equal(d.body.document.schemaVersion, 5); assert.equal(d.body.document.stations.length, 55); assert.equal(d.body.basedOn, "source");
   const bad = structuredClone(d.body.document); bad.sections[0].elements[0].runs = [{ t: "<script>" }]; bad.sections[0].elements[0].onclick = "x";
   const r = await api("/draft", json({ document: bad }));
   assert.equal(r.status, 422); assert.ok(r.body.issues.some(i => i.path === "sections[0].elements[0].runs[0].t")); assert.ok(r.body.issues.some(i => i.path === "sections[0].elements[0].onclick"));
@@ -82,6 +85,7 @@ test("undo and redo walk the edit; the stage follows", async () => {
 }, { timeout: 60000 });
 
 test("visibility, roles and a style override reach the draft and the stage", async () => {
+  await stageReady();
   await page.locator('.row:has(.lab:text-is("Visible")) input[type=checkbox]').uncheck(); await savedSoon();
   assert.equal((await api("/draft")).body.document.sections[0].elements[0].hidden, true);
   assert.equal(await frame().locator('[data-id="open.1"]').evaluate(e => getComputedStyle(e).display), "none");
@@ -96,6 +100,7 @@ test("visibility, roles and a style override reach the draft and the stage", asy
 }, { timeout: 60000 });
 
 test("motion values are range-checked and saved", async () => {
+  await stageReady();
   await page.click('.tabs button:has-text("Motion")');
   const spacing = page.locator('.row:has(.lab:has-text("Reveal spacing")) input');
   await spacing.fill("0.9"); await savedSoon();
@@ -142,20 +147,22 @@ test("preview hides the editor and returns without losing work", async () => {
 }, { timeout: 60000 });
 
 test("the player route embeds the requested document and refuses others", async () => {
-  const draft = await (await fetch(BASE + "/player/" + ID)).text(); assert.ok(draft.includes("Hello from the editor"));
-  const committed = await (await fetch(BASE + "/player/" + ID + "?source=committed")).text(); assert.ok(!committed.includes("Hello from the editor"));
+  assert.ok((await get("/player/" + ID)).text.includes("Hello from the editor"));
+  assert.ok(!(await get("/player/" + ID + "?source=committed")).text.includes("Hello from the editor"));
   const vid = (await api("/versions")).body.find(x => x.name === "Second cut").id;
-  const version = await (await fetch(BASE + "/player/" + ID + "?source=version:" + vid)).text(); assert.ok(version.includes("After the version"));
-  assert.equal((await fetch(BASE + "/player/" + ID + "?source=version:nope")).status, 404);
-  assert.equal((await fetch(BASE + "/player/nope")).status, 404);
-  assert.equal((await fetch(BASE + "/player/" + ID + "?source=../etc")).status, 400);
+  assert.ok((await get("/player/" + ID + "?source=version:" + vid)).text.includes("After the version"));
+  assert.equal((await get("/player/" + ID + "?source=version:nope")).status, 404);
+  assert.equal((await get("/player/nope")).status, 404);
+  assert.equal((await get("/player/" + ID + "?source=../etc")).status, 400);
+  assert.equal((await get("/player/" + ID + "?source=published")).status, 404, "nothing is published yet");
 });
 
-test("an SVG upload becomes an svg-paths asset; anything but paths is refused", async () => {
-  const good = new Blob(['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><script>alert(1)</script><path d="M0 0 L10 10 Z"/><path d="M5 5 h2"/></svg>'], { type: "image/svg+xml" });
-  const fd = new FormData(); fd.append("file", good, "mark.svg");
-  const r = await api("/assets", { method: "POST", body: fd });
-  assert.equal(r.status, 201); assert.equal(r.body.kind, "svg-paths"); assert.equal(r.body.viewBox, "0 0 10 10"); assert.equal(r.body.paths.length, 2); assert.match(r.body.sources[0].sha256, /^[0-9a-f]{64}$/);
-  const none = new FormData(); none.append("file", new Blob(['<svg viewBox="0 0 1 1"><rect/></svg>'], { type: "image/svg+xml" }), "x.svg");
-  assert.equal((await api("/assets", { method: "POST", body: none })).status, 422);
+test("an SVG upload becomes an svg-paths asset stored privately; anything but paths is refused", async () => {
+  const good = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><script>alert(1)</script><path d="M0 0 L10 10 Z"/><path d="M5 5 h2"/></svg>';
+  const r = await page.request.post(BASE + "/api/presentations/" + ID + "/assets", { multipart: { file: { name: "mark.svg", mimeType: "image/svg+xml", buffer: Buffer.from(good) } } });
+  const body = await r.json();
+  assert.equal(r.status(), 201, JSON.stringify(body)); assert.equal(body.kind, "svg-paths"); assert.equal(body.viewBox, "0 0 10 10"); assert.equal(body.paths.length, 2);
+  assert.match(body.sources[0].sha256, /^[0-9a-f]{64}$/); assert.match(body.sources[0].path, /^storage:\/\/assets\/[0-9a-f-]{36}\/[0-9a-f]{64}\.svg$/);
+  const none = await page.request.post(BASE + "/api/presentations/" + ID + "/assets", { multipart: { file: { name: "x.svg", mimeType: "image/svg+xml", buffer: Buffer.from('<svg viewBox="0 0 1 1"><rect/></svg>') } } });
+  assert.equal(none.status(), 422);
 });

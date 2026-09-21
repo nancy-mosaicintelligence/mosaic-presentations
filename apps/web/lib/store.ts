@@ -125,5 +125,5 @@ export class FileStore implements Store {
   }
 }
 
-let store: Store | null = null;
-export function getStore(): Store { return store ?? (store = new FileStore()); }
+let fileStore: FileStore | null = null;
+export function getFileStore(): FileStore { return fileStore ?? (fileStore = new FileStore()); }

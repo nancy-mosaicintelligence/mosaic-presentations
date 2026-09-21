@@ -81,7 +81,11 @@ export function createHistory(initial, opts = {}) {
     /** Replace the document without a history entry (a load, a restore); clears both stacks. @param {any} doc */
     reset(doc) { present = doc; past = []; future = []; },
     /** Labels of the steps that undo would walk, newest first. */
-    get undoLabels() { return past.map(e => e.label || "").reverse(); }
+    get undoLabels() { return past.map(e => e.label || "").reverse(); },
+    /** The step undo would take next (path and label), or null. */
+    peekUndo() { const e = past[past.length - 1]; return e ? { path: e.path, label: e.label } : null; },
+    /** The step redo would take next, or null. */
+    peekRedo() { const e = future[future.length - 1]; return e ? { path: e.path, label: e.label } : null; }
   };
 }
 

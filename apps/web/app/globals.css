@@ -59,5 +59,24 @@ code { font: 12px/1.4 "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, mono
 .kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 6px 0 10px; font-size: 12px; } .kv dt { color: var(--ink-3); } .kv dd { margin: 0; overflow-wrap: anywhere; } .kv .src { display: contents; }
 .issues { margin: 8px 12px 0; padding: 8px 10px; border: 1px solid rgba(252,100,82,.4); border-radius: 6px; font-size: 12px; color: var(--ink-2); }
 .versions { list-style: none; margin: 0; padding: 0; } .versions li { padding: 12px 0; border-bottom: 1px solid var(--hair); } .versions li.previewing { box-shadow: inset 2px 0 0 var(--signal); padding-left: 10px; }
-.versions .vh { display: flex; gap: 8px; align-items: center; } .tag { font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--hair-2); color: var(--ink-2); }
+.versions .vh { display: flex; gap: 8px; align-items: center; } .tag { font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--hair-2); color: var(--ink-2); } .tag.live { border-color: var(--signal); color: var(--signal); }
+.bar form.inline { display: inline; }
 .versions .note { margin: 6px 0; color: var(--ink-2); } .versions .actions { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; } .confirm { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; color: var(--ink-2); }
+
+/* sign-in, no-access, invitation pages */
+.auth { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+.auth .card { width: min(520px, 100%); background: var(--panel); border: 1px solid var(--hair); border-radius: 10px; padding: 28px 28px 24px; }
+.auth h1 { margin: 0 0 12px; font-size: 20px; font-weight: 600; } .auth p { margin: 8px 0; } .auth a { color: var(--ink); }
+.signin { display: grid; gap: 8px; margin-top: 18px; } .signin button { padding: 10px 14px; }
+
+/* people */
+.people { min-height: 100vh; display: grid; grid-template-rows: var(--bar) 1fr; }
+.people .bar { grid-template-columns: auto 1fr auto; } .people .bar form { display: inline; }
+.btn { display: inline-block; font: inherit; color: var(--ink-2); padding: 6px 12px; border: 1px solid transparent; border-radius: 6px; text-decoration: none; } .btn:hover { color: var(--ink); border-color: var(--hair-2); }
+.people-body { width: min(900px, 100%); margin: 0 auto; padding: 24px 16px 60px; display: grid; gap: 36px; }
+.people h2 { margin: 0 0 6px; font-size: 16px; font-weight: 600; }
+.members { width: 100%; border-collapse: collapse; margin-top: 12px; } .members th { text-align: left; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; padding: 6px 8px; border-bottom: 1px solid var(--hair); }
+.members td { padding: 8px; border-bottom: 1px solid var(--hair); vertical-align: middle; } .members td .field { width: auto; } .members tr.accepted td, .members tr.revoked td, .members tr.expired td { color: var(--ink-3); }
+.members .tag { margin-left: 8px; }
+.invite { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; margin-top: 12px; }
+.link { margin-top: 12px; padding: 12px; border: 1px solid rgba(252,100,82,.4); border-radius: 6px; } .link code { display: block; overflow-wrap: anywhere; margin: 6px 0 10px; color: var(--ink); }

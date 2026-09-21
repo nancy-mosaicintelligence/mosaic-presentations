@@ -108,16 +108,18 @@ test("a v1 document migrates to the current version unchanged apart from the ver
   const v2 = { ...minimal(), schemaVersion: 2 }; delete v2.assets;
   assert.equal(validate(migrate(v2)).ok, true);
   const v3 = { ...minimal(), schemaVersion: 3 };
-  assert.equal(migrate(v3).schemaVersion, 4); assert.equal(validate(migrate(v3)).ok, true);
+  assert.equal(migrate(v3).schemaVersion, SCHEMA_VERSION); assert.equal(validate(migrate(v3)).ok, true);
 });
 
 test("assets and groups are checked: path grammar, hashes, repo-relative files, no copy on a group", () => {
   const d = minimal();
   d.assets.mark.paths[0].d = "M0 0<script>"; d.assets.mark.sources[0].sha256 = "xyz"; d.assets.mark.sources.push({ path: "../../etc/passwd.svg", sha256: "b".repeat(64) });
   d.assets["Bad Id"] = { kind: "png", viewBox: "x", paths: [], sources: [] };
+  d.assets.stored = { kind: "svg-paths", viewBox: "0 0 1 1", paths: [{ d: "M0 0" }], sources: [{ path: "storage://assets/0b6f4a2e-1c3d-4e5f-8a9b-0c1d2e3f4a5b/abc.svg", sha256: "c".repeat(64) }, { path: "storage://assets/../x.svg", sha256: "c".repeat(64) }] };
   d.sections[0].elements[1].runs = [{ t: "no" }];
   const paths = validate(d).errors.map(e => e.path);
-  for (const p of ["assets.mark.paths[0].d", "assets.mark.sources[0].sha256", "assets.mark.sources[1].path", "assets.Bad Id", "assets.Bad Id.kind", "assets.Bad Id.viewBox", "assets.Bad Id.paths", "assets.Bad Id.sources", "sections[0].elements[1]"]) assert.ok(paths.includes(p), p);
+  for (const p of ["assets.mark.paths[0].d", "assets.mark.sources[0].sha256", "assets.mark.sources[1].path", "assets.Bad Id", "assets.Bad Id.kind", "assets.Bad Id.viewBox", "assets.Bad Id.paths", "assets.Bad Id.sources", "sections[0].elements[1]", "assets.stored.sources[1].path"]) assert.ok(paths.includes(p), p);
+  assert.ok(!paths.includes("assets.stored.sources[0].path"), "a storage object is a valid source");
 });
 
 test("migrate is deterministic, returns a copy, and refuses future versions", () => {

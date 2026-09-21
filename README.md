@@ -63,4 +63,17 @@ pnpm install
 pnpm dev
 ```
 
-Then open http://localhost:3000. Drafts, versions and uploads live in `apps/web/data/` (not committed). Unit tests: `pnpm test`; browser tests: `pnpm test:e2e` (needs `PW_EXEC` and `PW_MODULES`, see `tools/README.md`). The deck at the root of the repository is unchanged for an audience: the bridge the editor uses is inert unless the deck is framed by the editor on the same origin.
+Then open http://localhost:3000. The deck at the root of the repository is unchanged for an audience: the bridge the editor uses is inert unless the deck is framed by the editor on the same origin.
+
+### Sign-in and roles
+
+Access is invite-only. The app uses Supabase (Auth with Google, Postgres with row-level security, private storage):
+
+1. **Locally**: install Docker (colima works) and the Supabase CLI, then `supabase start` in the repository — it applies `supabase/migrations/` and prints the local URL and keys. Copy `apps/web/.env.example` to `apps/web/.env.local` and fill them in; set `OWNER_EMAILS` to the company address that should own the presentations. Google is not available locally: with `ITW_TEST_AUTH=1` the browser tests (and you) can sign in by password through `POST /auth/test-sign-in` for accounts created with the service role.
+2. **Hosted**: create a Supabase project, run the migration (`supabase db push`), and in the Supabase dashboard enable the Google provider with an OAuth client created in Google Cloud (authorised redirect: `https://<project>.supabase.co/auth/v1/callback`; set the app's `Site URL` and add `https://<app>/auth/callback` to the redirect list). Put the project URL, anon key and service-role key in the app's environment. Never commit them.
+
+Rules: only `mosaicintelligence.xyz` accounts may sign in without an invitation, and even they hold no role until an owner grants one. Owners manage people at `/presentations/<id>/people`: roles (owner, editor, viewer), and named invitations — one address, one role, fourteen days, a link shown once. Owners publish a version; everyone with access sees it at `/p/<id>` (a direct link may carry `#s=<station>`).
+
+Offline mode: `ITW_STORE=file` runs the editor without sign-in against `apps/web/data/` (never in production).
+
+Unit tests: `pnpm test`. Browser tests: `pnpm test:e2e` (needs the local stack, `PW_EXEC` and `PW_MODULES`, see `tools/README.md`).
