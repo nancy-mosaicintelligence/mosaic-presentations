@@ -9,7 +9,7 @@ const TYPE_LABEL: Record<string, string> = { text: "Text", list: "List", chips: 
 
 export function Inspector({ doc, selectedId, apply, onDeselect }: { doc: Doc; selectedId: string | null; apply: (c: Command) => void; onDeselect: () => void }) {
   const hit = locate(doc, selectedId);
-  if (!hit) return <div className="panel empty"><p>Select something on the stage to edit it.</p><p className="muted">Click a line of text, a list, the pills, a container. The outline on the left moves between stations.</p></div>;
+  if (!hit) return <div className="panel empty"><p>Click anything on the stage to select it; double-click a line to type into it.</p><p className="muted">The filmstrip under the stage and the arrow keys move between stations. This panel holds the finer controls of whatever is selected.</p></div>;
   const { si, ei, section, element: e } = hit;
   const base = ["sections", si, "elements", ei];
   const setField = (k: keyof Element, v: any, label?: string) => apply({ path: [...base, k], value: v, label: label || `${k} of ${e.id}` });

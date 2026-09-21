@@ -272,3 +272,13 @@ Production cannot be marked complete until the deployed URL has been opened and 
 - Supported viewport behavior
 - Primary workflows without console errors
 
+
+## The platform (after Phase 7)
+
+| Test | Status | Evidence |
+|---|---|---|
+| The editor moves between stations like a slide tool (filmstrip, arrows, keys) | PASS | `inline.test.mjs`: 55 cards grouped by chapter, a card click, the next arrow, ←, Home each move the stage and the current card |
+| Text is edited in place on the stage, marks kept, into the structured document | PASS | `inline.test.mjs`: a double click opens the line; typed text lands in the draft as runs with the emphasis intact; the stage shows it live and after reload |
+| The floating toolbar applies marks, size and alignment, all undoable | PASS | `inline.test.mjs`: highlight on a selection, size +2px, align right, ⌘Z restores |
+| List items and lines on other stations edit the same way | PASS | `inline.test.mjs` |
+| The deck stays identical for an audience | PASS | parity layout + 55 stations; 54/54 behavioural checks (`verify-inline`) |

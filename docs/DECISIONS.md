@@ -324,3 +324,18 @@
 - Rules: no deploy to the v2 Netlify site again (it is a manual-deploy site with no repository link, so only a deliberate upload could change it; the dashboard's "lock to published deploy" is the belt to these braces); no further commits to branch `v2`; the snapshot is never edited.
 - Where work continues: branch `platform`, taken from that commit. The platform serves the deck itself (`/player`, `/p/[slug]`), so it needs no static site; if a new standalone deck is ever wanted it gets a new snapshot name and a new site.
 - The three lines now: `main` → the original deck (untouched since the start); `v2` → the clean refined deck (frozen); `platform` → the editable, invite-only system.
+
+## D-037: The platform, step 1 — editing that behaves like a slide tool (2026-09-21)
+
+- Status: accepted (the user's review of the Phase 6 editor: "not intuitive", no way to move between slides, text edited in boxes)
+- What changed:
+  - **Filmstrip** under the stage: one card per station, grouped by chapter, the current one marked and kept in view; a click goes there. Cards are live text — the number, and the first words that station shows (computed from the document, so they follow every edit) — on a dark, black or white ground by station. Prev/next arrows and the counter sit over the stage in edit mode too; ←/→, PageUp/Down, Home and End step the stage whenever the focus is not in a field.
+  - **Typing on the stage**: a second press on a line (or a double click) opens it for typing in place — a paragraph, a list item, a pill, a chain line, a loop label. The line becomes `contenteditable` inside the deck; on every input the bridge converts the DOM back into runs (text nodes, the renderer's own tags `em`, `b`, `i`, `em.hl`, `b.lead`, `b.x2`, reveal spans, icons matched by their path data) and posts them; the editor records them in history (coalesced per line) and autosaves; the deck keeps the open line's text while a draft is re-applied around it. Enter or Done closes the line; Escape too. Closing an unchanged line is not a history step.
+  - **Floating toolbar** above the open line: the six marks on the selection (wrap, or unwrap when already inside that mark, then re-render through the model), size in 2 px steps with "auto" back to the role's size, alignment, colour — size/alignment/colour are the element's inline overrides, applied straight to the element without a full re-apply, so the caret stays.
+  - Hit-testing looks through beats that have faded out (they stay stacked, transparent), so the line under the pointer is the one on screen.
+- Choices:
+  1. **The document is still the model.** Inline editing is an interaction layer over runs; nothing is stored as HTML. That keeps validation, versions, undo and the parity tooling exactly as they were.
+  2. **Live text thumbnails, not screenshots.** A real render per station would need a rasteriser or a capture job and would go stale with every edit; the words a station shows are what a presenter scans for anyway, and they update instantly.
+  3. **Double press detected in the bridge.** The bridge cancels the first press (so the deck does not step), which makes the browser's own `dblclick` unreliable; two presses on the same line within half a second open it.
+- Proof: `apps/web/tests/e2e/inline.test.mjs` (4: filmstrip/arrows/keys, typing with marks kept, toolbar marks + size + alignment + undo, a list item on another station); the editor and access suites unchanged; deck parity (layout + 55 stations) and 54/54 behavioural checks re-proven — the bridge stays inert unframed.
+- Next in this line: home + library + import (static HTML / links), then images (element, library, editor), then the create harness (D-038 onward).

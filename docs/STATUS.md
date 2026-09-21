@@ -238,6 +238,11 @@ Sixth pass (D-027, D-028): the room recedes for the whole run of text and never 
 - Tests: 21 unit; 17 browser (access 7, editor 10) against the local stack
 - Pending for the hosted project: create it, apply the migration, configure Google (client id/secret in Google Cloud and the Supabase dashboard), set the environment; then Phase 8/9 verify Google sign-in on the deployed system
 
+## The platform (branch `platform`)
+
+- Step 1 (2026-09-21, D-037): filmstrip with live text cards, arrows and keys; typing on the stage with a floating toolbar (marks, size, alignment, colour); 4 browser tests; deck parity and 54/54 re-proven
+- Planned, in order: home + library + import (static HTML and links present-only), images (element, library, editor), the create harness (V2 engine as a template with beat types)
+
 ## Deployment (2026-09-21)
 
 - Original: `main` → https://mosaic-ventowave2026keynote.netlify.app (untouched since the start)

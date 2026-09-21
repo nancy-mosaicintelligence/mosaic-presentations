@@ -670,6 +670,8 @@ body.safe .beat.onobj .mv{ position:static; transform:none; }
 body.editing [data-id]{cursor:pointer}
 body.editing [data-id]:hover{outline:1px dashed rgba(252,100,82,.55);outline-offset:6px}
 body.editing [data-id].editsel{outline:2px solid var(--signal);outline-offset:6px}
+body.editing .editline{outline:2px solid var(--signal);outline-offset:6px;cursor:text;caret-color:var(--signal)}
+body.editing .editline::selection,body.editing .editline *::selection{background:rgba(252,100,82,.35)}
 </style>
 </head>
 <body>
@@ -3255,6 +3257,7 @@ body.editing [data-id].editsel{outline:2px solid var(--signal);outline-offset:6p
        renderer draws itself and the assets are read at start-up, so the editor reloads the deck for those */
     function load(doc) {
       if (!doc || !doc.sections || !doc.stations || doc.stations.length !== STATIONS.length) { post({ type: "itw:error", message: "load: the document must carry the deck's " + STATIONS.length + " stations" }); return; }
+      if (editingEl) { var keep = editingEl, keepHTML = keep.innerHTML; }
       CONTENT = doc; SECTION = {}; doc.sections.forEach(function (s) { SECTION[s.key] = s; });
       applyContent(doc);
       var A = doc.animation || { revealSpacing: .46, revealFade: .80, stepMin: 480, stepMax: 1900, stepPerUnit: 16000, stepEaseOut: .72 }, k;
@@ -3265,7 +3268,8 @@ body.editing [data-id].editsel{outline:2px solid var(--signal);outline-offset:6p
         ["black", "road", "lite", "vessel"].forEach(function (f) { if (s[f]) o[f] = 1; else delete o[f]; });
       });
       rebuildChapters(); rebuildReveals(); buildRail(); PT = STATIONS[step].p; paintNote(); paintHud();
-      if (selectedId) select(selectedId);
+      if (keep && document.contains(keep)) { keep.innerHTML = keepHTML; keep.setAttribute("contenteditable", "true"); keep.classList.add("editline"); }
+      if (selectedId) select(selectedId, false);
       post({ type: "itw:loaded" });
     }
     function rectOf(el) { var r = el.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; }
@@ -3277,13 +3281,115 @@ body.editing [data-id].editsel{outline:2px solid var(--signal);outline-offset:6p
       if (el) { el.classList.add("editsel"); var sec = el.closest("section.beat"); post({ type: "itw:selected", id: id, user: !!user, rect: rectOf(el), section: sec ? sec.getAttribute("data-k") : null }); }
       else post({ type: "itw:selected", id: null, user: !!user });
     }
+    /* ---- inline text editing: a double click opens the line for typing; the model stays runs ---- */
+    var editingEl = null, editingId = null, editingItem = -1, STYLE_KEYS_B = ["maxWidth", "margin", "marginTop", "marginBottom", "textAlign", "fontSize", "lineHeight", "color"];
+    var MARK_OF = { EM: "em", B: "strong", STRONG: "strong", I: "i" };
+    function pathOf(svg) { var m = /d="([^"]+)"/.exec(svg); return m ? m[1] : ""; }
+    function iconName(svg) { var d = pathOf(svg.outerHTML), k; for (k in ICON_SVG) if (pathOf(ICON_SVG[k]) === d) return k; return null; }
+    function sameMarks(a, b) { var x = a.marks || [], y = b.marks || []; if (x.length !== y.length) return false; for (var i = 0; i < x.length; i++) if (x[i] !== y[i]) return false; return (a.reveal ? JSON.stringify(a.reveal) : "") === (b.reveal ? JSON.stringify(b.reveal) : ""); }
+    function domToRuns(root) {
+      var runs = [];
+      function push(r, marks, reveal) {
+        if (marks.length) r.marks = marks.slice(); if (reveal) r.reveal = reveal;
+        var last = runs[runs.length - 1];
+        if (last && last.t !== undefined && r.t !== undefined && sameMarks(last, r)) last.t += r.t; else runs.push(r);
+      }
+      function walk(node, marks, reveal) {
+        for (var n = node.firstChild; n; n = n.nextSibling) {
+          if (n.nodeType === 3) { var t = n.nodeValue.replace(/ /g, " "); if (t) push({ t: t }, marks, reveal); }
+          else if (n.nodeType === 1) {
+            var tag = n.tagName.toUpperCase();
+            if (tag === "SVG") { var nm = iconName(n); if (nm) { var r = { icon: nm }; if (reveal) r.reveal = reveal; runs.push(r); } continue; }
+            if (tag === "BR") { push({ t: " " }, marks, reveal); continue; }
+            /* the renderer's tags: em.hl, b.lead, b.x2 carry their class; plain em, b/strong, i are the simple marks */
+            var m = n.classList.contains("hl") ? "hl" : n.classList.contains("lead") ? "lead" : n.classList.contains("x2") ? "x2" : (MARK_OF[tag] || null);
+            var rv = reveal; if (n.classList.contains("rv") && n.getAttribute("data-p") !== null) { rv = { p: parseFloat(n.getAttribute("data-p")) }; if (n.getAttribute("data-seq") !== null) rv.seq = parseFloat(n.getAttribute("data-seq")); }
+            walk(n, m ? marks.concat([m]) : marks, rv);
+          }
+        }
+      }
+      walk(root, [], null);
+      return runs.length ? runs : [{ t: "" }];
+    }
+    /* which node under the pointer holds runs, and how the document addresses it */
+    function editableAt(target) {
+      var host = target.closest("[data-id]"); if (!host) return null;
+      var id = host.getAttribute("data-id"), part;
+      if (host.matches("ul.pts")) { part = target.closest("li"); return part ? { el: part, id: id, item: [].indexOf.call(host.children, part) } : null; }
+      if (host.classList.contains("chips")) { part = target.closest("span.rv"); return part ? { el: part, id: id, item: [].indexOf.call(host.children, part) } : null; }
+      if (host.classList.contains("chain")) { part = target.closest("p"); return part ? { el: part, id: id, item: [].indexOf.call(host.children, part) } : null; }
+      if (host.classList.contains("loop")) { part = target.closest(".lp"); return part ? { el: part, id: id, item: [].slice.call(host.querySelectorAll(".lp")).indexOf(part) } : null; }
+      if (host.tagName === "P" || host.matches("span.mk") || host.classList.contains("cue")) return { el: host, id: id, item: -1 };
+      return null;
+    }
+    function caretRect() {
+      var s = window.getSelection(); if (!s || !s.rangeCount || !editingEl) return null;
+      var r = s.getRangeAt(0).getBoundingClientRect(); if (!r.width && !r.height) r = editingEl.getBoundingClientRect();
+      var e = editingEl.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height, ex: e.left, ey: e.top, ew: e.width, eh: e.height };
+    }
+    function postEdited(type) { if (!editingEl) return; post({ type: type, id: editingId, item: editingItem, runs: domToRuns(editingEl), caret: caretRect(), fontSize: parseFloat(getComputedStyle(editingEl).fontSize) }); }
+    function startEdit(hit, x, y) {
+      if (editingEl) endEdit();
+      editingEl = hit.el; editingId = hit.id; editingItem = hit.item;
+      editingEl.setAttribute("contenteditable", "true"); editingEl.classList.add("editline"); editingEl.style.opacity = "1";
+      editingEl.focus();
+      try { var r = document.caretRangeFromPoint(x, y); if (r) { var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); } } catch (e) {}
+      select(hit.id, false);
+      post({ type: "itw:editStart", id: editingId, item: editingItem, caret: caretRect(), fontSize: parseFloat(getComputedStyle(editingEl).fontSize) });
+    }
+    function endEdit() {
+      if (!editingEl) return;
+      var el = editingEl; postEdited("itw:editDone");
+      el.removeAttribute("contenteditable"); el.classList.remove("editline"); el.blur();
+      editingEl = null; editingId = null; editingItem = -1;
+    }
+    function caretToEnd() { var s = window.getSelection(), r = document.createRange(); r.selectNodeContents(editingEl); r.collapse(false); s.removeAllRanges(); s.addRange(r); }
+    /* a mark on the selection: wrap it, or unwrap when the whole selection already sits inside that mark; then re-render through the model */
+    function format(mark) {
+      var s = window.getSelection(); if (!editingEl || !s || !s.rangeCount) return;
+      var range = s.getRangeAt(0); if (!editingEl.contains(range.commonAncestorContainer)) return;
+      var anc = range.commonAncestorContainer; if (anc.nodeType === 3) anc = anc.parentNode;
+      var selector = mark === "em" ? "em:not(.hl)" : mark === "strong" ? "b:not(.lead):not(.x2), strong" : mark === "i" ? "i" : "." + mark;
+      var existing = anc.closest(selector);
+      if (existing && editingEl.contains(existing) && existing !== editingEl) { while (existing.firstChild) existing.parentNode.insertBefore(existing.firstChild, existing); existing.parentNode.removeChild(existing); }
+      else if (!range.collapsed) {
+        var wrap = document.createElement(mark === "em" || mark === "hl" ? "em" : mark === "i" ? "i" : "b");
+        if (mark === "hl" || mark === "lead" || mark === "x2") wrap.className = mark;
+        try { range.surroundContents(wrap); } catch (e) { wrap.appendChild(range.extractContents()); range.insertNode(wrap); }
+      } else return;
+      editingEl.innerHTML = renderRuns(domToRuns(editingEl)); caretToEnd(); postEdited("itw:edited");
+    }
+    document.addEventListener("input", function (e) { if (editingEl && editingEl.contains(e.target)) postEdited("itw:edited"); }, true);
+    document.addEventListener("selectionchange", function () { if (editingEl) post({ type: "itw:caret", caret: caretRect() }); });
+    window.addEventListener("keydown", function (e) {
+      if (!editingEl) return;
+      e.stopPropagation();
+      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); endEdit(); }
+      else if (e.key === "Escape") { e.preventDefault(); endEdit(); }
+    }, true);
+    window.addEventListener("dblclick", function (e) {
+      if (!editing) return; e.stopPropagation(); e.preventDefault();
+      if (editingEl) return;
+      var under = visibleUnder(e.clientX, e.clientY), hit = null, i;
+      for (i = 0; i < under.length && !hit; i++) hit = editableAt(under[i]);
+      if (hit) startEdit(hit, e.clientX, e.clientY);
+    }, true);
     /* in edit mode the pointer selects instead of stepping, and the wheel does nothing */
+    var lastDown = 0, lastDownEl = null;
+    /* the elements under a point, without those inside a beat that has faded out (they stay in the stack, transparent) */
+    function visibleUnder(x, y) {
+      return document.elementsFromPoint(x, y).filter(function (n) { var b = n.closest && n.closest("section.beat"); return !b || parseFloat(getComputedStyle(b).opacity) > 0.02; });
+    }
     window.addEventListener("pointerdown", function (e) {
       if (!editing) return;
+      if (editingEl && editingEl.contains(e.target)) { e.stopPropagation(); return; }
       e.stopPropagation(); e.preventDefault();
+      if (editingEl) endEdit();
       if (e.target.closest("#hud") || e.target.closest("#notes")) return;
-      var under = document.elementsFromPoint(e.clientX, e.clientY), el = null, i;
+      var under = visibleUnder(e.clientX, e.clientY), el = null, hit = null, i;
       for (i = 0; i < under.length && !el; i++) el = under[i].closest && under[i].closest("[data-id]");
+      var now = performance.now(), twice = el && el === lastDownEl && now - lastDown < 500; lastDown = now; lastDownEl = el;
+      if (twice) { for (i = 0; i < under.length && !hit; i++) hit = editableAt(under[i]); if (hit) { startEdit(hit, e.clientX, e.clientY); return; } }
       select(el ? el.getAttribute("data-id") : null, true);
     }, true);
     window.addEventListener("click", function (e) { if (editing) { e.stopPropagation(); e.preventDefault(); } }, true);
@@ -3299,8 +3405,11 @@ body.editing [data-id].editsel{outline:2px solid var(--signal);outline-offset:6p
       switch (m.type) {
         case "itw:load": load(m.doc); break;
         case "itw:goto": if (typeof m.index === "number") { if (!present) setMode(true); goto(m.index); } break;
-        case "itw:edit": editing = !!m.on; document.body.classList.toggle("editing", editing); if (!editing) select(null); break;
+        case "itw:edit": editing = !!m.on; document.body.classList.toggle("editing", editing); if (!editing) { endEdit(); select(null); } break;
         case "itw:select": select(typeof m.id === "string" ? m.id : null); break;
+        case "itw:endEdit": endEdit(); break;
+        case "itw:format": if (typeof m.mark === "string") format(m.mark); break;
+        case "itw:style": { var sel = document.querySelector('[data-id="' + m.id + '"]'); if (sel && m.style && typeof m.style === "object") { STYLE_KEYS_B.forEach(function (k) { sel.style[k] = ""; }); for (var sk in m.style) if (STYLE_KEYS_B.indexOf(sk) >= 0) sel.style[sk] = m.style[sk]; } break; }
         case "itw:mode": setMode(!!m.present); break;
         case "itw:notes": elNotes.hidden = !m.on; btnNotes.setAttribute("aria-pressed", m.on ? "true" : "false"); break;
         case "itw:safe": setSafe(!!m.on, false); break;

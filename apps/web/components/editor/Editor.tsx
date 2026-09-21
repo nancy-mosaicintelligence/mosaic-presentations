@@ -5,6 +5,9 @@ import type { Doc, Command } from "@/lib/doc";
 import { needsReload } from "@/lib/doc";
 import { PlayerBridge, type BridgeMessage } from "./bridge";
 import { Inspector } from "./Inspector";
+import { Filmstrip } from "./Filmstrip";
+import { InlineToolbar, type Caret } from "./InlineToolbar";
+import { locate } from "@/lib/doc";
 import { Outline } from "./Outline";
 import { AnimationPanel, CopyPanel, AssetsPanel } from "./Panels";
 import { VersionsPanel, type VersionMeta } from "./Versions";
@@ -30,6 +33,9 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
   const [ready, setReady] = useState(false);
   const [notes, setNotes] = useState(false);
   const [pendingReload, setPendingReload] = useState(false);
+  const [inline, setInline] = useState<{ id: string; item: number; caret: Caret; fontSize: number } | null>(null);
+  const inlineRef = useRef(inline); inlineRef.current = inline;
+  const [frameBox, setFrameBox] = useState<DOMRect | null>(null);
   const frame = useRef<HTMLIFrameElement | null>(null);
   const saveTimer = useRef<number | null>(null);
   const docRef = useRef<Doc | null>(null); docRef.current = doc;
@@ -39,8 +45,12 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
     if (m.type === "itw:ready" || m.type === "itw:state") { setReady(true); if (m.type === "itw:state") { setStation(m.step); setNotes(!!m.notes); } }
     else if (m.type === "itw:station") setStation(m.index);
     else if (m.type === "itw:selected") { setSelected(m.id); if (m.id && m.user) setTab("element"); }
+    else if (m.type === "itw:editStart") { setInline({ id: m.id, item: m.item, caret: m.caret, fontSize: m.fontSize }); setFrameBox(frame.current?.getBoundingClientRect() ?? null); }
+    else if (m.type === "itw:caret") { if (m.caret) setInline(s => (s ? { ...s, caret: m.caret } : s)); }
+    else if (m.type === "itw:edited" || m.type === "itw:editDone") { inlineEditRef.current(m.id, m.item, m.runs, m.type === "itw:edited"); if (m.type === "itw:editDone") setInline(null); else if (m.caret) setInline(s => (s ? { ...s, caret: m.caret, fontSize: m.fontSize } : s)); }
     else if (m.type === "itw:error") setSave({ kind: "error", message: m.message });
   }, []);
+  const inlineEditRef = useRef<(id: string, item: number, runs: any[], typing: boolean) => void>(() => {});
   const bridge = useMemo(() => new PlayerBridge(() => frame.current, onMessage), [onMessage]);
   // attach, and ask the frame for its state in case it is already running (a remount never reloads the frame)
   useEffect(() => { bridge.attach(); bridge.send({ type: "itw:state" }); return () => bridge.detach(); }, [bridge]);
@@ -87,16 +97,43 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
     if (path && needsReload(path)) setPendingReload(true); else if (ready) bridge.send({ type: "itw:load", doc: next });
   }, [history, scheduleSave, ready, bridge]);
   const apply = useCallback((c: Command) => { const next = history.apply(c) as Doc; afterChange(next, c.path); }, [history, afterChange]);
+  // typing on the stage: into history (coalesced) and autosave, but not sent back while the line is open
+  inlineEditRef.current = (id, item, runs, typing) => {
+    const d = docRef.current; if (!d) return; const hit = locate(d, id); if (!hit) return;
+    const path = item >= 0 ? ["sections", hit.si, "elements", hit.ei, "items", item, "runs"] : ["sections", hit.si, "elements", hit.ei, "runs"];
+    const current = item >= 0 ? hit.element.items?.[item]?.runs : hit.element.runs;
+    if (JSON.stringify(current) === JSON.stringify(runs)) { if (!typing && ready) bridge.send({ type: "itw:load", doc: d }); return; }   // closing a line unchanged is not a step
+    const next = history.apply({ path, value: runs, label: `copy of ${id}`, coalesce: `${id}.${item}` }) as Doc;
+    setDoc(next); setHist({ undo: history.canUndo, redo: history.canRedo }); scheduleSave();
+    if (!typing && ready) bridge.send({ type: "itw:load", doc: next });
+  };
+  /** A style change for the line being edited: into the document, and straight onto the element without a re-apply. */
+  const inlineStyle = useCallback((patch: Record<string, string | undefined>) => {
+    const d = docRef.current, s = inlineRef.current; if (!d || !s) return; const hit = locate(d, s.id); if (!hit) return;
+    const style = { ...(hit.element.style || {}) }; for (const k of Object.keys(patch)) { const v = patch[k]; if (v === undefined) delete style[k]; else style[k] = v; }
+    const value = Object.keys(style).length ? style : undefined;
+    const next = history.apply({ path: ["sections", hit.si, "elements", hit.ei, "style"], value, label: `style of ${s.id}` }) as Doc;
+    setDoc(next); setHist({ undo: history.canUndo, redo: history.canRedo }); scheduleSave();
+    bridge.send({ type: "itw:style", id: s.id, style });
+  }, [history, scheduleSave, bridge]);
   // undo and redo re-apply live unless the step they walk touched what the stage reads at start-up
   const undo = useCallback(() => { const e = history.peekUndo(); if (!e) return; afterChange(history.undo() as Doc, e.path); }, [history, afterChange]);
   const redo = useCallback(() => { const e = history.peekRedo(); if (!e) return; afterChange(history.redo() as Doc, e.path); }, [history, afterChange]);
+  const stationRef = useRef(station); stationRef.current = station;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const mod = e.metaKey || e.ctrlKey; if (!mod || e.key.toLowerCase() !== "z") return;
-      e.preventDefault(); if (e.shiftKey) redo(); else undo();
+      const t = e.target as HTMLElement | null; const inField = !!t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable);
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.key.toLowerCase() === "z") { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
+      if (inField || mod) return;
+      if (e.key === "ArrowRight" || e.key === "PageDown") { e.preventDefault(); bridge.send({ type: "itw:goto", index: stationRef.current + 1 }); }
+      else if (e.key === "ArrowLeft" || e.key === "PageUp") { e.preventDefault(); bridge.send({ type: "itw:goto", index: stationRef.current - 1 }); }
+      else if (e.key === "Home") { e.preventDefault(); bridge.send({ type: "itw:goto", index: 0 }); }
+      else if (e.key === "End") { e.preventDefault(); bridge.send({ type: "itw:goto", index: 9999 }); }
     };
     window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey);
-  }, [undo, redo]);
+  }, [undo, redo, bridge]);
+  useEffect(() => { const on = () => setFrameBox(frame.current?.getBoundingClientRect() ?? null); window.addEventListener("resize", on); return () => window.removeEventListener("resize", on); }, []);
 
   /* ---- versions ---- */
   const newVersion = async () => {
@@ -157,7 +194,9 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
         <iframe key={playerKey} ref={frame} src={playerSrc} title="The presentation" allow="fullscreen" allowFullScreen onLoad={() => bridge.send({ type: "itw:state" })} />
       </div>
       {!ready && <div className="loading">Loading the stage…</div>}
-      {inPreview && <div className="preview-nav"><button type="button" onClick={() => bridge.send({ type: "itw:goto", index: station - 1 })}>‹</button><span>{String(station + 1).padStart(2, "0")} / {doc?.stations.length ?? "—"}</span><button type="button" onClick={() => bridge.send({ type: "itw:goto", index: station + 1 })}>›</button></div>}
+      <div className={"preview-nav" + (inPreview ? "" : " always")}><button type="button" aria-label="previous station" onClick={() => bridge.send({ type: "itw:goto", index: station - 1 })}>‹</button><span>{String(station + 1).padStart(2, "0")} / {doc?.stations.length ?? "—"}</span><button type="button" aria-label="next station" onClick={() => bridge.send({ type: "itw:goto", index: station + 1 })}>›</button></div>
+      {!inPreview && doc && <Filmstrip doc={doc} station={station} onGoto={i => bridge.send({ type: "itw:goto", index: i })} />}
+      {inline && frameBox && doc && !inPreview && <InlineToolbar caret={inline.caret} frameBox={frameBox} element={locate(doc, inline.id)?.element ?? null} fontSize={inline.fontSize} onMark={m => bridge.send({ type: "itw:format", mark: m })} onStyle={inlineStyle} onDone={() => bridge.send({ type: "itw:endEdit" })} />}
     </main>
 
     {!inPreview && doc && <aside className="side right">
