@@ -2,7 +2,7 @@
 import {
   SCHEMA_VERSION, PRESENTATION_FIELDS, TOKEN_FIELDS, SECTION_FIELDS, ELEMENT_FIELDS,
   RUN_FIELDS, REVEAL_FIELDS, STATION_FIELDS, COPY_FIELDS, CUSTOM_SCENES,
-  COLOR_RE, FONT_STACK_RE
+  COLOR_RE, FONT_STACK_RE, LAYOUT_FIELDS, ANIMATION_FIELDS, STYLE_KEYS, SAFE_CSS_RE
 } from "./schema.js";
 
 /**
@@ -52,6 +52,16 @@ export function validate(doc) {
     if (isObj(d.copy.hud)) checkFields(d.copy.hud, { safe: { type: "string", req: true }, notes: { type: "string", req: true }, present: { type: "string", req: true }, explore: { type: "string", req: true }, fullscreen: { type: "string", req: true } }, "copy.hud", err);
   }
 
+  // animation
+  if (d.animation !== undefined) {
+    if (!isObj(d.animation)) err("animation", "must be an object");
+    else {
+      checkFields(d.animation, ANIMATION_FIELDS, "animation", err);
+      for (const [k, spec] of Object.entries(ANIMATION_FIELDS)) { const v = d.animation[k]; if (typeof v === "number" && (v < spec.min || v > spec.max)) err(`animation.${k}`, `must be between ${spec.min} and ${spec.max}`); }
+      if (typeof d.animation.stepMin === "number" && typeof d.animation.stepMax === "number" && d.animation.stepMin > d.animation.stepMax) err("animation.stepMax", "must be at least stepMin");
+    }
+  }
+
   // sections
   const keys = new Set();
   const ids = new Set();
@@ -60,6 +70,7 @@ export function validate(doc) {
     if (!isObj(s)) return err(sp, "must be an object");
     checkFields(s, SECTION_FIELDS, sp, err);
     if (typeof s.key === "string") { if (keys.has(s.key)) err(`${sp}.key`, `duplicate section key "${s.key}"`); keys.add(s.key); }
+    if (s.layout !== undefined) { if (!isObj(s.layout)) err(`${sp}.layout`, "must be an object"); else checkFields(s.layout, LAYOUT_FIELDS, `${sp}.layout`, err); }
     if (Array.isArray(s.elements)) s.elements.forEach((e, j) => {
       const ep = `${sp}.elements[${j}]`;
       if (!isObj(e)) return err(ep, "must be an object");
@@ -93,6 +104,13 @@ export function validate(doc) {
         default: /* type errors already reported */ break;
       }
       if (e.reveal !== undefined) checkReveal(e.reveal, `${ep}.reveal`, err);
+      if (e.style !== undefined) {
+        if (!isObj(e.style)) err(`${ep}.style`, "must be an object");
+        else for (const [k, v] of Object.entries(e.style)) {
+          if (!STYLE_KEYS.includes(k)) err(`${ep}.style.${k}`, "style property not allowed");
+          else if (typeof v !== "string" || !SAFE_CSS_RE.test(v) || v.length > 120) err(`${ep}.style.${k}`, "malformed style value");
+        }
+      }
     });
   });
 

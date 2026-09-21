@@ -20,7 +20,8 @@ function minimal() {
       substitution: [{ t: "s" }], fluoroscopyPlaceholders: ["f"], partnerLine: "p", cue: "c", notesLabel: "n", safeNote: "s",
       hud: { safe: "Safe", notes: "Notes", present: "Present", explore: "Explore", fullscreen: "Fullscreen" }
     },
-    sections: [{ key: "open", elements: [{ id: "open.1", type: "text", runs: [{ t: "Hello " }, { t: "world", marks: ["em"] }] }] }],
+    animation: { revealSpacing: .46, revealFade: .8, stepMin: 480, stepMax: 1900, stepPerUnit: 16000, stepEaseOut: .72 },
+    sections: [{ key: "open", layout: { variants: ["mid"], width: "min(940px,76%)", until: 0.05 }, elements: [{ id: "open.1", type: "text", role: ["hero", "strong"], style: { maxWidth: "17ch", margin: "22px 0 0" }, runs: [{ t: "Hello " }, { t: "world", marks: ["em"] }] }] }],
     stations: [{ p: 0, section: "open", camera: "none", chapter: "Open", note: "n" }, { p: 0.03, section: "", camera: "acc", chapter: "Open", note: "n", dur: 2400, black: true }]
   };
 }
@@ -80,6 +81,24 @@ test("bad tokens are rejected", () => {
   assert.ok(paths.includes("tokens.colors.Signal"));
   assert.ok(paths.includes("tokens.colors.bad"));
   assert.ok(paths.includes("tokens.fonts.body"));
+});
+
+test("layout, role, style and animation are allow-listed and range-checked", () => {
+  const d = minimal();
+  d.sections[0].layout.variants.push("float"); d.sections[0].layout.width = "min(10px,5%) url(x)"; d.sections[0].layout.box = "grid";
+  d.sections[0].elements[0].role.push("btn-primary"); d.sections[0].elements[0].style.background = "red"; d.sections[0].elements[0].style.color = "url(javascript:x)";
+  d.animation.stepEaseOut = 2; d.animation.stepMax = 100; d.animation.bounce = 1;
+  const paths = validate(d).errors.map(e => e.path);
+  for (const p of ["sections[0].layout.variants[1]", "sections[0].layout.width", "sections[0].layout.box", "sections[0].elements[0].role[2]", "sections[0].elements[0].style.background", "sections[0].elements[0].style.color", "animation.stepEaseOut", "animation.stepMax", "animation.bounce"]) assert.ok(paths.includes(p), p);
+});
+
+test("a v1 document migrates to v2 unchanged apart from the version, deterministically", () => {
+  const v1 = minimal(); v1.schemaVersion = 1; delete v1.animation; delete v1.sections[0].layout; delete v1.sections[0].elements[0].role; delete v1.sections[0].elements[0].style;
+  const a = migrate(v1), b = migrate(v1);
+  assert.deepEqual(a, b);
+  assert.equal(a.schemaVersion, 2);
+  assert.deepEqual({ ...a, schemaVersion: 1 }, v1);
+  assert.equal(validate(a).ok, true);
 });
 
 test("migrate is deterministic, returns a copy, and refuses future versions", () => {

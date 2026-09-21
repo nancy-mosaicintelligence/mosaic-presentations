@@ -12,7 +12,7 @@ Last updated: 2026-09-18
 - Phase 4C (navigation, AV lesson, thesis): complete, partly reversed by 4D
 - Phase 4D (the review pass: type system, presenter chrome, vessel rail, reversals, chain, close): complete
 - Phase 4E: blocked on the fluoroscopy frames
-- Phase 5 (structured content): step 1 complete — copy, tokens and stations extracted to a validated document and the deck bound to it with proven parity (D-031); layout/animation extraction and assets are the next steps
+- Phase 5 (structured content): steps 1 and 2 complete — copy, tokens and stations (D-031), then section layout, element roles, inline overrides and the global animation values (D-032) extracted to a validated document and the deck bound to it with proven parity; the structural containers' reveals and the asset model are the next steps
 - Phases 5 through 9: planned only
 
 ## Inspected
@@ -206,6 +206,13 @@ Sixth pass (D-027, D-028): the room recedes for the whole run of text and never 
 - `presentations/italian-tech-week/content/presentation.json` (+ `bindings.json`), embedded in `index.html`; `applyContent()` renders copy, tokens and stations from it
 - `tools/extract-content.mjs`, `tools/embed-content.mjs`, `tools/check-parity.mjs`; `snapshots/phase4d/` is the parity reference
 - Parity: re-extraction identical; all 55 stations identical to the snapshot; the full behavioural verification (54 checks) passes on the bound deck (`6da5ba48…`, 1,072,869 bytes); `node --test` 11/11
+
+## Phase 5 step 2 (2026-09-20)
+
+- Schema v2 (`layout`, `role`, `style`, `animation`; migration 1→2 = version stamp); validator range- and allow-list checks; 13 unit tests
+- `presentation.json` now carries the layout of 26 sections, 48 element roles, 11 sets of inline overrides and the six animation values (content `7135615b29db`); `applyContent()` applies them and the reveal loop, easing and tween read `ANIM.*`
+- `tools/check-parity.mjs` gained a layout signature; `tools/check-binding.mjs` is the mutation proof
+- Parity: re-extraction identical; layout signature and all 55 stations identical to `snapshots/phase4d/`; the full behavioural verification (54 checks) passes on the step-2 deck (`ed7ab81e…`, 1,077,138 bytes); `node --test` 13/13
 
 ## Deployment (2026-09-20)
 

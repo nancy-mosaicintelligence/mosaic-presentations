@@ -9,7 +9,7 @@
  * by renderer id with a closed set of parameters.
  */
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 /** Inline marks a run may carry. The renderer maps each to fixed markup. */
 export const MARKS = Object.freeze(["em", "strong", "i", "hl", "lead", "x2"]);
@@ -27,6 +27,33 @@ export const CUSTOM_SCENES = Object.freeze({
   "itw-sense-tie": { params: [] },
   "itw-chalkboard": { params: [] },
   "itw-loop": { params: [] }
+});
+
+/** Section layout variants: the beat's class tokens, all defined in the renderer's stylesheet. */
+export const LAYOUT_VARIANTS = Object.freeze(["mid", "left", "right", "plain", "top", "low", "lowcol", "lite", "vess", "onfield", "inroom", "orbwrap", "loopwrap"]);
+
+/** Extra class the section's content box (.mv) may carry. */
+export const MV_VARIANTS = Object.freeze(["scale-in", "scale-col", "scale-bound", "navq"]);
+
+/** The content box width: min(<px>, <percent>) only. */
+export const WIDTH_RE = /^min\(\d{2,4}px,\d{1,3}%\)$/;
+
+/** Typographic and structural roles an element may carry (its class tokens); each is a rule in the stylesheet. */
+export const ROLES = Object.freeze(["hero", "strong", "big", "huge", "lede", "lead-in", "ask", "askline", "senseh", "sensenote", "btitle", "bsynth", "loopcap", "src", "x2line", "mk",
+  "vopen", "vhero", "c1", "c2", "c3", "lp", "lp1", "lp2", "lp3", "pts", "chips", "chain", "loop", "impchart", "icons", "sensetie", "boardsk", "rv"]);
+
+/** Inline style overrides an element may carry, and the shape a value must have (no urls, no expressions, no delimiters). */
+export const STYLE_KEYS = Object.freeze(["maxWidth", "margin", "marginTop", "marginBottom", "textAlign", "fontSize", "lineHeight", "color"]);
+export const SAFE_CSS_RE = /^[A-Za-z0-9#.,%()\- ]+$/;
+
+/** Global animation values the renderer reads. Ranges keep an edit from breaking the deck. */
+export const ANIMATION_FIELDS = Object.freeze({
+  revealSpacing: { type: "number", req: true, min: 0, max: 3 },      // seconds between sequenced reveals
+  revealFade: { type: "number", req: true, min: 0.05, max: 3 },      // seconds a reveal takes to arrive
+  stepMin: { type: "number", req: true, min: 100, max: 5000 },       // ms, shortest ordinary step
+  stepMax: { type: "number", req: true, min: 100, max: 10000 },      // ms, longest ordinary step
+  stepPerUnit: { type: "number", req: true, min: 1000, max: 60000 }, // ms per unit of progress
+  stepEaseOut: { type: "number", req: true, min: 0, max: 1 }         // share of ease-out in an ordinary step
 });
 
 /** Camera targets a station may name (the renderer's OBJ table). */
@@ -50,6 +77,7 @@ export const PRESENTATION_FIELDS = Object.freeze({
   meta: { type: "object" },
   tokens: { type: "object", req: true },
   copy: { type: "object", req: true },
+  animation: { type: "object" },
   sections: { type: "array", req: true },
   stations: { type: "array", req: true }
 });
@@ -61,7 +89,15 @@ export const TOKEN_FIELDS = Object.freeze({
 
 export const SECTION_FIELDS = Object.freeze({
   key: { type: "string", req: true },
+  layout: { type: "object" },
   elements: { type: "array", req: true }
+});
+
+export const LAYOUT_FIELDS = Object.freeze({
+  variants: { type: { arrayOf: { enum: LAYOUT_VARIANTS } } },
+  width: { type: { re: WIDTH_RE } },
+  box: { type: { enum: MV_VARIANTS } },
+  until: { type: "number" }
 });
 
 export const ELEMENT_FIELDS = Object.freeze({
@@ -70,6 +106,8 @@ export const ELEMENT_FIELDS = Object.freeze({
   runs: { type: "runs" },        // text
   items: { type: "array" },      // list, chips, chain, loop-labels: each item is runs (+ reveal)
   reveal: { type: "reveal" },
+  role: { type: { arrayOf: { enum: ROLES } } },
+  style: { type: "object" },
   scene: { type: { enum: Object.keys(CUSTOM_SCENES) } },
   params: { type: "object" }
 });

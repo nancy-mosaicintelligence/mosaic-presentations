@@ -55,6 +55,14 @@ function htmlToRuns(s) {
   return runs;
 }
 
+// global animation values: from the embedded document once bound, else read off the source constants
+const num = (re) => { const m = html.match(re); if (!m) throw new Error("animation constant " + re); return +m[1]; };
+const animation = EMBEDDED && EMBEDDED.animation ? EMBEDDED.animation : {
+  revealSpacing: num(/R\.seq\*\(REDUCED\?0:(\.\d+)\)\) \/ \(REDUCED\?\.01:\.\d+\)/), revealFade: num(/R\.seq\*\(REDUCED\?0:\.\d+\)\) \/ \(REDUCED\?\.01:(\.\d+)\)/),
+  stepMin: num(/Math\.max\((\d+), Math\.min\(\d+, Math\.abs\(PT - P\)/), stepMax: num(/Math\.max\(\d+, Math\.min\((\d+), Math\.abs\(PT - P\)/),
+  stepPerUnit: num(/Math\.abs\(PT - P\) \* (\d+)\)/), stepEaseOut: num(/return lerp\(smooth\(k\), o, (\.\d+)\)/)
+};
+
 // JS-authored copy: from the source literals before the deck is bound, from the embedded document after
 let jsCopy;
 if (EMBEDDED) {
@@ -116,11 +124,20 @@ const dom = await page.evaluate(() => {
   const GENERATED = "#icoNature, #icoEng, #impchart, .boardsk, .bub, .marrow, .loopsvg, .sensetie";
   const tagNth = (sec, el) => { const tag = el.tagName.toLowerCase(); const all = [...sec.querySelectorAll(tag)].filter(x => !x.parentElement.closest(GENERATED)); return { tag, nth: all.indexOf(el) }; };
   const reveal = (el) => el.dataset.p !== undefined ? { p: +el.dataset.p, ...(el.dataset.seq !== undefined ? { seq: +el.dataset.seq } : {}) } : undefined;
+  const STYLE_KEYS = ["maxWidth", "margin", "marginTop", "marginBottom", "textAlign", "fontSize", "lineHeight", "color"];
+  // the shorthand wins over the longhands the CSSOM derives from it
+  const styleOf = (el) => { const o = {}; for (const k of STYLE_KEYS) if (el.style[k]) o[k] = el.style[k]; if (o.margin) { delete o.marginTop; delete o.marginBottom; } return Object.keys(o).length ? o : undefined; };
   const sections = [], bindings = [];
   for (const sec of document.querySelectorAll("#stagec section.beat")) {
     const key = sec.dataset.k, elements = []; let n = 0;
+    const layout = { variants: [...sec.classList].filter(c => c !== "beat") };
+    if (sec.dataset.until !== undefined) layout.until = +sec.dataset.until;
+    const mv = sec.querySelector(":scope > .mv");
+    if (mv) { if (mv.style.width) layout.width = mv.style.width.replace(/\s+/g, ""); const box = [...mv.classList].find(c => c !== "mv"); if (box) layout.box = box; }
     const bind = (el, id) => { const { tag, nth } = tagNth(sec, el); bindings.push({ id, section: key, tag, nth }); };
-    const add = (el, type, extra) => { const id = key + "." + (++n); const e = { id, type, ...extra }; const rv = reveal(el); if (rv && type !== "chips") e.reveal = rv; elements.push(e); bind(el, id); return e; };
+    const add = (el, type, extra) => { const id = key + "." + (++n); const e = { id, type, ...extra }; const rv = reveal(el); if (rv && type !== "chips") e.reveal = rv;
+      const role = [...el.classList].filter(Boolean); if (role.length) e.role = role; const st = styleOf(el); if (st) e.style = st;
+      elements.push(e); bind(el, id); return e; };
     // document order over the copy-bearing and scene elements
     const walker = document.createTreeWalker(sec, NodeFilter.SHOW_ELEMENT);
     const handled = new Set();
@@ -139,7 +156,7 @@ const dom = await page.evaluate(() => {
       if (el.matches(".bub, .marrow")) { handled.add(el); continue; }   /* drawn by the chalkboard scene */
       if (tag === "p" || el.matches("span.mk") || el.matches(".cue")) { add(el, "text", { runs: runsOf(el) }); handled.add(el); continue; }
     }
-    sections.push({ key, elements });
+    sections.push({ key, layout, elements });
   }
   const text = (sel) => document.querySelector(sel).textContent.replace(/\s+/g, " ").trim();
   const copy = {
@@ -162,12 +179,13 @@ await browser.close();
 const bindingsOut = dom.bindings.filter(b => !(b.section === "open" && !dom.sections[0].elements.some(e => e.id === b.id)));
 
 const doc = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   id: "italian-tech-week-2026",
   title: "The Room and the Vessel",
   renderer: "itw-keynote",
   meta: { extractedFrom: "index.html", extractedAt: new Date().toISOString().slice(0, 10) },
   tokens,
+  animation,
   copy: {
     road: jsCopy.road,
     team: jsCopy.team,

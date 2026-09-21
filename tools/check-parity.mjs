@@ -4,6 +4,10 @@
 // deck to structured content (Phase 5) changed nothing the audience or presenter sees.
 //   node tools/check-parity.mjs <urlA> <urlB>
 import { createRequire } from "node:module";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+const BINDINGS = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "presentations/italian-tech-week/content/bindings.json"), "utf8"));
 const { chromium } = createRequire((process.env.PW_MODULES || process.env.NODE_PATH || "") + "/")("playwright");
 const [A, B] = process.argv.slice(2);
 if (!A || !B) { console.error("usage: check-parity <urlA> <urlB>"); process.exit(2); }
@@ -12,7 +16,19 @@ async function snapshot(url) {
   const page = await (await browser.newContext({ viewport: { width: 1440, height: 810 }, reducedMotion: "reduce" })).newPage();
   await page.goto(url + (url.includes("?") ? "&" : "?") + "watchdog=off"); await page.evaluate(() => document.fonts.ready); await page.waitForTimeout(500);
   const total = await page.evaluate(() => parseInt(document.getElementById("pos").textContent.split("/")[1], 10));
-  const out = [];
+  // layout is static: sample it once — section classes and box widths, every bound element's classes and computed type/spacing
+  const layout = await page.evaluate((BINDINGS) => {
+    const secs = [...document.querySelectorAll("#stagec section.beat")].map(s => { const mv = s.querySelector(":scope > .mv"); return [s.dataset.k, s.className, s.dataset.until || "", mv ? mv.className + "|" + mv.style.width : ""].join("~"); });
+    const GENERATED = "#icoNature, #icoEng, #impchart, .boardsk, .bub, .marrow, .loopsvg, .sensetie";
+    const els = BINDINGS.map(b => {
+      const sec = document.querySelector('#stagec section.beat[data-k="' + b.section + '"]');
+      const e = sec && [...sec.querySelectorAll(b.tag)].filter(x => !x.parentElement.closest(GENERATED))[b.nth];
+      if (!e) return b.id + "~missing";
+      const c = getComputedStyle(e); return [b.id, e.className, c.fontFamily.split(",")[0], c.fontWeight, c.fontSize, c.maxWidth, c.margin, c.textAlign, c.lineHeight, c.color].join("~");
+    });
+    return secs.concat(els);
+  }, BINDINGS);
+  const out = [{ layout }];
   for (let n = 1; n <= total; n++) {
     if (n > 1) await page.keyboard.press("ArrowRight");
     // settle: the counter shows this station and no beat is mid-fade (software rendering can be slow)
@@ -41,7 +57,7 @@ await browser.close();
 let diffs = 0;
 for (let i = 0; i < Math.max(a.length, b.length); i++) {
   const sa = JSON.stringify(a[i]), sb = JSON.stringify(b[i]);
-  if (sa !== sb) { diffs++; let j = 0; while (sa[j] === sb[j]) j++; console.log(`station ${i + 1} differs at char ${j}:\n  A: ${sa.slice(Math.max(0, j - 80), j + 120)}\n  B: ${sb.slice(Math.max(0, j - 80), j + 120)}`); }
+  if (sa !== sb) { diffs++; let j = 0; while (sa[j] === sb[j]) j++; console.log(`${i === 0 ? "layout" : "station " + i} differs at char ${j}:\n  A: ${sa.slice(Math.max(0, j - 80), j + 120)}\n  B: ${sb.slice(Math.max(0, j - 80), j + 120)}`); }
 }
-console.log(diffs === 0 ? `PARITY: all ${a.length} stations identical (text, reveals, notes, overlays, chrome, tokens)` : `${diffs} station(s) differ`);
+console.log(diffs === 0 ? `PARITY: layout and all ${a.length - 1} stations identical (classes, computed type and spacing, text, reveals, notes, overlays, chrome, tokens)` : `${diffs} difference(s)`);
 process.exit(diffs === 0 ? 0 : 1);

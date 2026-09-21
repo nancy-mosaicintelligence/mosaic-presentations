@@ -7,7 +7,10 @@ import { SCHEMA_VERSION } from "./schema.js";
  * @type {Record<number, (doc: any) => any>}
  */
 const STEPS = {
-  // 1 → 2 will go here when the schema changes.
+  // 1 → 2: sections gained an optional `layout`, elements optional `role` and `style`, the document an
+  // optional `animation`. All optional, so the upgrade is the version stamp alone; a v1 document renders
+  // with the layout the markup already carries.
+  1: (doc) => ({ ...doc, schemaVersion: 2 })
 };
 
 /**

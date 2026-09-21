@@ -179,17 +179,30 @@ Fluoroscopy integration additionally requires:
 ## Phase 5 content architecture
 
 Step 1 (copy, tokens, stations) verified 2026-09-20. Evidence: `packages/presentation-core/test/`, `tools/check-parity.mjs`, D-031.
+Step 2 (layout, roles, inline overrides, animation) verified 2026-09-20. Evidence: the same tests (13), `tools/check-parity.mjs` (layout signature + 55 stations), `tools/check-binding.mjs`, D-032.
 
 | Test | Status | Evidence |
 |---|---|---|
 | A versioned schema validates the Italian Tech Week presentation | PASS | `presentation.json` (schema 1, 27 sections, 59 elements, 55 stations) passes `validate()` with no errors |
 | Invalid element types and unsupported properties are rejected | PASS | unit tests: unknown type, unknown fields at document/element/station/run level, markup in text, unknown marks, icons, scenes and scene parameters, bad tokens, out-of-order or dangling stations |
-| Content, tokens, layout, animation, assets and renderer code remain separate | PARTIAL | copy, tokens and stations are in the document; layout and animation values stay in markup/CSS until the next step; assets are not yet modelled (only the two logo SVGs exist, embedded as paths) |
+| Content, tokens, layout, animation, assets and renderer code remain separate | PARTIAL | copy, tokens and stations (step 1), section layout, element roles and inline overrides, and the global animation values (step 2) are in the document; the structural containers' reveals stay in the markup; assets are not yet modelled (only the two logo SVGs exist, embedded as paths) |
 | Structured-data output matches approved baseline states | PASS | re-extracting the bound deck reproduces the document byte for byte; `check-parity` finds all 55 stations identical to the pre-binding snapshot (`snapshots/phase4d/`) |
 | Schema migrations are deterministic and covered by tests | PASS | `migrate()` identity at v1, refuses future/unknown versions, returns a copy; unit-tested |
 | Custom scenes accept validated parameters without accepting arbitrary code | PASS | scenes are references with closed parameter lists; a `code` parameter is rejected in tests |
 | The deck's embedded `renderRuns` equals the package's reference implementation | PASS | unit test compares the two texts |
 | Deck behaviour unchanged after binding | PASS | full verification run on the bound deck (see Phase 4D table; same checks) |
+
+Step 2 additions:
+
+| Test | Status | Evidence |
+|---|---|---|
+| Layout, role, style and animation fields validate and are allow-listed | PASS | unit test: an unknown variant, a `url()` in a width, an unknown box, an unknown role, a `background` override, a `url(javascript:)` colour, an out-of-range ease and step, and an unknown animation key are each rejected at their path |
+| A v1 document migrates to v2 deterministically and still validates | PASS | unit test: two runs equal, only `schemaVersion` differs, the result validates |
+| Layout unchanged after binding | PASS | `check-parity` layout signature identical to `snapshots/phase4d/`: every section's class list, exit progress and box, every bound element's class list and computed family, weight, size, measure, margins, alignment, leading and colour |
+| Every station unchanged after binding | PASS | `check-parity`: 55 of 55 identical |
+| Re-extraction reproduces the document | PASS | extracting from the bound deck yields the same document byte for byte (24,166 characters) |
+| The values are read from the document, not the markup | PASS | `check-binding`: a mutated variant, exit progress, box width, role, colour, measure, removed overrides and a 3 s reveal spacing each reach the page; the control deck is unchanged |
+| Deck behaviour unchanged after step 2 | PASS | full verification run on the step-2 deck: 54 of 54 checks (rail, chrome, reversals, chain, station 21, close, header, tags, bounds and clipping at four viewports, console and requests clean) |
 
 ## Phase 6 editor MVP
 

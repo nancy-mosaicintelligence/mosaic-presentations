@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "id": "italian-tech-week-2026",
   "title": "The Room and the Vessel",
   "renderer": "itw-keynote",
@@ -29,6 +29,14 @@
       "chalk": "\"Architects Daughter\",\"Segoe Print\",\"Bradley Hand\",ui-rounded,cursive",
       "mono": "\"IBM Plex Mono\",ui-monospace,\"SF Mono\",Menlo,Consolas,monospace"
     }
+  },
+  "animation": {
+    "revealSpacing": 0.46,
+    "revealFade": 0.8,
+    "stepMin": 480,
+    "stepMax": 1900,
+    "stepPerUnit": 16000,
+    "stepEaseOut": 0.72
   },
   "copy": {
     "road": [
@@ -149,6 +157,11 @@
   "sections": [
     {
       "key": "open",
+      "layout": {
+        "variants": [
+          "mid"
+        ]
+      },
       "elements": [
         {
           "id": "open.1",
@@ -172,6 +185,10 @@
                 "p": 0.03
               }
             }
+          ],
+          "role": [
+            "hero",
+            "strong"
           ]
         },
         {
@@ -208,6 +225,13 @@
     },
     {
       "key": "tl",
+      "layout": {
+        "variants": [
+          "plain",
+          "top"
+        ],
+        "width": "min(940px,76%)"
+      },
       "elements": [
         {
           "id": "tl.1",
@@ -225,12 +249,21 @@
             {
               "t": ":"
             }
+          ],
+          "role": [
+            "lede"
           ]
         }
       ]
     },
     {
       "key": "r1",
+      "layout": {
+        "variants": [
+          "left",
+          "inroom"
+        ]
+      },
       "elements": [
         {
           "id": "r1.1",
@@ -248,12 +281,23 @@
             {
               "t": " can be used as a transportation network through the human body."
             }
+          ],
+          "role": [
+            "big"
           ]
         }
       ]
     },
     {
       "key": "imp",
+      "layout": {
+        "variants": [
+          "right",
+          "inroom"
+        ],
+        "until": 0.512,
+        "width": "min(470px,39%)"
+      },
       "elements": [
         {
           "id": "imp.1",
@@ -262,7 +306,13 @@
             {
               "t": "Enormous implications:"
             }
-          ]
+          ],
+          "role": [
+            "big"
+          ],
+          "style": {
+            "marginBottom": "18px"
+          }
         },
         {
           "id": "imp.2",
@@ -308,6 +358,9 @@
                 "p": 0.495
               }
             }
+          ],
+          "role": [
+            "pts"
           ]
         },
         {
@@ -316,12 +369,23 @@
           "scene": "itw-impact-chart",
           "reveal": {
             "p": 0.375
-          }
+          },
+          "role": [
+            "impchart"
+          ]
         }
       ]
     },
     {
       "key": "cv",
+      "layout": {
+        "variants": [
+          "left",
+          "inroom"
+        ],
+        "until": 0.906,
+        "width": "min(400px,33%)"
+      },
       "elements": [
         {
           "id": "cv.1",
@@ -340,12 +404,22 @@
             {
               "t": ":"
             }
+          ],
+          "role": [
+            "big"
           ]
         }
       ]
     },
     {
       "key": "nx",
+      "layout": {
+        "variants": [
+          "right",
+          "inroom"
+        ],
+        "width": "min(400px,33%)"
+      },
       "elements": [
         {
           "id": "nx.1",
@@ -373,12 +447,22 @@
             {
               "t": " become possible:"
             }
+          ],
+          "role": [
+            "big"
           ]
         }
       ]
     },
     {
       "key": "nx2",
+      "layout": {
+        "variants": [
+          "right",
+          "inroom"
+        ],
+        "width": "min(430px,35%)"
+      },
       "elements": [
         {
           "id": "nx2.1",
@@ -387,7 +471,13 @@
             {
               "t": "And instead of delivering only balloons and stents, they can deliver:"
             }
-          ]
+          ],
+          "role": [
+            "lede"
+          ],
+          "style": {
+            "maxWidth": "42ch"
+          }
         },
         {
           "id": "nx2.2",
@@ -463,6 +553,9 @@
                 "seq": 4.5
               }
             }
+          ],
+          "role": [
+            "chips"
           ]
         },
         {
@@ -482,12 +575,31 @@
           "reveal": {
             "p": 0.885,
             "seq": 6.4
+          },
+          "role": [
+            "hero",
+            "strong",
+            "rv"
+          ],
+          "style": {
+            "maxWidth": "14ch",
+            "margin": "22px 0px 0px",
+            "textAlign": "left",
+            "fontSize": "clamp(22px, 2.6vw, 38px)"
           }
         }
       ]
     },
     {
       "key": "disc",
+      "layout": {
+        "variants": [
+          "right",
+          "lowcol",
+          "inroom"
+        ],
+        "width": "min(400px,34%)"
+      },
       "elements": [
         {
           "id": "disc.1",
@@ -496,12 +608,22 @@
             {
               "t": "We have discovered a way to reach deep inside the human body without opening it."
             }
+          ],
+          "role": [
+            "big"
           ]
         }
       ]
     },
     {
       "key": "ves1",
+      "layout": {
+        "variants": [
+          "vess",
+          "low"
+        ],
+        "width": "min(820px,64%)"
+      },
       "elements": [
         {
           "id": "ves1.1",
@@ -519,7 +641,13 @@
             {
               "t": ", but it came with an expensive tradeoff."
             }
-          ]
+          ],
+          "role": [
+            "vopen"
+          ],
+          "style": {
+            "fontSize": "26.9px"
+          }
         },
         {
           "id": "ves1.2",
@@ -540,12 +668,21 @@
           ],
           "reveal": {
             "p": 1.025
-          }
+          },
+          "role": [
+            "vhero",
+            "rv"
+          ]
         }
       ]
     },
     {
       "key": "ves2",
+      "layout": {
+        "variants": [
+          "orbwrap"
+        ]
+      },
       "elements": [
         {
           "id": "ves2.1",
@@ -611,6 +748,13 @@
     },
     {
       "key": "sc1",
+      "layout": {
+        "variants": [
+          "lite",
+          "plain"
+        ],
+        "box": "scale-in"
+      },
       "elements": [
         {
           "id": "sc1.1",
@@ -619,6 +763,9 @@
             {
               "t": "So what makes endovascular surgery possible today is extreme human expertise:"
             }
+          ],
+          "role": [
+            "lead-in"
           ]
         },
         {
@@ -641,12 +788,24 @@
           "reveal": {
             "p": 1.33,
             "seq": 1
-          }
+          },
+          "role": [
+            "hero",
+            "strong",
+            "rv"
+          ]
         }
       ]
     },
     {
       "key": "sc2",
+      "layout": {
+        "variants": [
+          "lite",
+          "left"
+        ],
+        "box": "scale-col"
+      },
       "elements": [
         {
           "id": "sc2.1",
@@ -655,6 +814,9 @@
             {
               "t": "As a result, surgery may be the last $100B industry that still scales one highly trained human at a time."
             }
+          ],
+          "role": [
+            "big"
           ]
         },
         {
@@ -694,12 +856,23 @@
           ],
           "reveal": {
             "p": 1.4
-          }
+          },
+          "role": [
+            "rv",
+            "x2line"
+          ]
         }
       ]
     },
     {
       "key": "sc3",
+      "layout": {
+        "variants": [
+          "lite",
+          "left"
+        ],
+        "box": "scale-bound"
+      },
       "elements": [
         {
           "id": "sc3.1",
@@ -717,12 +890,25 @@
             {
               "t": "."
             }
-          ]
+          ],
+          "role": [
+            "huge",
+            "strong"
+          ],
+          "style": {
+            "maxWidth": "19ch"
+          }
         }
       ]
     },
     {
       "key": "q",
+      "layout": {
+        "variants": [
+          "lite",
+          "mid"
+        ]
+      },
       "elements": [
         {
           "id": "q.1",
@@ -731,12 +917,22 @@
             {
               "t": "So: What would it take to scale the knowledge of the very best surgeons?"
             }
+          ],
+          "role": [
+            "hero"
           ]
         }
       ]
     },
     {
       "key": "nav",
+      "layout": {
+        "variants": [
+          "lite",
+          "plain"
+        ],
+        "box": "navq"
+      },
       "elements": [
         {
           "id": "nav.1",
@@ -765,6 +961,9 @@
                 "seq": 1
               }
             }
+          ],
+          "role": [
+            "ask"
           ]
         },
         {
@@ -786,7 +985,11 @@
           ],
           "reveal": {
             "p": 1.555
-          }
+          },
+          "role": [
+            "askline",
+            "rv"
+          ]
         },
         {
           "id": "nav.3",
@@ -795,6 +998,9 @@
             {
               "t": "But nature doesn't."
             }
+          ],
+          "role": [
+            "senseh"
           ]
         },
         {
@@ -803,7 +1009,10 @@
           "scene": "itw-sense-icons",
           "params": {
             "set": "nature"
-          }
+          },
+          "role": [
+            "icons"
+          ]
         },
         {
           "id": "nav.5",
@@ -812,6 +1021,9 @@
             {
               "t": "Evolution selects the sensory system that is useful for your environment."
             }
+          ],
+          "role": [
+            "sensenote"
           ]
         },
         {
@@ -820,7 +1032,11 @@
           "scene": "itw-sense-tie",
           "reveal": {
             "p": 1.625
-          }
+          },
+          "role": [
+            "sensetie",
+            "rv"
+          ]
         },
         {
           "id": "nav.7",
@@ -829,6 +1045,9 @@
             {
               "t": "Engineering works the same way."
             }
+          ],
+          "role": [
+            "senseh"
           ]
         },
         {
@@ -837,7 +1056,10 @@
           "scene": "itw-sense-icons",
           "params": {
             "set": "engineering"
-          }
+          },
+          "role": [
+            "icons"
+          ]
         },
         {
           "id": "nav.9",
@@ -846,17 +1068,30 @@
             {
               "t": "Engineering fuses these systems together, to answer exactly the same 2 questions."
             }
+          ],
+          "role": [
+            "sensenote"
           ]
         }
       ]
     },
     {
       "key": "av",
+      "layout": {
+        "variants": [
+          "lite",
+          "plain"
+        ],
+        "width": "min(1280px,92%)"
+      },
       "elements": [
         {
           "id": "av.1",
           "type": "custom-scene",
-          "scene": "itw-chalkboard"
+          "scene": "itw-chalkboard",
+          "role": [
+            "boardsk"
+          ]
         },
         {
           "id": "av.2",
@@ -865,6 +1100,9 @@
             {
               "t": "Lessons learnt from autonomous vehicle industry:"
             }
+          ],
+          "role": [
+            "btitle"
           ]
         },
         {
@@ -898,6 +1136,9 @@
                 "em"
               ]
             }
+          ],
+          "role": [
+            "bsynth"
           ]
         },
         {
@@ -958,6 +1199,12 @@
     },
     {
       "key": "av2",
+      "layout": {
+        "variants": [
+          "lite",
+          "mid"
+        ]
+      },
       "elements": [
         {
           "id": "av2.1",
@@ -975,12 +1222,23 @@
             {
               "t": " had to come first."
             }
+          ],
+          "role": [
+            "hero",
+            "strong"
           ]
         }
       ]
     },
     {
       "key": "av3",
+      "layout": {
+        "variants": [
+          "lite",
+          "plain"
+        ],
+        "width": "min(1180px,86%)"
+      },
       "elements": [
         {
           "id": "av3.1",
@@ -998,7 +1256,16 @@
             {
               "t": "."
             }
-          ]
+          ],
+          "role": [
+            "hero",
+            "strong"
+          ],
+          "style": {
+            "maxWidth": "20ch",
+            "margin": "0px 0px 30px",
+            "textAlign": "left"
+          }
         },
         {
           "id": "av3.2",
@@ -1007,6 +1274,9 @@
             {
               "t": "01"
             }
+          ],
+          "role": [
+            "mk"
           ]
         },
         {
@@ -1034,6 +1304,9 @@
             {
               "t": "02"
             }
+          ],
+          "role": [
+            "mk"
           ]
         },
         {
@@ -1052,6 +1325,9 @@
             {
               "t": "03"
             }
+          ],
+          "role": [
+            "mk"
           ]
         },
         {
@@ -1070,6 +1346,12 @@
     },
     {
       "key": "st",
+      "layout": {
+        "variants": [
+          "vess",
+          "loopwrap"
+        ]
+      },
       "elements": [
         {
           "id": "st.1",
@@ -1078,6 +1360,9 @@
             {
               "t": "Much like AVs did, we start by:"
             }
+          ],
+          "role": [
+            "loopcap"
           ]
         },
         {
@@ -1132,12 +1417,21 @@
                 "p": 2.01
               }
             }
+          ],
+          "role": [
+            "loop"
           ]
         }
       ]
     },
     {
       "key": "st2",
+      "layout": {
+        "variants": [
+          "mid",
+          "vess"
+        ]
+      },
       "elements": [
         {
           "id": "st2.1",
@@ -1209,12 +1503,21 @@
                 }
               ]
             }
+          ],
+          "role": [
+            "chain"
           ]
         }
       ]
     },
     {
       "key": "out",
+      "layout": {
+        "variants": [
+          "mid",
+          "onfield"
+        ]
+      },
       "elements": [
         {
           "id": "out.1",
@@ -1232,12 +1535,26 @@
             {
               "t": "."
             }
-          ]
+          ],
+          "role": [
+            "hero",
+            "strong"
+          ],
+          "style": {
+            "maxWidth": "17ch"
+          }
         }
       ]
     },
     {
       "key": "out2",
+      "layout": {
+        "variants": [
+          "left",
+          "inroom"
+        ],
+        "width": "min(430px,37%)"
+      },
       "elements": [
         {
           "id": "out2.1",
@@ -1255,6 +1572,9 @@
             {
               "t": " has developed."
             }
+          ],
+          "role": [
+            "big"
           ]
         },
         {
@@ -1273,12 +1593,24 @@
             {
               "t": "."
             }
-          ]
+          ],
+          "role": [
+            "big"
+          ],
+          "style": {
+            "marginTop": "16px"
+          }
         }
       ]
     },
     {
       "key": "out3",
+      "layout": {
+        "variants": [
+          "mid",
+          "onfield"
+        ]
+      },
       "elements": [
         {
           "id": "out3.1",
@@ -1296,7 +1628,14 @@
             {
               "t": "."
             }
-          ]
+          ],
+          "role": [
+            "lede"
+          ],
+          "style": {
+            "margin": "0px auto 18px",
+            "textAlign": "center"
+          }
         },
         {
           "id": "out3.2",
@@ -1314,12 +1653,25 @@
             {
               "t": "."
             }
-          ]
+          ],
+          "role": [
+            "hero",
+            "strong"
+          ],
+          "style": {
+            "maxWidth": "19ch"
+          }
         }
       ]
     },
     {
       "key": "exit1",
+      "layout": {
+        "variants": [
+          "mid",
+          "onfield"
+        ]
+      },
       "elements": [
         {
           "id": "exit1.1",
@@ -1328,12 +1680,22 @@
             {
               "t": "Because once surgery can be perceived, it can be learnt."
             }
+          ],
+          "role": [
+            "huge"
           ]
         }
       ]
     },
     {
       "key": "exit2",
+      "layout": {
+        "variants": [
+          "mid",
+          "onfield"
+        ],
+        "until": 2.276
+      },
       "elements": [
         {
           "id": "exit2.1",
@@ -1345,12 +1707,21 @@
                 "em"
               ]
             }
+          ],
+          "role": [
+            "huge"
           ]
         }
       ]
     },
     {
       "key": "exit3",
+      "layout": {
+        "variants": [
+          "mid",
+          "low"
+        ]
+      },
       "elements": [
         {
           "id": "exit3.1",
@@ -1359,7 +1730,14 @@
             {
               "t": "ileana@mosaicintelligence.xyz"
             }
-          ]
+          ],
+          "role": [
+            "src"
+          ],
+          "style": {
+            "lineHeight": "2.4",
+            "color": "var(--ink-2)"
+          }
         }
       ]
     }
