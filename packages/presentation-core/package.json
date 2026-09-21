@@ -1,0 +1,12 @@
+{
+  "name": "@mosaic/presentation-core",
+  "version": "0.1.0",
+  "description": "Framework-independent schema, validation, migration and hashing for Mosaic presentations. No runtime dependencies.",
+  "type": "module",
+  "private": true,
+  "exports": "./src/index.js",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "engines": { "node": ">=20" }
+}

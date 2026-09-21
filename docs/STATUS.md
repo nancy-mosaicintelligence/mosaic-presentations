@@ -12,6 +12,7 @@ Last updated: 2026-09-18
 - Phase 4C (navigation, AV lesson, thesis): complete, partly reversed by 4D
 - Phase 4D (the review pass: type system, presenter chrome, vessel rail, reversals, chain, close): complete
 - Phase 4E: blocked on the fluoroscopy frames
+- Phase 5 (structured content): step 1 complete — copy, tokens and stations extracted to a validated document and the deck bound to it with proven parity (D-031); layout/animation extraction and assets are the next steps
 - Phases 5 through 9: planned only
 
 ## Inspected
@@ -198,6 +199,13 @@ Sixth pass (D-027, D-028): the room recedes for the whole run of text and never 
 - A typography change can materially alter wrapping and timing.
 - Invite-only access cannot be enforced by the current static host configuration.
 - The motion-reference directory contains missing assets and cannot serve as a production dependency.
+
+## Phase 5 step 1 (2026-09-20)
+
+- `packages/presentation-core/` (schema, validator, migration, hash, runs renderer; zero dependencies; `node --test`)
+- `presentations/italian-tech-week/content/presentation.json` (+ `bindings.json`), embedded in `index.html`; `applyContent()` renders copy, tokens and stations from it
+- `tools/extract-content.mjs`, `tools/embed-content.mjs`, `tools/check-parity.mjs`; `snapshots/phase4d/` is the parity reference
+- Parity: re-extraction identical; all 55 stations identical to the snapshot; the full behavioural verification (54 checks) passes on the bound deck (`6da5ba48…`, 1,072,869 bytes); `node --test` 11/11
 
 ## Deployment (2026-09-20)
 

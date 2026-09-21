@@ -9,3 +9,7 @@ Exact copy of the root `index.html` at the end of Phase 4B (Fraunces + DM Sans, 
 ## phase4c/
 
 Exact copy of the root `index.html` at the end of Phase 4C, taken 2026-09-20 before Phase 4D began. The "before" for the Phase 4D comparison set. Do not edit.
+
+## phase4d/
+
+Exact copy of the root `index.html` at the end of Phase 4D (the deployed v2 deck, `96e32502…`), taken 2026-09-20 before Phase 5 bound the deck to structured content. The parity reference for Phase 5. Do not edit.

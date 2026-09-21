@@ -1,0 +1,344 @@
+[
+  {
+    "id": "open.1",
+    "section": "open",
+    "tag": "p",
+    "nth": 0
+  },
+  {
+    "id": "open.2",
+    "section": "open",
+    "tag": "p",
+    "nth": 1
+  },
+  {
+    "id": "open.3",
+    "section": "open",
+    "tag": "p",
+    "nth": 2
+  },
+  {
+    "id": "tl.1",
+    "section": "tl",
+    "tag": "p",
+    "nth": 0
+  },
+  {
+    "id": "r1.1",
+    "section": "r1",
+    "tag": "p",
+    "nth": 0
+  },
+  {
+    "id": "imp.1",
+    "section": "imp",
+    "tag": "p",
+    "nth": 0
+  },
+  {
+    "id": "imp.2",
+    "section": "imp",
+    "tag": "ul",
+    "nth": 0
+  },
+  {
+    "id": "imp.3",
+    "section": "imp",
+    "tag": "div",
+    "nth": 1
+  },
+  {
+    "id": "cv.1",
+    "section": "cv",
+    "tag": "p",
+    "nth": 0
+  },
+  {
+    "id": "nx.1",
+    "section": "nx",
+    "tag": "p",
+    "nth": 0
+  },
+  {
+    "id": "nx2.1",
+    "section": "nx2",
+    "tag": "p",
+    "nth": 0
+  },
+  {
+    "id": "nx2.2",
+    "section": "nx2",
+    "tag": "div",
+    "nth": 1
+  },
+  {
+    "id": "nx2.3",
+    "section": "nx2",
+    "tag": "p",
+    "nth": 1
+  },
+  {
+    "id": "disc.1",
+    "section": "disc",
+    "tag": "p",
+    "nth": 0
+  },
+  {
+    "id": "ves1.1",
+    "section": "ves1",
+    "tag": "p",
+    "nth": 0
+  },
+  {
+    "id": "ves1.2",
+    "section": "ves1",
+    "tag": "p",
+    "nth": 1
+  },
+  {
+    "id": "ves2.1",
+    "section": "ves2",
+    "tag": "p",
+    "nth": 0
+  },
+  {
+    "id": "sc1.1",
+    "section": "sc1",
+    "tag": "p",
+    "nth": 0
+  },
+  {
+    "id": "sc1.2",
+    "section": "sc1",
+    "tag": "p",
+    "nth": 1
+  },
+  {
+    "id": "sc2.1",
+    "section": "sc2",
+    "tag": "p",
+    "nth": 0
+  },
+  {
+    "id": "sc2.2",
+    "section": "sc2",
+    "tag": "p",
+    "nth": 1
+  },
+  {
+    "id": "sc3.1",
+    "section": "sc3",
+    "tag": "p",
+    "nth": 0
+  },
+  {
+    "id": "q.1",
+    "section": "q",
+    "tag": "p",
+    "nth": 0
+  },
+  {
+    "id": "nav.1",
+    "section": "nav",
+    "tag": "p",
+    "nth": 0
+  },
+  {
+    "id": "nav.2",
+    "section": "nav",
+    "tag": "p",
+    "nth": 1
+  },
+  {
+    "id": "nav.3",
+    "section": "nav",
+    "tag": "p",
+    "nth": 2
+  },
+  {
+    "id": "nav.4",
+    "section": "nav",
+    "tag": "div",
+    "nth": 2
+  },
+  {
+    "id": "nav.5",
+    "section": "nav",
+    "tag": "p",
+    "nth": 3
+  },
+  {
+    "id": "nav.6",
+    "section": "nav",
+    "tag": "svg",
+    "nth": 0
+  },
+  {
+    "id": "nav.7",
+    "section": "nav",
+    "tag": "p",
+    "nth": 4
+  },
+  {
+    "id": "nav.8",
+    "section": "nav",
+    "tag": "div",
+    "nth": 4
+  },
+  {
+    "id": "nav.9",
+    "section": "nav",
+    "tag": "p",
+    "nth": 5
+  },
+  {
+    "id": "av.1",
+    "section": "av",
+    "tag": "svg",
+    "nth": 0
+  },
+  {
+    "id": "av.2",
+    "section": "av",
+    "tag": "p",
+    "nth": 0
+  },
+  {
+    "id": "av.3",
+    "section": "av",
+    "tag": "p",
+    "nth": 1
+  },
+  {
+    "id": "av.4",
+    "section": "av",
+    "tag": "p",
+    "nth": 2
+  },
+  {
+    "id": "av.5",
+    "section": "av",
+    "tag": "p",
+    "nth": 3
+  },
+  {
+    "id": "av.6",
+    "section": "av",
+    "tag": "p",
+    "nth": 4
+  },
+  {
+    "id": "av2.1",
+    "section": "av2",
+    "tag": "p",
+    "nth": 0
+  },
+  {
+    "id": "av3.1",
+    "section": "av3",
+    "tag": "p",
+    "nth": 0
+  },
+  {
+    "id": "av3.2",
+    "section": "av3",
+    "tag": "span",
+    "nth": 0
+  },
+  {
+    "id": "av3.3",
+    "section": "av3",
+    "tag": "p",
+    "nth": 1
+  },
+  {
+    "id": "av3.4",
+    "section": "av3",
+    "tag": "span",
+    "nth": 1
+  },
+  {
+    "id": "av3.5",
+    "section": "av3",
+    "tag": "p",
+    "nth": 2
+  },
+  {
+    "id": "av3.6",
+    "section": "av3",
+    "tag": "span",
+    "nth": 2
+  },
+  {
+    "id": "av3.7",
+    "section": "av3",
+    "tag": "p",
+    "nth": 3
+  },
+  {
+    "id": "st.1",
+    "section": "st",
+    "tag": "p",
+    "nth": 0
+  },
+  {
+    "id": "st.2",
+    "section": "st",
+    "tag": "div",
+    "nth": 0
+  },
+  {
+    "id": "st2.1",
+    "section": "st2",
+    "tag": "div",
+    "nth": 1
+  },
+  {
+    "id": "out.1",
+    "section": "out",
+    "tag": "p",
+    "nth": 0
+  },
+  {
+    "id": "out2.1",
+    "section": "out2",
+    "tag": "p",
+    "nth": 0
+  },
+  {
+    "id": "out2.2",
+    "section": "out2",
+    "tag": "p",
+    "nth": 1
+  },
+  {
+    "id": "out3.1",
+    "section": "out3",
+    "tag": "p",
+    "nth": 0
+  },
+  {
+    "id": "out3.2",
+    "section": "out3",
+    "tag": "p",
+    "nth": 1
+  },
+  {
+    "id": "exit1.1",
+    "section": "exit1",
+    "tag": "p",
+    "nth": 0
+  },
+  {
+    "id": "exit2.1",
+    "section": "exit2",
+    "tag": "p",
+    "nth": 0
+  },
+  {
+    "id": "exit3.1",
+    "section": "exit3",
+    "tag": "p",
+    "nth": 0
+  }
+]

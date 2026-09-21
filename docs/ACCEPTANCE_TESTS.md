@@ -178,12 +178,18 @@ Fluoroscopy integration additionally requires:
 
 ## Phase 5 content architecture
 
-- A versioned schema validates the Italian Tech Week presentation.
-- Invalid element types and unsupported properties are rejected.
-- Content, tokens, layout, animation, assets, and renderer code remain separate.
-- Structured-data output matches approved baseline states.
-- Schema migrations are deterministic and covered by tests.
-- Custom scenes accept validated parameters without accepting arbitrary code.
+Step 1 (copy, tokens, stations) verified 2026-09-20. Evidence: `packages/presentation-core/test/`, `tools/check-parity.mjs`, D-031.
+
+| Test | Status | Evidence |
+|---|---|---|
+| A versioned schema validates the Italian Tech Week presentation | PASS | `presentation.json` (schema 1, 27 sections, 59 elements, 55 stations) passes `validate()` with no errors |
+| Invalid element types and unsupported properties are rejected | PASS | unit tests: unknown type, unknown fields at document/element/station/run level, markup in text, unknown marks, icons, scenes and scene parameters, bad tokens, out-of-order or dangling stations |
+| Content, tokens, layout, animation, assets and renderer code remain separate | PARTIAL | copy, tokens and stations are in the document; layout and animation values stay in markup/CSS until the next step; assets are not yet modelled (only the two logo SVGs exist, embedded as paths) |
+| Structured-data output matches approved baseline states | PASS | re-extracting the bound deck reproduces the document byte for byte; `check-parity` finds all 55 stations identical to the pre-binding snapshot (`snapshots/phase4d/`) |
+| Schema migrations are deterministic and covered by tests | PASS | `migrate()` identity at v1, refuses future/unknown versions, returns a copy; unit-tested |
+| Custom scenes accept validated parameters without accepting arbitrary code | PASS | scenes are references with closed parameter lists; a `code` parameter is rejected in tests |
+| The deck's embedded `renderRuns` equals the package's reference implementation | PASS | unit test compares the two texts |
+| Deck behaviour unchanged after binding | PASS | full verification run on the bound deck (see Phase 4D table; same checks) |
 
 ## Phase 6 editor MVP
 

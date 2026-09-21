@@ -1,0 +1,1811 @@
+{
+  "schemaVersion": 1,
+  "id": "italian-tech-week-2026",
+  "title": "The Room and the Vessel",
+  "renderer": "itw-keynote",
+  "meta": {
+    "extractedFrom": "index.html",
+    "extractedAt": "2026-09-21"
+  },
+  "tokens": {
+    "colors": {
+      "black": "#040102",
+      "white": "#FFFFFF",
+      "grey": "#949494",
+      "warm": "#ABA7A4",
+      "room": "#8CA0AE",
+      "signal": "#FC6452",
+      "signal2": "#FD8678",
+      "ink": "#FFFFFF",
+      "ink-2": "#C9C5C2",
+      "ink-3": "#7E7A78",
+      "hair": "rgba(171,167,164,.16)",
+      "hair-2": "rgba(171,167,164,.30)",
+      "chip": "rgba(255,255,255,.055)"
+    },
+    "fonts": {
+      "serif": "\"Fraunces\",Georgia,\"Times New Roman\",serif",
+      "body": "\"DM Sans\",\"Helvetica Neue\",Helvetica,Arial,sans-serif",
+      "chalk": "\"Architects Daughter\",\"Segoe Print\",\"Bradley Hand\",ui-rounded,cursive",
+      "mono": "\"IBM Plex Mono\",ui-monospace,\"SF Mono\",Menlo,Consolas,monospace"
+    }
+  },
+  "copy": {
+    "road": [
+      {
+        "year": [
+          {
+            "t": "from opening the body"
+          }
+        ],
+        "text": [
+          {
+            "t": "In open surgery, the surgeon can see the organ. They can touch it. They can feel how the tissue responds."
+          }
+        ]
+      },
+      {
+        "year": [
+          {
+            "t": "to small incisions"
+          }
+        ],
+        "text": [
+          {
+            "t": "In laparoscopy, we give up touch, but we preserve vision through a camera."
+          }
+        ]
+      },
+      {
+        "year": [
+          {
+            "t": "to navigating through the body’s own vascular highways"
+          }
+        ],
+        "text": [
+          {
+            "t": "in endovascular surgery, a surgical instrument is navigated deep inside the body"
+          }
+        ]
+      }
+    ],
+    "team": [
+      "operations",
+      "surgeons",
+      "residents",
+      "scrub nurses",
+      "circulating nurses",
+      "radiology techs"
+    ],
+    "sites": [
+      "blocked coronary arteries",
+      "stopping strokes",
+      "repairing aneurysms",
+      "blood flow to a limb",
+      "liver",
+      "uterus",
+      "prostate",
+      "lungs"
+    ],
+    "impactBars": [
+      "access",
+      "recovery trauma",
+      "hospital stay",
+      "cost"
+    ],
+    "senseNature": [
+      "ultrasound",
+      "electrical fields",
+      "vibration",
+      "pressure",
+      "polarization",
+      "temperature"
+    ],
+    "senseEngineering": [
+      "cameras",
+      "radar",
+      "lidar",
+      "inertial sensing",
+      "localization",
+      "maps"
+    ],
+    "annotations": [
+      "Procedure table",
+      "C‑arm · AP projection",
+      "Monitor bank",
+      "Access · right CFA"
+    ],
+    "substitution": [
+      {
+        "t": "It is one of the greatest "
+      },
+      {
+        "t": "substitution",
+        "marks": [
+          "em"
+        ]
+      },
+      {
+        "t": " stories in medicine."
+      }
+    ],
+    "fluoroscopyPlaceholders": [
+      "Fluoroscopy · frame 1",
+      "Fluoroscopy · frame 2",
+      "Fluoroscopy · frame 3"
+    ],
+    "partnerLine": "October 2026, Italy",
+    "cue": "Press → to begin",
+    "notesLabel": "Speaker note",
+    "safeNote": "Safe mode on — the scene is off, the text is intact",
+    "hud": {
+      "safe": "Safe",
+      "notes": "Notes",
+      "present": "Present",
+      "explore": "Explore",
+      "fullscreen": "Fullscreen"
+    }
+  },
+  "sections": [
+    {
+      "key": "open",
+      "elements": [
+        {
+          "id": "open.1",
+          "type": "text",
+          "runs": [
+            {
+              "t": "Surgery is the closest "
+            },
+            {
+              "t": "modern medicine",
+              "marks": [
+                "em"
+              ]
+            },
+            {
+              "t": " has come to defeating death"
+            },
+            {
+              "t": ":",
+              "reveal": {
+                "p": 0.03
+              }
+            }
+          ]
+        },
+        {
+          "id": "open.2",
+          "type": "text",
+          "runs": [
+            {
+              "t": "physically",
+              "marks": [
+                "i"
+              ]
+            },
+            {
+              "t": " change the anatomy"
+            }
+          ]
+        },
+        {
+          "id": "open.3",
+          "type": "text",
+          "runs": [
+            {
+              "t": "physically",
+              "marks": [
+                "i"
+              ]
+            },
+            {
+              "t": " remove the cause of death."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "tl",
+      "elements": [
+        {
+          "id": "tl.1",
+          "type": "text",
+          "runs": [
+            {
+              "t": "Modern surgery has spent the last 150 years becoming less invasive, to reduce the physical cost of accessing anatomy. "
+            },
+            {
+              "t": "We went",
+              "marks": [
+                "lead"
+              ]
+            },
+            {
+              "t": ":"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "r1",
+      "elements": [
+        {
+          "id": "r1.1",
+          "type": "text",
+          "runs": [
+            {
+              "t": "The "
+            },
+            {
+              "t": "vascular system",
+              "marks": [
+                "hl"
+              ]
+            },
+            {
+              "t": " can be used as a transportation network through the human body."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "imp",
+      "elements": [
+        {
+          "id": "imp.1",
+          "type": "text",
+          "runs": [
+            {
+              "t": "Enormous implications:"
+            }
+          ]
+        },
+        {
+          "id": "imp.2",
+          "type": "list",
+          "items": [
+            {
+              "runs": [
+                {
+                  "t": "A needle-sized access point can replace large incisions"
+                }
+              ],
+              "reveal": {
+                "p": 0.405
+              }
+            },
+            {
+              "runs": [
+                {
+                  "t": "Recovery gets shorter. Physiological trauma decreases."
+                }
+              ],
+              "reveal": {
+                "p": 0.435
+              }
+            },
+            {
+              "runs": [
+                {
+                  "t": "Patients leave the hospital sooner."
+                }
+              ],
+              "reveal": {
+                "p": 0.465
+              }
+            },
+            {
+              "runs": [
+                {
+                  "t": "Costs go down."
+                }
+              ],
+              "reveal": {
+                "p": 0.495
+              }
+            }
+          ]
+        },
+        {
+          "id": "imp.3",
+          "type": "custom-scene",
+          "scene": "itw-impact-chart",
+          "reveal": {
+            "p": 0.375
+          }
+        }
+      ]
+    },
+    {
+      "key": "cv",
+      "elements": [
+        {
+          "id": "cv.1",
+          "type": "text",
+          "runs": [
+            {
+              "t": "So far, we used these pathways primarily to treat "
+            },
+            {
+              "t": "cardiovascular disease",
+              "marks": [
+                "em",
+                "strong"
+              ]
+            },
+            {
+              "t": ":"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "nx",
+      "elements": [
+        {
+          "id": "nx.1",
+          "type": "text",
+          "runs": [
+            {
+              "t": "But increasingly, physicians are using the "
+            },
+            {
+              "t": "vascular system",
+              "marks": [
+                "em"
+              ]
+            },
+            {
+              "t": " as a route to disease itself. Entirely "
+            },
+            {
+              "t": "new categories of targeted treatment",
+              "marks": [
+                "em",
+                "strong"
+              ]
+            },
+            {
+              "t": " become possible:"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "nx2",
+      "elements": [
+        {
+          "id": "nx2.1",
+          "type": "text",
+          "runs": [
+            {
+              "t": "And instead of delivering only balloons and stents, they can deliver:"
+            }
+          ]
+        },
+        {
+          "id": "nx2.2",
+          "type": "chips",
+          "items": [
+            {
+              "runs": [
+                {
+                  "icon": "drugs"
+                },
+                {
+                  "t": "drugs"
+                }
+              ],
+              "reveal": {
+                "p": 0.885,
+                "seq": 1.3
+              }
+            },
+            {
+              "runs": [
+                {
+                  "icon": "radiation"
+                },
+                {
+                  "t": "radiation"
+                }
+              ],
+              "reveal": {
+                "p": 0.885,
+                "seq": 2.1
+              }
+            },
+            {
+              "runs": [
+                {
+                  "icon": "energy"
+                },
+                {
+                  "t": "energy"
+                }
+              ],
+              "reveal": {
+                "p": 0.885,
+                "seq": 2.9
+              }
+            },
+            {
+              "runs": [
+                {
+                  "icon": "embolic-agents"
+                },
+                {
+                  "t": "embolic agents"
+                }
+              ],
+              "reveal": {
+                "p": 0.885,
+                "seq": 3.7
+              }
+            },
+            {
+              "runs": [
+                {
+                  "icon": "other-therapies"
+                },
+                {
+                  "t": "other therapies"
+                }
+              ],
+              "reveal": {
+                "p": 0.885,
+                "seq": 4.5
+              }
+            }
+          ]
+        },
+        {
+          "id": "nx2.3",
+          "type": "text",
+          "runs": [
+            {
+              "t": "precisely where they are needed",
+              "marks": [
+                "em"
+              ]
+            },
+            {
+              "t": "."
+            }
+          ],
+          "reveal": {
+            "p": 0.885,
+            "seq": 6.4
+          }
+        }
+      ]
+    },
+    {
+      "key": "disc",
+      "elements": [
+        {
+          "id": "disc.1",
+          "type": "text",
+          "runs": [
+            {
+              "t": "We have discovered a way to reach deep inside the human body without opening it."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "ves1",
+      "elements": [
+        {
+          "id": "ves1.1",
+          "type": "text",
+          "runs": [
+            {
+              "t": "Endovascular medicine is an extraordinary "
+            },
+            {
+              "t": "access system",
+              "marks": [
+                "em"
+              ]
+            },
+            {
+              "t": ", but it came with an expensive tradeoff."
+            }
+          ]
+        },
+        {
+          "id": "ves1.2",
+          "type": "text",
+          "runs": [
+            {
+              "t": "As the incision disappeared, "
+            },
+            {
+              "t": "direct human perception disappeared with it",
+              "marks": [
+                "em"
+              ]
+            },
+            {
+              "t": "."
+            }
+          ],
+          "reveal": {
+            "p": 1.025
+          }
+        }
+      ]
+    },
+    {
+      "key": "ves2",
+      "elements": [
+        {
+          "id": "ves2.1",
+          "type": "text",
+          "runs": [
+            {
+              "t": "What does the operator actually have to do?"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "tun",
+      "elements": [
+        {
+          "id": "tun.1",
+          "type": "text",
+          "runs": [
+            {
+              "t": "This is what they see.",
+              "marks": [
+                "strong"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "tun.2",
+          "type": "list",
+          "items": [
+            {
+              "runs": [
+                {
+                  "t": "Imagine driving a car through a tunnel."
+                }
+              ]
+            },
+            {
+              "runs": [
+                {
+                  "t": "Without lights."
+                }
+              ]
+            },
+            {
+              "runs": [
+                {
+                  "t": "Without windows."
+                }
+              ]
+            },
+            {
+              "runs": [
+                {
+                  "t": "With only intermittent views from grainy satellite images."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "sc1",
+      "elements": [
+        {
+          "id": "sc1.1",
+          "type": "text",
+          "runs": [
+            {
+              "t": "So what makes endovascular surgery possible today is extreme human expertise:"
+            }
+          ]
+        },
+        {
+          "id": "sc1.2",
+          "type": "text",
+          "runs": [
+            {
+              "t": "We have created extraordinary medicine that is "
+            },
+            {
+              "t": "extraordinarily difficult to scale",
+              "marks": [
+                "em"
+              ]
+            },
+            {
+              "t": "."
+            }
+          ],
+          "reveal": {
+            "p": 1.33,
+            "seq": 1
+          }
+        }
+      ]
+    },
+    {
+      "key": "sc2",
+      "elements": [
+        {
+          "id": "sc2.1",
+          "type": "text",
+          "runs": [
+            {
+              "t": "As a result, surgery may be the last $100B industry that still scales one highly trained human at a time."
+            }
+          ]
+        },
+        {
+          "id": "sc2.2",
+          "type": "text",
+          "runs": [
+            {
+              "t": "If you want to perform "
+            },
+            {
+              "t": "×2",
+              "marks": [
+                "x2"
+              ]
+            },
+            {
+              "t": " as many operations, you need at least "
+            },
+            {
+              "t": "×2",
+              "marks": [
+                "x2"
+              ]
+            },
+            {
+              "t": " as many surgeons, residents, and "
+            },
+            {
+              "t": "×2",
+              "marks": [
+                "x2"
+              ]
+            },
+            {
+              "t": " as many scrub nurses, circulating nurses, and radiology techs."
+            }
+          ],
+          "reveal": {
+            "p": 1.4
+          }
+        }
+      ]
+    },
+    {
+      "key": "sc3",
+      "elements": [
+        {
+          "id": "sc3.1",
+          "type": "text",
+          "runs": [
+            {
+              "t": "Bound by a "
+            },
+            {
+              "t": "linear labor-to-output relationship",
+              "marks": [
+                "em"
+              ]
+            },
+            {
+              "t": "."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "q",
+      "elements": [
+        {
+          "id": "q.1",
+          "type": "text",
+          "runs": [
+            {
+              "t": "So: What would it take to scale the knowledge of the very best surgeons?"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "nav",
+      "elements": [
+        {
+          "id": "nav.1",
+          "type": "text",
+          "runs": [
+            {
+              "t": "Where am I?",
+              "marks": [
+                "strong"
+              ]
+            },
+            {
+              "t": "/",
+              "marks": [
+                "i"
+              ],
+              "reveal": {
+                "p": 1.52,
+                "seq": 1
+              }
+            },
+            {
+              "t": "What's around me?",
+              "reveal": {
+                "p": 1.52,
+                "seq": 1
+              }
+            }
+          ]
+        },
+        {
+          "id": "nav.2",
+          "type": "text",
+          "runs": [
+            {
+              "t": "Before you can choose where to go, you need an internal representation of the world. Humans tend to equate perception with "
+            },
+            {
+              "t": "optical vision",
+              "marks": [
+                "em"
+              ]
+            },
+            {
+              "t": "."
+            }
+          ],
+          "reveal": {
+            "p": 1.555
+          }
+        },
+        {
+          "id": "nav.3",
+          "type": "text",
+          "runs": [
+            {
+              "t": "But nature doesn't."
+            }
+          ]
+        },
+        {
+          "id": "nav.4",
+          "type": "custom-scene",
+          "scene": "itw-sense-icons",
+          "params": {
+            "set": "nature"
+          }
+        },
+        {
+          "id": "nav.5",
+          "type": "text",
+          "runs": [
+            {
+              "t": "Evolution selects the sensory system that is useful for your environment."
+            }
+          ]
+        },
+        {
+          "id": "nav.6",
+          "type": "custom-scene",
+          "scene": "itw-sense-tie",
+          "reveal": {
+            "p": 1.625
+          }
+        },
+        {
+          "id": "nav.7",
+          "type": "text",
+          "runs": [
+            {
+              "t": "Engineering works the same way."
+            }
+          ]
+        },
+        {
+          "id": "nav.8",
+          "type": "custom-scene",
+          "scene": "itw-sense-icons",
+          "params": {
+            "set": "engineering"
+          }
+        },
+        {
+          "id": "nav.9",
+          "type": "text",
+          "runs": [
+            {
+              "t": "Engineering fuses these systems together, to answer exactly the same 2 questions."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "av",
+      "elements": [
+        {
+          "id": "av.1",
+          "type": "custom-scene",
+          "scene": "itw-chalkboard"
+        },
+        {
+          "id": "av.2",
+          "type": "text",
+          "runs": [
+            {
+              "t": "Lessons learnt from autonomous vehicle industry:"
+            }
+          ]
+        },
+        {
+          "id": "av.3",
+          "type": "text",
+          "runs": [
+            {
+              "t": "Perception creates a "
+            },
+            {
+              "t": "machine-readable representation",
+              "marks": [
+                "strong"
+              ]
+            },
+            {
+              "t": " of the environment. "
+            },
+            {
+              "t": "→",
+              "marks": [
+                "i"
+              ]
+            },
+            {
+              "t": " "
+            },
+            {
+              "t": "Only then can planning become useful.",
+              "marks": [
+                "em"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "av.4",
+          "type": "text",
+          "runs": [
+            {
+              "t": "autonomous driving looked primarily like a "
+            },
+            {
+              "t": "decision-making problem",
+              "marks": [
+                "strong"
+              ]
+            },
+            {
+              "t": "."
+            }
+          ]
+        },
+        {
+          "id": "av.5",
+          "type": "text",
+          "runs": [
+            {
+              "t": "But none of that matters if the vehicle doesn't have a sufficiently accurate "
+            },
+            {
+              "t": "model of the world around it",
+              "marks": [
+                "strong"
+              ]
+            },
+            {
+              "t": "."
+            }
+          ]
+        },
+        {
+          "id": "av.6",
+          "type": "text",
+          "runs": [
+            {
+              "t": "Before the car could plan, "
+            },
+            {
+              "t": "it had to perceive",
+              "marks": [
+                "strong"
+              ]
+            },
+            {
+              "t": "."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "av2",
+      "elements": [
+        {
+          "id": "av2.1",
+          "type": "text",
+          "runs": [
+            {
+              "t": "But "
+            },
+            {
+              "t": "perception",
+              "marks": [
+                "em"
+              ]
+            },
+            {
+              "t": " had to come first."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "av3",
+      "elements": [
+        {
+          "id": "av3.1",
+          "type": "text",
+          "runs": [
+            {
+              "t": "We think surgery needs to follow "
+            },
+            {
+              "t": "the same path",
+              "marks": [
+                "em"
+              ]
+            },
+            {
+              "t": "."
+            }
+          ]
+        },
+        {
+          "id": "av3.2",
+          "type": "text",
+          "runs": [
+            {
+              "t": "01"
+            }
+          ]
+        },
+        {
+          "id": "av3.3",
+          "type": "text",
+          "runs": [
+            {
+              "t": "At Mosaic, we build surgical instruments that can "
+            },
+            {
+              "t": "perceive and navigate human anatomy",
+              "marks": [
+                "strong"
+              ]
+            },
+            {
+              "t": "."
+            }
+          ]
+        },
+        {
+          "id": "av3.4",
+          "type": "text",
+          "runs": [
+            {
+              "t": "02"
+            }
+          ]
+        },
+        {
+          "id": "av3.5",
+          "type": "text",
+          "runs": [
+            {
+              "t": "We are starting in the vascular system because we believe that solving vascular navigation would unlock access to"
+            }
+          ]
+        },
+        {
+          "id": "av3.6",
+          "type": "text",
+          "runs": [
+            {
+              "t": "03"
+            }
+          ]
+        },
+        {
+          "id": "av3.7",
+          "type": "text",
+          "runs": [
+            {
+              "t": "delivering any therapy to any organ, anywhere.",
+              "marks": [
+                "em"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "st",
+      "elements": [
+        {
+          "id": "st.1",
+          "type": "text",
+          "runs": [
+            {
+              "t": "Much like AVs did, we start by:"
+            }
+          ]
+        },
+        {
+          "id": "st.2",
+          "type": "loop-labels",
+          "items": [
+            {
+              "runs": [
+                {
+                  "t": "Restoring "
+                },
+                {
+                  "t": "perception",
+                  "marks": [
+                    "strong"
+                  ]
+                }
+              ],
+              "reveal": {
+                "p": 1.905
+              }
+            },
+            {
+              "runs": [
+                {
+                  "t": "Generating "
+                },
+                {
+                  "t": "understanding",
+                  "marks": [
+                    "strong"
+                  ]
+                }
+              ],
+              "reveal": {
+                "p": 1.955
+              }
+            },
+            {
+              "runs": [
+                {
+                  "t": "Closing the loop on "
+                },
+                {
+                  "t": "action",
+                  "marks": [
+                    "strong"
+                  ]
+                }
+              ],
+              "reveal": {
+                "p": 2.01
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "st2",
+      "elements": [
+        {
+          "id": "st2.1",
+          "type": "chain",
+          "items": [
+            {
+              "runs": [
+                {
+                  "t": "Perception",
+                  "marks": [
+                    "strong"
+                  ]
+                },
+                {
+                  "t": " creates "
+                },
+                {
+                  "t": "data",
+                  "marks": [
+                    "em"
+                  ]
+                },
+                {
+                  "t": "."
+                }
+              ]
+            },
+            {
+              "runs": [
+                {
+                  "t": "Data",
+                  "marks": [
+                    "strong"
+                  ]
+                },
+                {
+                  "t": " creates "
+                },
+                {
+                  "t": "understanding",
+                  "marks": [
+                    "em"
+                  ]
+                },
+                {
+                  "t": "."
+                }
+              ]
+            },
+            {
+              "runs": [
+                {
+                  "t": "Understanding",
+                  "marks": [
+                    "strong"
+                  ]
+                },
+                {
+                  "t": " enables "
+                },
+                {
+                  "t": "increasingly intelligent action",
+                  "marks": [
+                    "em"
+                  ]
+                },
+                {
+                  "t": "."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "out",
+      "elements": [
+        {
+          "id": "out.1",
+          "type": "text",
+          "runs": [
+            {
+              "t": "Surgical intelligence emerges "
+            },
+            {
+              "t": "from the bottom up",
+              "marks": [
+                "em"
+              ]
+            },
+            {
+              "t": "."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "out2",
+      "elements": [
+        {
+          "id": "out2.1",
+          "type": "text",
+          "runs": [
+            {
+              "t": "That is how every major "
+            },
+            {
+              "t": "embodied intelligent system",
+              "marks": [
+                "strong"
+              ]
+            },
+            {
+              "t": " has developed."
+            }
+          ]
+        },
+        {
+          "id": "out2.2",
+          "type": "text",
+          "runs": [
+            {
+              "t": "And we believe surgery will be "
+            },
+            {
+              "t": "no different",
+              "marks": [
+                "em"
+              ]
+            },
+            {
+              "t": "."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "out3",
+      "elements": [
+        {
+          "id": "out3.1",
+          "type": "text",
+          "runs": [
+            {
+              "t": "For the last 150 years, we made surgery progressively "
+            },
+            {
+              "t": "less invasive",
+              "marks": [
+                "strong"
+              ]
+            },
+            {
+              "t": "."
+            }
+          ]
+        },
+        {
+          "id": "out3.2",
+          "type": "text",
+          "runs": [
+            {
+              "t": "The next era is about making it progressively "
+            },
+            {
+              "t": "more intelligent",
+              "marks": [
+                "em"
+              ]
+            },
+            {
+              "t": "."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "exit1",
+      "elements": [
+        {
+          "id": "exit1.1",
+          "type": "text",
+          "runs": [
+            {
+              "t": "Because once surgery can be perceived, it can be learnt."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "exit2",
+      "elements": [
+        {
+          "id": "exit2.1",
+          "type": "text",
+          "runs": [
+            {
+              "t": "Once it can be learnt, it can be scaled.",
+              "marks": [
+                "em"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "exit3",
+      "elements": [
+        {
+          "id": "exit3.1",
+          "type": "text",
+          "runs": [
+            {
+              "t": "ileana@mosaicintelligence.xyz"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "stations": [
+    {
+      "p": 0,
+      "section": "open",
+      "camera": "none",
+      "chapter": "Open",
+      "note": "Black. The first line alone, modern medicine in orange. Say it and hold.",
+      "black": true
+    },
+    {
+      "p": 0.03,
+      "section": "open",
+      "camera": "none",
+      "chapter": "Open",
+      "note": "The second half of the sentence arrives. Physically change, physically remove.",
+      "black": true
+    },
+    {
+      "p": 0.075,
+      "section": "tl",
+      "camera": "none",
+      "chapter": "1 · Less invasive",
+      "note": "The line about 150 years sits on top and the road draws itself in. Nothing on it yet.",
+      "dur": 2400,
+      "black": true,
+      "road": true
+    },
+    {
+      "p": 0.11,
+      "section": "tl",
+      "camera": "none",
+      "chapter": "1 · Less invasive",
+      "note": "From opening the body. Open surgery: see it, touch it, feel it.",
+      "black": true,
+      "road": true
+    },
+    {
+      "p": 0.145,
+      "section": "tl",
+      "camera": "none",
+      "chapter": "1 · Less invasive",
+      "note": "To small incisions. Laparoscopy: touch goes, vision stays.",
+      "black": true,
+      "road": true
+    },
+    {
+      "p": 0.18,
+      "section": "tl",
+      "camera": "none",
+      "chapter": "1 · Less invasive",
+      "note": "To the vascular highways. This is the one everything after depends on.",
+      "black": true,
+      "road": true
+    },
+    {
+      "p": 0.265,
+      "section": "",
+      "camera": "none",
+      "chapter": "2 · The network",
+      "note": "One press: the dot drives itself off the last curve and we land in the room. Top view, C-arm in place. Say nothing — let it arrive.",
+      "dur": 4200
+    },
+    {
+      "p": 0.3,
+      "section": "r1",
+      "camera": "none",
+      "chapter": "2 · The network",
+      "note": "The transportation-network line, in the room."
+    },
+    {
+      "p": 0.335,
+      "section": "r1",
+      "camera": "none",
+      "chapter": "2 · The network",
+      "note": "Her vasculature lights up across the whole body.",
+      "dur": 2600
+    },
+    {
+      "p": 0.375,
+      "section": "imp",
+      "camera": "none",
+      "chapter": "2 · The network",
+      "note": "Enormous implications. The chart is empty — one bar per line from here."
+    },
+    {
+      "p": 0.405,
+      "section": "imp",
+      "camera": "none",
+      "chapter": "2 · The network",
+      "note": "Needle-sized access."
+    },
+    {
+      "p": 0.435,
+      "section": "imp",
+      "camera": "none",
+      "chapter": "2 · The network",
+      "note": "Recovery and trauma."
+    },
+    {
+      "p": 0.465,
+      "section": "imp",
+      "camera": "none",
+      "chapter": "2 · The network",
+      "note": "Length of stay."
+    },
+    {
+      "p": 0.495,
+      "section": "imp",
+      "camera": "none",
+      "chapter": "2 · The network",
+      "note": "Cost."
+    },
+    {
+      "p": 0.53,
+      "section": "",
+      "camera": "none",
+      "chapter": "2 · The network",
+      "note": "The implications clear and the line stands alone under her: one of the greatest substitution stories in medicine.",
+      "dur": 2400
+    },
+    {
+      "p": 0.6,
+      "section": "cv",
+      "camera": "none",
+      "chapter": "3 · What it treats today",
+      "note": "The cardiovascular uses. The four lines and their four tags arrive by themselves — let them land before you speak.",
+      "dur": 2800
+    },
+    {
+      "p": 0.73,
+      "section": "nx",
+      "camera": "none",
+      "chapter": "4 · A route to disease itself",
+      "note": "The C-arm slides out of the frame as this lands. A route to disease itself — the first column stays and the four new sites arrive on the other side, in orange.",
+      "dur": 3400
+    },
+    {
+      "p": 0.885,
+      "section": "nx2",
+      "camera": "none",
+      "chapter": "4 · A route to disease itself",
+      "note": "Not only balloons and stents. Land on precisely where they are needed."
+    },
+    {
+      "p": 0.93,
+      "section": "disc",
+      "camera": "none",
+      "chapter": "5 · Into the vessel",
+      "note": "All the tags clear and one path lights the whole way up. Say the discovery line over it.",
+      "dur": 2800
+    },
+    {
+      "p": 0.965,
+      "section": "",
+      "camera": "acc",
+      "chapter": "5 · Into the vessel",
+      "note": "The C-arm slides away and the camera drops onto the right common femoral. This is the door.",
+      "dur": 3200
+    },
+    {
+      "p": 1,
+      "section": "ves1",
+      "camera": "acc",
+      "chapter": "5 · Into the vessel",
+      "note": "Through the wall and into the lumen. Let the entry finish, then the tradeoff line.",
+      "dur": 5600,
+      "vessel": true
+    },
+    {
+      "p": 1.025,
+      "section": "ves1",
+      "camera": "none",
+      "chapter": "5 · Into the vessel",
+      "note": "As the incision disappeared, direct human perception disappeared with it. The setup steps back.",
+      "vessel": true
+    },
+    {
+      "p": 1.05,
+      "section": "ves2",
+      "camera": "none",
+      "chapter": "5 · Into the vessel",
+      "note": "The question comes toward us down the lumen and holds. A metre away, opaque, deformable, no line of sight — say all of that over it. This is the last thing they see before the white.",
+      "dur": 3800,
+      "vessel": true
+    },
+    {
+      "p": 1.15,
+      "section": "tun",
+      "camera": "none",
+      "chapter": "6 · What they actually see",
+      "note": "Everything slides to white. All three fluoroscopy frames arrive together. Say nothing yet.",
+      "dur": 3000,
+      "lite": true
+    },
+    {
+      "p": 1.18,
+      "section": "tun",
+      "camera": "none",
+      "chapter": "6 · What they actually see",
+      "note": "And this is what they see. Then the inference — resistance at the fingertips, and experience.",
+      "lite": true
+    },
+    {
+      "p": 1.21,
+      "section": "tun",
+      "camera": "none",
+      "chapter": "6 · What they actually see",
+      "note": "The right half: the tunnel, seen through a windscreen.",
+      "lite": true
+    },
+    {
+      "p": 1.235,
+      "section": "tun",
+      "camera": "none",
+      "chapter": "6 · What they actually see",
+      "note": "The lights go out.",
+      "lite": true
+    },
+    {
+      "p": 1.26,
+      "section": "tun",
+      "camera": "none",
+      "chapter": "6 · What they actually see",
+      "note": "The windscreen goes.",
+      "lite": true
+    },
+    {
+      "p": 1.285,
+      "section": "tun",
+      "camera": "none",
+      "chapter": "6 · What they actually see",
+      "note": "Grainy, intermittent. Hold on this one.",
+      "lite": true
+    },
+    {
+      "p": 1.33,
+      "section": "sc1",
+      "camera": "none",
+      "chapter": "7 · Difficult to scale",
+      "note": "Clean white. Extraordinary medicine, extraordinarily difficult to scale.",
+      "dur": 2600,
+      "lite": true
+    },
+    {
+      "p": 1.365,
+      "section": "sc2",
+      "camera": "none",
+      "chapter": "7 · Difficult to scale",
+      "note": "One patient, one surgeon, one resident, the team around them.",
+      "lite": true
+    },
+    {
+      "p": 1.4,
+      "section": "sc2",
+      "camera": "none",
+      "chapter": "7 · Difficult to scale",
+      "note": "Twice the operations. Everything doubles. Let them count it.",
+      "lite": true
+    },
+    {
+      "p": 1.435,
+      "section": "sc3",
+      "camera": "none",
+      "chapter": "7 · Difficult to scale",
+      "note": "The phrase alone. Bound by a linear labor-to-output relationship.",
+      "lite": true
+    },
+    {
+      "p": 1.475,
+      "section": "q",
+      "camera": "none",
+      "chapter": "7 · Difficult to scale",
+      "note": "The question, alone. Ask it and wait.",
+      "lite": true
+    },
+    {
+      "p": 1.52,
+      "section": "nav",
+      "camera": "none",
+      "chapter": "8 · Where am I?",
+      "note": "Two questions. They stay up for the whole section.",
+      "lite": true
+    },
+    {
+      "p": 1.555,
+      "section": "nav",
+      "camera": "none",
+      "chapter": "8 · Where am I?",
+      "note": "An internal representation of the world. Perception is not only vision.",
+      "lite": true
+    },
+    {
+      "p": 1.59,
+      "section": "nav",
+      "camera": "none",
+      "chapter": "8 · Where am I?",
+      "note": "Nature: the bat, and every other sensing modality evolution picked.",
+      "lite": true
+    },
+    {
+      "p": 1.625,
+      "section": "nav",
+      "camera": "none",
+      "chapter": "8 · Where am I?",
+      "note": "Engineering: the same answer, different sensors, fused.",
+      "lite": true
+    },
+    {
+      "p": 1.665,
+      "section": "av",
+      "camera": "none",
+      "chapter": "9 · Perception first",
+      "note": "The board goes up, with the lesson written across the top as the synthesis.",
+      "dur": 2800,
+      "lite": true
+    },
+    {
+      "p": 1.715,
+      "section": "av",
+      "camera": "none",
+      "chapter": "9 · Perception first",
+      "note": "The working out underneath, arriving by itself: a decision problem, then the missing model of the world, then perception first. The bubbles arrive one at a time.",
+      "dur": 2600,
+      "lite": true
+    },
+    {
+      "p": 1.765,
+      "section": "av2",
+      "camera": "none",
+      "chapter": "9 · Perception first",
+      "note": "Alone. But perception had to come first. Do not rush off this one.",
+      "lite": true
+    },
+    {
+      "p": 1.8,
+      "section": "av3",
+      "camera": "none",
+      "chapter": "9 · Perception first",
+      "note": "Mosaic. Why the vascular system first.",
+      "lite": true
+    },
+    {
+      "p": 1.85,
+      "section": "st",
+      "camera": "none",
+      "chapter": "10 · How we start",
+      "note": "White slides away and we are back in the vessel where we left it. Much like AVs did, we start by — the loop is empty.",
+      "dur": 3400,
+      "vessel": true
+    },
+    {
+      "p": 1.905,
+      "section": "st",
+      "camera": "none",
+      "chapter": "10 · How we start",
+      "note": "Restoring perception. Sensing at the tool–anatomy interface; the anatomical scene, understood as they move.",
+      "vessel": true
+    },
+    {
+      "p": 1.955,
+      "section": "st",
+      "camera": "none",
+      "chapter": "10 · How we start",
+      "note": "Generating understanding. Interactions become data; what happened, what went wrong, how they recovered.",
+      "vessel": true
+    },
+    {
+      "p": 2.01,
+      "section": "st",
+      "camera": "none",
+      "chapter": "10 · How we start",
+      "note": "Closing the loop on action. Dexterity and fine motion a metre away — and the loop closes.",
+      "vessel": true
+    },
+    {
+      "p": 2.055,
+      "section": "st2",
+      "camera": "none",
+      "chapter": "10 · How we start",
+      "note": "Perception creates data. One line, alone in the vessel. Let it sit.",
+      "vessel": true
+    },
+    {
+      "p": 2.075,
+      "section": "st2",
+      "camera": "none",
+      "chapter": "10 · How we start",
+      "note": "Data creates understanding. Bigger; the first line steps back.",
+      "vessel": true
+    },
+    {
+      "p": 2.095,
+      "section": "st2",
+      "camera": "none",
+      "chapter": "10 · How we start",
+      "note": "Understanding enables increasingly intelligent action. The largest; the others fade behind it. This is the compounding.",
+      "vessel": true
+    },
+    {
+      "p": 2.11,
+      "section": "out",
+      "camera": "none",
+      "chapter": "11 · Bottom up",
+      "note": "Out of the vessel, back to the room, no C-arm. Surgical intelligence emerges from the bottom up.",
+      "dur": 3600
+    },
+    {
+      "p": 2.145,
+      "section": "out2",
+      "camera": "none",
+      "chapter": "11 · Bottom up",
+      "note": "Every embodied intelligent system."
+    },
+    {
+      "p": 2.18,
+      "section": "out3",
+      "camera": "none",
+      "chapter": "11 · Bottom up",
+      "note": "Less invasive, then more intelligent."
+    },
+    {
+      "p": 2.23,
+      "section": "exit1",
+      "camera": "none",
+      "chapter": "12 · Close",
+      "note": "The one becomes many. Once surgery can be perceived, it can be learnt.",
+      "dur": 3600
+    },
+    {
+      "p": 2.265,
+      "section": "exit2",
+      "camera": "none",
+      "chapter": "12 · Close",
+      "note": "Once it can be learnt, it can be scaled."
+    },
+    {
+      "p": 2.32,
+      "section": "exit3",
+      "camera": "none",
+      "chapter": "Close",
+      "note": "They resolve into the mark, slowly: the sentence goes, they gather, the mark holds orange, then the name arrives. Do not speak over it. Then thank the room.",
+      "dur": 9000
+    }
+  ]
+}
