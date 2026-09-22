@@ -309,3 +309,4 @@ Production cannot be marked complete until the deployed URL has been opened and 
 | A presentation is renamed on its card and from the bar; owners and editors only; empty titles refused | PASS | `library.test.mjs`, `slides.test.mjs` (D-045) |
 | Every bound renderer line opens on a press and drags to an offset kept in the document; undo restores | PASS | `slides.test.mjs` (D-045); parity; 54/54 |
 | Delete removes a presentation for everyone (rows and files) after a warning; owners only; built-in decks refuse (409) and stay archivable | PASS | `library.test.mjs` (D-046) |
+| Sharing is immediate: an existing account holds the role at once and sees the deck in its library; a new address holds it at its first sign-in with no link; sharing again sets the role; revocation locks out | PASS | `access.test.mjs` (D-048) |

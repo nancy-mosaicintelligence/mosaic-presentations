@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { authConfig } from "@/lib/auth/config";
 import { supabaseServer } from "@/lib/auth/server";
-import { currentUser, admitted, bootstrapOwner } from "@/lib/auth/access";
+import { currentUser, admitted, bootstrapOwner, acceptPending } from "@/lib/auth/access";
 
 // The browser tests' way in: an email + password sign-in that goes through the same admission as the
 // Google callback. Exists only when ITW_TEST_AUTH=1 and never in production.
@@ -15,6 +15,6 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: "no session" }, { status: 401 });
   const a = await admitted(user);
   if (!a.ok) { await sb.auth.signOut(); return NextResponse.json({ error: a.reason }, { status: 403 }); }
-  await bootstrapOwner(user);
+  await bootstrapOwner(user); await acceptPending(user);   /* as the Google callback does */
   return NextResponse.json({ ok: true, email: user.email });
 }

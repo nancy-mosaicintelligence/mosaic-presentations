@@ -30,7 +30,7 @@ frozen keynote (`mosaic-ventowave2026keynote` and `…-v2`) deploy from the old 
 - Open the site, sign in with Google as `nancy@…`: the owner bootstrap gives that account the keynote (and any other
   seeded deck) as owner. The hosted database starts empty apart from the seeds — local drafts do not travel.
 - Colleagues on `mosaicintelligence.xyz` can sign in and create their own presentations at once. To work on the
-  keynote, they need a role: People → invite by address → send the link yourself (one address, one role, fourteen days).
+  keynote, they need a role: People → Share → their address and a role. It is in their library at once (or at their first sign-in).
 - A viewer opens `/p/<slug>` — the current document; the frozen published version is `/p/<slug>?source=published`.
 
 ## What the build needs and why it works

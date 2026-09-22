@@ -120,6 +120,49 @@ export async function revokeInvitation(sb: SupabaseClient, presentationId: strin
   if (!count) throw new StoreError(404, "no open invitation with that id");
   await sb.from("audit_events").insert({ presentation_id: presentationId, actor_id: actor.id, actor_email: actor.email, action: "invitation.revoked", detail: { id } });
 }
+/** Share with an address (owners). An account that has signed in before holds the role at once; one that has not gets an open
+ *  invitation the first sign-in turns into the membership by itself (see acceptPending). Sharing the same address again sets the role. */
+export type ShareResult = { status: "member"; member: Member } | { status: "waiting"; invitation: Invitation; link: string };
+export async function share(presentationId: string, email: string, role: "editor" | "viewer", actor: SessionUser, origin: string): Promise<ShareResult> {
+  email = email.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new StoreError(422, "that is not an email address");
+  if (role !== "editor" && role !== "viewer") throw new StoreError(422, "share as editor or viewer; owners are promoted in the members list");
+  const admin = supabaseAdmin(); const now = new Date().toISOString();
+  const { data: profile } = await admin.from("profiles").select("id, email, full_name").eq("email", email).maybeSingle();
+  if (profile) {
+    const { error } = await admin.from("presentation_memberships").upsert({ presentation_id: presentationId, user_id: profile.id, role, granted_by: actor.id });
+    if (error) throw new StoreError(error.message.includes("one owner") ? 409 : 500, error.message);
+    await admin.from("invitations").update({ accepted_at: now, accepted_by: profile.id }).eq("presentation_id", presentationId).eq("email", email).is("accepted_at", null).is("revoked_at", null);
+    await admin.from("audit_events").insert({ presentation_id: presentationId, actor_id: actor.id, actor_email: actor.email, action: "member.shared", detail: { userId: profile.id, email, role } });
+    return { status: "member", member: { userId: profile.id, email: profile.email, name: profile.full_name, role, createdAt: now } };
+  }
+  // not signed in yet: one open invitation per address, refreshed rather than duplicated (90 days to turn up)
+  const token = randomBytes(32).toString("base64url"); const expires_at = new Date(Date.now() + 90 * 86400_000).toISOString();
+  const { data: open } = await admin.from("invitations").select("id").eq("presentation_id", presentationId).eq("email", email).is("accepted_at", null).is("revoked_at", null).maybeSingle();
+  const q = open
+    ? admin.from("invitations").update({ role, token_hash: tokenHash(token), expires_at, created_by: actor.id }).eq("id", open.id)
+    : admin.from("invitations").insert({ presentation_id: presentationId, email, role, token_hash: tokenHash(token), expires_at, created_by: actor.id });
+  const { data, error } = await q.select("id, email, role, expires_at, created_at, accepted_at, revoked_at").single();
+  if (error) throw new StoreError(500, error.message);
+  await admin.from("audit_events").insert({ presentation_id: presentationId, actor_id: actor.id, actor_email: actor.email, action: "invitation.created", detail: { id: data.id, email, role, expires_at, refreshed: !!open } });
+  return { status: "waiting", invitation: { id: data.id, email: data.email, role: data.role, expiresAt: data.expires_at, createdAt: data.created_at, acceptedAt: null, revokedAt: null, status: "pending" }, link: `${origin}/invite/${token}` };
+}
+/** On every sign-in and library visit: whatever was shared with this address before it had an account becomes a membership now (never lowering a role already held). */
+export async function acceptPending(user: SessionUser): Promise<number> {
+  const admin = supabaseAdmin();
+  const { data: open } = await admin.from("invitations").select("id, presentation_id, role").eq("email", user.email).is("accepted_at", null).is("revoked_at", null).gt("expires_at", new Date().toISOString());
+  let n = 0;
+  for (const inv of open || []) {
+    const { data: existing } = await admin.from("presentation_memberships").select("role").eq("presentation_id", inv.presentation_id).eq("user_id", user.id).maybeSingle();
+    const role: Role = existing && RANK[existing.role as Role] >= RANK[inv.role as Role] ? (existing.role as Role) : (inv.role as Role);
+    const { error } = await admin.from("presentation_memberships").upsert({ presentation_id: inv.presentation_id, user_id: user.id, role, granted_by: null });
+    if (error) continue;
+    await admin.from("invitations").update({ accepted_at: new Date().toISOString(), accepted_by: user.id }).eq("id", inv.id);
+    await admin.from("audit_events").insert({ presentation_id: inv.presentation_id, actor_id: user.id, actor_email: user.email, action: "invitation.accepted", detail: { id: inv.id, role, how: "sign-in" } });
+    n++;
+  }
+  return n;
+}
 /** Accept an invitation with the signed-in account: the address must match, the invitation must be open. Grants the membership (never lowering an existing role). */
 export async function acceptInvitation(token: string, user: SessionUser): Promise<{ slug: string; role: Role }> {
   const admin = supabaseAdmin();

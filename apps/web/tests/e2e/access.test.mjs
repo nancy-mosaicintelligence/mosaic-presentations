@@ -44,7 +44,7 @@ test("a stranger's Google account is refused at admission; a colleague without a
   assert.equal(await status(c, `/player/${ID}?source=published`), 403);
 });
 
-test("the owner (bootstrapped from OWNER_EMAILS) manages people: roles, invitations, the last-owner rule", async () => {
+test("the owner (bootstrapped from OWNER_EMAILS) manages people: sharing, roles, the last-owner rule", async () => {
   const o = await as("owner");
   // OWNER_EMAILS bootstraps the test owner onto the keynote (alongside whoever else owns it); the test deck is theirs alone
   const kn = await json(o, `/api/presentations/${KEYNOTE}/members`); assert.equal(kn.status, 200); assert.ok(kn.body.some(m => m.email === USERS.owner && m.role === "owner"), "bootstrapped onto the keynote");
@@ -52,29 +52,38 @@ test("the owner (bootstrapped from OWNER_EMAILS) manages people: roles, invitati
   // the owner cannot demote or remove the last owner
   assert.equal((await json(o, `/api/presentations/${ID}/members`, { method: "PUT", data: { userId: users.owner.id, role: "editor" } })).status, 409);
   assert.equal((await json(o, `/api/presentations/${ID}/members`, { method: "DELETE", data: { userId: users.owner.id } })).status, 409);
-  // an invitation for the editor colleague (company account) and one for the external guest (viewer)
-  const inv1 = await json(o, `/api/presentations/${ID}/invitations`, { method: "POST", data: { email: USERS.editor, role: "editor" } }); assert.equal(inv1.status, 201); assert.match(inv1.body.link, /\/invite\/[A-Za-z0-9_-]{40,}$/);
-  const inv2 = await json(o, `/api/presentations/${ID}/invitations`, { method: "POST", data: { email: USERS.guest.toUpperCase(), role: "viewer" } }); assert.equal(inv2.status, 201); assert.equal(inv2.body.invitation.email, USERS.guest, "addresses are normalised");
+  // sharing: the colleague and the external guest have accounts already, so they hold the role at once
+  const NEWCOMER = "newcomer@mosaicintelligence.xyz"; const PASSWORD = "itw-test-password-1";
+  { const { data } = await admin().auth.admin.listUsers({ perPage: 1000 }); for (const u of data.users.filter(u => u.email === NEWCOMER)) await admin().auth.admin.deleteUser(u.id); }   /* a fresh address every run */
+  const s1 = await json(o, `/api/presentations/${ID}/invitations`, { method: "POST", data: { email: USERS.editor, role: "editor" } }); assert.equal(s1.status, 201, JSON.stringify(s1.body)); assert.equal(s1.body.status, "member"); assert.equal(s1.body.member.role, "editor");
+  const s2 = await json(o, `/api/presentations/${ID}/invitations`, { method: "POST", data: { email: USERS.guest.toUpperCase(), role: "viewer" } }); assert.equal(s2.body.status, "member"); assert.equal(s2.body.member.email, USERS.guest, "addresses are normalised");
   assert.equal((await json(o, `/api/presentations/${ID}/invitations`, { method: "POST", data: { email: "nobody", role: "viewer" } })).status, 422);
-  assert.equal((await json(o, `/api/presentations/${ID}/invitations`, { method: "POST", data: { email: "x@y.z", role: "owner" } })).status, 422, "an invitation never grants owner");
-  const list = await json(o, `/api/presentations/${ID}/invitations`); assert.equal(list.body.filter(i => i.status === "pending").length, 2);
+  assert.equal((await json(o, `/api/presentations/${ID}/invitations`, { method: "POST", data: { email: "x@y.z", role: "owner" } })).status, 422, "sharing never grants owner");
+  // an address that has never signed in waits — with a link that carries the site's own address; sharing again sets the role, refreshing the one row
+  const s3 = await json(o, `/api/presentations/${ID}/invitations`, { method: "POST", data: { email: NEWCOMER, role: "viewer" } }); assert.equal(s3.status, 201); assert.equal(s3.body.status, "waiting"); assert.match(s3.body.link, /\/invite\/[A-Za-z0-9_-]{40,}$/); assert.ok(s3.body.link.startsWith(BASE));
+  const s4 = await json(o, `/api/presentations/${ID}/invitations`, { method: "POST", data: { email: NEWCOMER, role: "editor" } }); assert.equal(s4.body.status, "waiting"); assert.equal(s4.body.invitation.id, s3.body.invitation.id, "one row per address"); assert.equal(s4.body.invitation.role, "editor");
+  const list = await json(o, `/api/presentations/${ID}/invitations`); assert.deepEqual(list.body.filter(i => i.status === "pending").map(i => [i.email, i.role]), [[NEWCOMER, "editor"]]);
+  assert.deepEqual((await json(o, `/api/presentations/${ID}/members`)).body.map(m => [m.email, m.role]).sort(), [[USERS.editor, "editor"], [USERS.guest, "viewer"], [USERS.owner, "owner"]].sort());
+  // sharing again with a member sets their role too
+  const s5 = await json(o, `/api/presentations/${ID}/invitations`, { method: "POST", data: { email: USERS.guest, role: "editor" } }); assert.equal(s5.body.member.role, "editor");
+  assert.equal((await json(o, `/api/presentations/${ID}/invitations`, { method: "POST", data: { email: USERS.guest, role: "viewer" } })).body.member.role, "viewer");
   // a token is stored hashed, never returned again
-  const { data } = await admin().from("invitations").select("token_hash").eq("email", USERS.guest).single(); assert.match(data.token_hash, /^[0-9a-f]{64}$/); assert.ok(!inv2.body.link.includes(data.token_hash));
-  globalThis.__links = { editor: inv1.body.link, guest: inv2.body.link, guestId: inv2.body.invitation.id };
+  const { data } = await admin().from("invitations").select("token_hash").eq("email", NEWCOMER).single(); assert.match(data.token_hash, /^[0-9a-f]{64}$/); assert.ok(!s4.body.link.includes(data.token_hash));
+  globalThis.__newcomer = { email: NEWCOMER, password: PASSWORD, link: s4.body.link };
 });
 
-test("an invitation binds to its address: the wrong account is refused, the right one is granted the role", async () => {
-  const { editor: editorLink, guest: guestLink } = globalThis.__links;
-  const g = await as("guest");
-  // the guest tries the editor's link: refused, and their own link: admitted as viewer
-  let r = await g.request.get(editorLink, { maxRedirects: 0 }); assert.equal(r.status(), 200); assert.match(await r.text(), /was sent to editor@mosaicintelligence\.xyz/);
-  r = await g.request.get(guestLink, { maxRedirects: 0 }); assert.equal(r.status(), 307); assert.equal(r.headers()["location"], `/p/${ID}`);
-  r = await g.request.get(guestLink, { maxRedirects: 0 }); assert.match(await r.text(), /was accepted/, "a link is single use");
-  const e = await as("editor");
-  r = await e.request.get(editorLink, { maxRedirects: 0 }); assert.equal(r.status(), 307); assert.equal(r.headers()["location"], `/presentations/${ID}/edit`);
+test("a new address holds its role the moment it first signs in — no link to click; the old link then says so", async () => {
+  const { email, password, link } = globalThis.__newcomer;
+  const made = await admin().auth.admin.createUser({ email, password, email_confirm: true }); assert.ok(!made.error, made.error?.message);
+  const n = await (await browser.newContext()).newPage(); const r = await signIn(n, BASE, email); assert.equal(r.status, 200, JSON.stringify(r.body));
+  const lib = (await json(n, "/api/presentations")).body; assert.ok(lib.some(p => p.slug === ID && p.role === "editor"), "in the library, as editor, straight after signing in: " + JSON.stringify(lib.map(p => [p.slug, p.role])));
+  assert.equal(await status(n, `/presentations/${ID}/edit`), 200);
+  const used = await n.request.get(link, { maxRedirects: 0 }); assert.match(await used.text(), /was accepted/, "the link was consumed by the sign-in");
+  const g = await as("guest"); const wrong = await g.request.get(link, { maxRedirects: 0 }); assert.match(await wrong.text(), /was accepted/);
   const o = await as("owner");
-  const members = (await json(o, `/api/presentations/${ID}/members`)).body.map(m => [m.email, m.role]).sort();
-  assert.deepEqual(members, [[USERS.editor, "editor"], [USERS.guest, "viewer"], [USERS.owner, "owner"]]);
+  assert.deepEqual((await json(o, `/api/presentations/${ID}/members`)).body.map(m => [m.email, m.role]).sort(), [[email, "editor"], [USERS.editor, "editor"], [USERS.guest, "viewer"], [USERS.owner, "owner"]].sort());
+  assert.equal((await json(o, `/api/presentations/${ID}/members`, { method: "DELETE", data: { userId: made.data.user.id } })).status, 200);
+  await n.context().close();
 });
 
 test("the editor edits and versions but cannot manage people or publish; the viewer reaches only what is published", async () => {
@@ -112,13 +121,13 @@ test("revocation takes effect at once: a removed viewer and a revoked invitation
   assert.equal(await status(v, `/p/${ID}`), 200);
   assert.equal((await json(o, `/api/presentations/${ID}/members`, { method: "DELETE", data: { userId: users.guest.id } })).status, 200);
   assert.equal(await status(v, `/p/${ID}`), 403);
-  const inv = await json(o, `/api/presentations/${ID}/invitations`, { method: "POST", data: { email: USERS.guest, role: "viewer" } });
+  const inv = await json(o, `/api/presentations/${ID}/invitations`, { method: "POST", data: { email: "later@example.com", role: "viewer" } }); assert.equal(inv.body.status, "waiting");
   assert.equal((await json(o, `/api/presentations/${ID}/invitations`, { method: "DELETE", data: { id: inv.body.invitation.id } })).status, 200);
   const r = await v.request.get(inv.body.link, { maxRedirects: 0 }); assert.match(await r.text(), /was revoked/);
   assert.equal(await status(v, `/p/${ID}`), 403);
   // the audit trail names every step; only the owner reads it (through the members' view it is not exposed to editors)
   const { data: events } = await admin().from("audit_events").select("action").order("at");
-  for (const a of ["owner.bootstrapped", "invitation.created", "invitation.accepted", "version.created", "version.published", "member.removed", "invitation.revoked"]) assert.ok(events.some(e => e.action === a), a);
+  for (const a of ["owner.bootstrapped", "member.shared", "invitation.created", "invitation.accepted", "version.created", "version.published", "member.removed", "invitation.revoked"]) assert.ok(events.some(e => e.action === a), a);
   await signOut(v, BASE); assert.equal(await status(v, `/api/presentations/${ID}/publication`), 401, "signed out");
 });
 

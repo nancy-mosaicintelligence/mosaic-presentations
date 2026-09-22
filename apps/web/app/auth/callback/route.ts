@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/auth/server";
-import { currentUser, admitted, bootstrapOwner } from "@/lib/auth/access";
+import { currentUser, admitted, bootstrapOwner, acceptPending } from "@/lib/auth/access";
 
 // After Google: exchange the code for a session, then decide admission once — company accounts pass,
 // anyone else needs a membership or an open invitation; otherwise the session is ended on the spot.
@@ -15,6 +15,6 @@ export async function GET(req: Request) {
   if (!user) return NextResponse.redirect(new URL("/sign-in?error=sign-in%20did%20not%20complete", url.origin));
   const a = await admitted(user);
   if (!a.ok) { await sb.auth.signOut(); return NextResponse.redirect(new URL(`/no-access?reason=${encodeURIComponent(a.reason || "")}`, url.origin)); }
-  await bootstrapOwner(user);
+  await bootstrapOwner(user); await acceptPending(user);
   return NextResponse.redirect(new URL(safeNext, url.origin));
 }
