@@ -72,7 +72,7 @@ test("an image box is added and filled from the library; the picture covers its 
   await page.waitForSelector(".panel .fill"); await page.click(".imggrid:not(.brand) .imgcell");   /* the upload, not a brand mark */
   await untilDraft(d => el(d, box.id).asset === globalThis.__img.id, "the fill");
   await frame().waitForSelector(`figure[data-id="${box.id}"]:not([data-empty]) img`, { timeout: 15000 });
-  assert.equal(await frame().evaluate((id) => document.querySelector(`figure[data-id="${id}"] img`).style.objectFit, box.id), "cover");
+  assert.deepEqual(await frame().evaluate((id) => { const i = document.querySelector(`figure[data-id="${id}"] img`); return { fit: i.style.objectFit, covers: parseFloat(i.style.width) >= 99.9 && parseFloat(i.style.height) >= 99.9 }; }, box.id), { fit: "fill", covers: true }, "the picture is laid out to cover the frame");
 }, { timeout: 90000 });
 
 test("the keynote's fluoroscopy frame is an empty box: a click on it opens the library, a pick fills it", async () => {
@@ -203,6 +203,69 @@ test("every bound line takes the press: the substitution line under the patient 
   const lib = await (await page.request.get(`${BASE}/api/presentations`)).json(); assert.equal(lib.find(p => p.slug === ID).title, "Renamed from the bar");
   await page.request.fetch(`${API}`, { method: "PATCH", data: { title: "E2E keynote" } });
 }, { timeout: 90000 });
+
+test("a box on a station the renderer draws itself (the tunnel) lands on the stage; ⌘C ⌘V and ⌘D make free copies a step aside, from either frame", async () => {
+  await goto(24); await stageReady();   /* station 25 — the tunnel: no beat node of its own until a box needs one */
+  const sect = (await draft()).stations[24].section; assert.equal(sect, "tun");
+  const had = new Set((await draft()).sections.find(s => s.key === sect).elements.map(e => e.id));
+  await page.click('.station-tools button:has-text("+ Text box")');
+  const d0 = await untilDraft(d => d.sections.find(s => s.key === sect).elements.some(e => !had.has(e.id) && e.place), "the box in the tunnel section");
+  const box = d0.sections.find(s => s.key === sect).elements.find(e => !had.has(e.id) && e.place);
+  await frame().waitForSelector(`section.beat.placed-host[data-k="${sect}"] [data-id="${box.id}"]`, { timeout: 15000 });
+  await page.waitForSelector(`.ph code:has-text("${box.id}")`, { timeout: 10000 });
+  assert.ok(parseFloat(await frame().evaluate(k => getComputedStyle(document.querySelector(`section.beat.placed-host[data-k="${k}"]`)).opacity, sect)) > 0.5, "the host layer is on with its stations");
+  // the parent's keys
+  await page.locator(".stage-fit").click({ position: { x: 4, y: 4 } });
+  await page.keyboard.press("Meta+c"); await page.keyboard.press("Meta+v");
+  const d1 = await untilDraft(d => d.sections.find(s => s.key === sect).elements.some(e => e.place && e.id !== box.id && !had.has(e.id) && Math.abs(e.place.x - (box.place.x + 2)) < 0.01), "the paste, a step aside");
+  const pasted = d1.sections.find(s => s.key === sect).elements.find(e => e.place && e.id !== box.id && !had.has(e.id));
+  assert.equal(pasted.runs[0].t, box.runs[0].t); await page.waitForSelector(`.ph code:has-text("${pasted.id}")`, { timeout: 10000 });
+  await page.keyboard.press("Meta+d");
+  await untilDraft(d => d.sections.find(s => s.key === sect).elements.filter(e => e.place && !had.has(e.id)).length === 3, "the duplicate");
+  // the keys inside the frame: select the first box there, copy, paste
+  const c = await centre(box.id); await page.mouse.click(c.b.x + 6, c.b.y + 6);   /* its top-left corner: the copies sit a step to the right and down */
+  await page.waitForSelector(`.ph code:has-text("${box.id}")`, { timeout: 10000 });
+  await page.keyboard.press("Meta+c"); await page.keyboard.press("Meta+v");
+  await untilDraft(d => d.sections.find(s => s.key === sect).elements.filter(e => e.place && !had.has(e.id)).length === 4, "a paste from inside the frame");
+}, { timeout: 90000 });
+
+test("a framed picture is cropped on the stage: double-click, scroll to zoom, drag to pan, Escape; the crop is in the document and one undo takes it back", async () => {
+  const d0 = await draft(); const ci = d0.stations.findIndex(st => st.chapter.includes("What they")); const li = (ci >= 0 ? ci : 23) + 1;   /* the frames' station, as the fill test finds it */
+  assert.ok(d0.sections.find(s => s.key === "lab").elements[0].asset, "lab.1 holds a picture from the fill test");
+  await goto(li); await stageReady();
+  await frame().waitForFunction(() => { const f = document.querySelector('[data-id="lab.1"]'); return f && parseFloat(getComputedStyle(f).opacity) > 0.9 && !!f.__cropState; }, null, { timeout: 30000 });
+  const fb = await page.locator("iframe").boundingBox(); const r = await frame().evaluate(() => { const b = document.querySelector('figure[data-id="lab.1"]').getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width, h: b.height }; });
+  const x = fb.x + r.x + 12, y = fb.y + r.y + 12;   /* a corner of the frame: boxes from the earlier tests sit over its middle */
+  const under = await frame().evaluate(([px, py]) => ({ under: document.elementsFromPoint(px, py).slice(0, 5).map(n => n.tagName + "#" + (n.id || "") + "." + n.className + "[" + (n.getAttribute("data-id") || "") + "]"), crop: !!document.querySelector('figure[data-id="lab.1"]').__cropState, opacity: getComputedStyle(document.querySelector('figure[data-id="lab.1"]')).opacity }), [r.x + 12, r.y + 12]);
+  await page.mouse.dblclick(x, y);
+  try { await frame().waitForSelector('figure[data-id="lab.1"].cropping', { timeout: 10000 }); } catch (e) { throw new Error("no crop mode — under the point: " + JSON.stringify(under)); }
+  await page.waitForSelector(".cropping-hint");
+  const stageCrop = () => frame().evaluate(() => document.querySelector('figure[data-id="lab.1"]').__cropState.c);
+  await page.mouse.move(x, y); await page.mouse.wheel(0, -240);
+  await frame().waitForFunction(() => document.querySelector('figure[data-id="lab.1"]').__cropState.c.w < 0.95, null, { timeout: 5000 });   /* the stage paints the session live */
+  const c1 = await stageCrop();
+  await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.move(x + 60, y + 10, { steps: 6 }); await page.mouse.up();
+  await frame().waitForFunction((x0) => Math.abs(document.querySelector('figure[data-id="lab.1"]').__cropState.c.x - x0) > 0.01, c1.x, { timeout: 5000 });
+  assert.equal((await draft()).sections.find(s => s.key === "lab").elements[0].adjust?.crop, undefined, "the document waits for the session to close");
+  await page.keyboard.press("Escape"); await frame().waitForSelector('figure[data-id="lab.1"].cropping', { state: "detached", timeout: 5000 }); await page.waitForSelector(".cropping-hint", { state: "detached" });
+  await untilDraft(d => { const c = d.sections.find(s => s.key === "lab").elements[0].adjust?.crop; return c && c.w < 0.95 && Math.abs(c.x - c1.x) > 0.01; }, "the crop in the document, once, when the session closed");
+  const shown = await frame().evaluate(() => { const i = document.querySelector('figure[data-id="lab.1"] .crop img'); return { w: parseFloat(i.style.width), fit: i.style.objectFit }; });
+  assert.ok(shown.w > 100 && shown.fit === "fill", "the picture is laid out larger than the frame, showing the region: " + JSON.stringify(shown));
+  await page.locator(".stage-fit").click({ position: { x: 4, y: 4 } }); await page.keyboard.press("Meta+z");
+  await untilDraft(d => { const c = d.sections.find(s => s.key === "lab").elements[0].adjust?.crop; return !c || c.w === 1; }, "one undo for the whole crop session");
+}, { timeout: 90000 });
+
+test("leaving with unsaved changes asks; Save and leave writes the draft first", async () => {
+  await goto(0); await stageReady();
+  await page.route("**/api/presentations/*/draft", async route => { if (route.request().method() === "PUT") await new Promise(r => setTimeout(r, 1500)); await route.continue(); });   /* a slow save keeps the changes unsaved for a moment */
+  const before = (await draft()).sections[0].elements.length;
+  await page.click('.station-tools button:has-text("+ Text box")'); await page.waitForSelector(".bar .save.dirty, .bar .save.saving", { timeout: 5000 });
+  await page.click(".bar a.brand"); await page.waitForSelector(".modal", { timeout: 5000 });
+  await page.click('.modal button:has-text("Save and leave")'); await page.waitForURL(`${BASE}/`, { timeout: 15000 });
+  await page.unroute("**/api/presentations/*/draft");
+  assert.equal((await draft()).sections[0].elements.length, before + 1, "saved before leaving");
+  await page.goto(`${BASE}/presentations/${ID}/edit`); await stageReady();
+}, { timeout: 60000 });
 
 test("History offers a reset of the draft to the committed document", async () => {
   await page.click('.bar button:has-text("History")'); await page.waitForSelector('button:has-text("Reset the draft")');

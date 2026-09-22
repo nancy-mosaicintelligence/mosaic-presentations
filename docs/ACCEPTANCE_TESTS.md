@@ -310,3 +310,6 @@ Production cannot be marked complete until the deployed URL has been opened and 
 | Every bound renderer line opens on a press and drags to an offset kept in the document; undo restores | PASS | `slides.test.mjs` (D-045); parity; 54/54 |
 | Delete removes a presentation for everyone (rows and files) after a warning; owners only; built-in decks refuse (409) and stay archivable | PASS | `library.test.mjs` (D-046) |
 | Sharing is immediate: an existing account holds the role at once and sees the deck in its library; a new address holds it at its first sign-in with no link; sharing again sets the role; revocation locks out | PASS | `access.test.mjs` (D-048) |
+| A box added on a station the renderer draws itself (the tunnel) appears on the stage in a host layer shown with its stations; ⌘C/⌘V/⌘D make free copies a step aside from either frame | PASS | `slides.test.mjs` (D-049) |
+| A framed picture is cropped on the stage: double-click, wheel zooms, drag pans, Escape closes; the crop is in the document and one undo takes the session back | PASS | `slides.test.mjs` (D-049); parity; 54/54 |
+| Leaving the editor with unsaved changes asks; Save and leave writes the draft first | PASS | `slides.test.mjs` (D-049) |

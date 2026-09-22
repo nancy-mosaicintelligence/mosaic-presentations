@@ -64,7 +64,13 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
   const onMessage = useCallback((m: BridgeMessage) => {
     if (m.type === "itw:ready" || m.type === "itw:state") { setReady(true); if (m.type === "itw:state") { setStation(m.step); setNotes(!!m.notes); } }
     else if (m.type === "itw:station") setStation(m.index);
-    else if (m.type === "itw:selected") { setSelected(m.id); if (m.id && m.user) { if (m.empty) { setFillTarget(m.id); setTab("images"); } else setTab("element"); } }
+    else if (m.type === "itw:selected") { setSelected(m.id); if (m.id && m.pct) selPctRef.current = { id: m.id, ...m.pct }; if (m.id && m.user) { if (m.empty) { setFillTarget(m.id); setTab("images"); } else setTab("element"); } }
+    else if (m.type === "itw:copy") copyRef.current(m.id);
+    else if (m.type === "itw:paste") pasteRef.current();
+    else if (m.type === "itw:duplicate") { copyRef.current(m.id); pasteRef.current(); }
+    else if (m.type === "itw:crop") cropRef.current(m.id, m.crop, !!m.done);
+    else if (m.type === "itw:cropStart") setCropping(m.id);
+    else if (m.type === "itw:cropEnd") setCropping(null);
     else if (m.type === "itw:placed") placedRef.current(m);
     else if (m.type === "itw:delete") removeRef.current(m.id);
     else if (m.type === "itw:copyMoved") copyMovedRef.current(m.path, m.dx, m.dy);
@@ -79,6 +85,10 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
   const copyEditRef = useRef<(path: string, runs: any[], text: string, typing: boolean) => void>(() => {});
   const placedRef = useRef<(m: BridgeMessage) => void>(() => {});
   const removeRef = useRef<(id: string) => void>(() => {});
+  const copyRef = useRef<(id: string) => void>(() => {}); const pasteRef = useRef<() => void>(() => {}); const cropRef = useRef<(id: string, crop: any, done: boolean) => void>(() => {});
+  const selPctRef = useRef<{ id: string; x: number; y: number; w: number } | null>(null);
+  const clipRef = useRef<{ element: any; pct: { x: number; y: number; w: number } | null } | null>(null);
+  const [cropping, setCropping] = useState<string | null>(null);
   const copyMovedRef = useRef<(path: string, dx: number, dy: number) => void>(() => {});
   const nudgeRef = useRef<(id: string, dx: number, dy: number) => void>(() => {});
   const dropRef = useRef<(m: BridgeMessage) => void>(() => {});
@@ -156,6 +166,30 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
   copyMovedRef.current = (path, dx, dy) => {
     const d = docRef.current; if (!d) return;
     apply({ path: ["offsets", path], value: Math.abs(dx) < 0.05 && Math.abs(dy) < 0.05 ? undefined : { dx, dy }, label: `move ${path}` });
+  };
+  /** Copy: the element as it is, with where it sits on the stage; paste: a free copy of it on the current station, a step to the side. */
+  copyRef.current = (id) => {
+    const d = docRef.current; if (!d) return; const hit = locate(d, id); if (!hit) return;
+    const pct = selPctRef.current && selPctRef.current.id === id ? { x: selPctRef.current.x, y: selPctRef.current.y, w: selPctRef.current.w } : null;
+    clipRef.current = { element: JSON.parse(JSON.stringify(hit.element)), pct };
+  };
+  pasteRef.current = () => {
+    const d = docRef.current, clip = clipRef.current; if (!d || !clip) return;
+    const st = d.stations[stationRef.current]; const si = d.sections.findIndex(s => s.key === st.section); if (si < 0) { setSave({ kind: "error", message: "this station has no section to hold a box" }); return; }
+    const sec = d.sections[si]; let n = sec.elements.length + 1; while (sec.elements.some(e => e.id === `${sec.key}.${n}`)) n++;
+    const src = clip.element; const { id: _id, in: _in, nudge: _n, hidden: _h, ...rest } = src;
+    const at = src.place ? { x: src.place.x + 2, y: src.place.y + 2, w: src.place.w } : clip.pct ? { x: clip.pct.x + 2, y: clip.pct.y + 2, w: Math.max(4, clip.pct.w) } : { x: 32, y: 32, w: 36 };
+    const el = { ...rest, id: `${sec.key}.${n}`, place: { x: +Math.min(96, at.x).toFixed(2), y: +Math.min(96, at.y).toFixed(2), w: +at.w.toFixed(2) }, reveal: { p: st.p } };
+    apply({ path: ["sections", si, "elements", sec.elements.length], value: el, label: `paste ${src.id}` });
+    clipRef.current = { element: JSON.parse(JSON.stringify(el)), pct: null };   /* another paste lands a step further */
+    setSelected(el.id); setTimeout(() => bridge.send({ type: "itw:select", id: el.id }), 120); setTab("element");
+  };
+  /** The crop a framed picture was given on the stage (drag to pan, wheel to zoom). The stage paints the session live; the
+   *  document takes the result once, when the session closes — one undo step for the whole crop. */
+  cropRef.current = (id, crop, done) => {
+    if (!done) return;
+    const d = docRef.current; if (!d) return; const hit = locate(d, id); if (!hit) return; const e = hit.element;
+    apply({ path: ["sections", hit.si, "elements", hit.ei, "adjust"], value: { ...(e.adjust || {}), crop }, label: `crop ${id}` });
   };
   /** Remove the selected element (the keynote's own lines are hidden rather than lost; undo brings anything back). */
   removeRef.current = (id) => {
@@ -240,6 +274,11 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
       const t = e.target as HTMLElement | null; const inField = !!t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable);
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key.toLowerCase() === "z") { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
+      if (mod && !inField && !inlineRef.current) {
+        const k = e.key.toLowerCase();
+        if (k === "v" && clipRef.current) { e.preventDefault(); pasteRef.current(); return; }
+        if (selectedRef.current && (k === "c" || k === "d")) { e.preventDefault(); copyRef.current(selectedRef.current); if (k === "d") pasteRef.current(); return; }
+      }
       if (inField || mod) return;
       if (selectedRef.current && !inlineRef.current) {
         const step = e.shiftKey ? 5 : 1;
@@ -283,8 +322,17 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
   const inPreview = preview || !!previewVersion;
 
   useEffect(() => { const u = new URL(window.location.href); if (preview) u.searchParams.set("preview", "1"); else u.searchParams.delete("preview"); window.history.replaceState(null, "", u.toString()); }, [preview]);
+  // unsaved changes: the browser asks before a close or a reload; a link out of the editor asks Save / Discard / Stay
+  const dirty = save.kind === "dirty" || save.kind === "saving"; const dirtyRef = useRef(dirty); dirtyRef.current = dirty;
+  const [leaving, setLeaving] = useState<string | null>(null);
+  useEffect(() => { const h = (e: BeforeUnloadEvent) => { if (dirtyRef.current) { e.preventDefault(); e.returnValue = ""; } }; window.addEventListener("beforeunload", h); return () => window.removeEventListener("beforeunload", h); }, []);
+  const onLeaveClick = (e: React.MouseEvent) => { const a = (e.target as HTMLElement).closest("a[href]") as HTMLAnchorElement | null; if (!a || a.target === "_blank" || !dirtyRef.current) return; e.preventDefault(); setLeaving(a.getAttribute("href")); };
 
-  return <div className={"editor" + (inPreview ? " preview" : "") + (!inPreview && !showLeft ? " no-left" : "") + (!inPreview && !showRight ? " no-right" : "")}>
+  return <div className={"editor" + (inPreview ? " preview" : "") + (!inPreview && !showLeft ? " no-left" : "") + (!inPreview && !showRight ? " no-right" : "")} onClickCapture={onLeaveClick}>
+    {leaving && <div className="modal-back" role="dialog" aria-label="Unsaved changes"><div className="modal">
+      <h3>Unsaved changes</h3><p className="muted">Save them before leaving, or discard them and go back to what was last saved.</p>
+      <div className="actions"><button type="button" className="primary" onClick={async () => { await persist(); dirtyRef.current = false; window.location.href = leaving; }}>Save and leave</button><button type="button" className="ghost danger" onClick={() => { dirtyRef.current = false; window.location.href = leaving; }}>Discard and leave</button><button type="button" className="ghost" onClick={() => setLeaving(null)}>Stay</button></div>
+    </div></div>}
     <header className="bar">
       <div className="left">{!inPreview && <button type="button" className={"ghost side-toggle" + (showLeft ? " on" : "")} title={narrow ? "the outline is folded away on a narrow window" : sides.left ? "hide the outline" : "show the outline"} onClick={() => setSides(s => ({ ...s, left: !s.left }))} disabled={narrow}>◧</button>}<BrandMark />{renaming
         ? <input className="field title-edit" defaultValue={name} autoFocus aria-label="Title" onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); rename((e.target as HTMLInputElement).value); } if (e.key === "Escape") setRenaming(false); }} onBlur={e => rename(e.target.value)} />
@@ -297,6 +345,7 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
           <button type="button" className="ghost" onClick={() => setTab("versions")} title="Versions: preview, restore, duplicate">History{versions.length ? ` · ${versions.length}` : ""}</button>
           <span className={"save " + save.kind} aria-live="polite">{save.kind === "idle" ? "" : save.kind === "dirty" ? "Unsaved" : save.kind === "saving" ? "Saving…" : save.kind === "saved" ? `Saved ${new Date(save.at).toLocaleTimeString()}` : `Not saved: ${save.message}`}</span>
           {pendingReload && <button type="button" className="ghost" onClick={() => { if (save.kind === "saved") reloadPlayer(); else persist(); }}>Reload stage</button>}
+          {cropping && <span className="save cropping-hint">Cropping · drag to move, scroll to zoom, Esc when done</span>}
         </>}
         {previewVersion && <span className="save">Previewing “{previewVersion.name}” — read only</span>}
       </div>
@@ -334,7 +383,7 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
     </main>
 
     {!inPreview && showRight && doc && <aside className="side right">
-      <nav className="tabs">{(["element", "images", "motion", "copy", "assets", "versions"] as Tab[]).map(t => <button key={t} type="button" className={tab === t ? "on" : ""} onClick={() => setTab(t)}>{t === "element" ? "Element" : t === "images" ? "Images" : t === "motion" ? "Motion" : t === "copy" ? "Renderer copy" : t === "assets" ? "Marks" : `Versions${versions.length ? ` · ${versions.length}` : ""}`}</button>)}</nav>
+      <nav className="tabs">{(["element", "images", "motion", "versions"] as Tab[]).map(t => <button key={t} type="button" className={tab === t ? "on" : ""} onClick={() => setTab(t)}>{t === "element" ? "Element" : t === "images" ? "Images" : t === "motion" ? "Motion" : t === "copy" ? "Renderer copy" : t === "assets" ? "Marks" : `Versions${versions.length ? ` · ${versions.length}` : ""}`}</button>)}</nav>
       {issues.length > 0 && <div className="issues">{issues.slice(0, 5).map((i, k) => <div key={k}><code>{i.path}</code> {i.message}</div>)}</div>}
       {tab === "element" && <Inspector doc={doc} slug={id} selectedId={selected} apply={apply} onDeselect={() => { setSelected(null); bridge.send({ type: "itw:select", id: null }); }} onFill={eid => { setFillTarget(eid); setTab("images"); }} onRemove={eid => removeRef.current(eid)} />}
       {tab === "images" && <ImagesPanel doc={doc} slug={id} station={station} apply={apply} fillTarget={fillTarget} onPick={a => placeImage(a, undefined, fillTarget)} onPlaced={pid => { setSelected(pid); setTab("element"); setTimeout(() => bridge.send({ type: "itw:select", id: pid }), 150); }} />}

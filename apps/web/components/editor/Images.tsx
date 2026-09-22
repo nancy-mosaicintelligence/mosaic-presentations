@@ -14,10 +14,14 @@ export function ImagesPanel({ doc, slug, station, apply, onPlaced, fillTarget, o
   const input = useRef<HTMLInputElement | null>(null);
   const load = useCallback(async () => { const r = await fetch(`/api/presentations/${slug}/images`, { cache: "no-store" }); if (r.ok) setItems(await r.json()); }, [slug]);
   useEffect(() => { load(); }, [load]);
-  const upload = async (file: File) => {
-    setBusy(true); setErr(null);
-    try { const fd = new FormData(); fd.append("file", file); const r = await fetch(`/api/presentations/${slug}/images`, { method: "POST", body: fd }); const body = await r.json(); if (!r.ok) throw new Error(body.error || r.statusText); await load(); }
-    catch (e: any) { setErr(e.message); } finally { setBusy(false); }
+  /** Several files at once (select many in the picker): each is uploaded in turn; one failure does not stop the rest. */
+  const upload = async (files: File[]) => {
+    setBusy(true); setErr(null); const failed: string[] = [];
+    for (const file of files) {
+      try { const fd = new FormData(); fd.append("file", file); const r = await fetch(`/api/presentations/${slug}/images`, { method: "POST", body: fd }); const body = await r.json(); if (!r.ok) throw new Error(body.error || r.statusText); }
+      catch (e: any) { failed.push(`${file.name}: ${e.message}`); }
+    }
+    await load(); if (failed.length) setErr(failed.join(" · ")); setBusy(false);
   };
   /** Place: the asset goes into the document (if not there yet) and a new image element is appended to the station's section. */
   const place = (a: ImageAsset) => {
@@ -34,8 +38,8 @@ export function ImagesPanel({ doc, slug, station, apply, onPlaced, fillTarget, o
   return <div className="panel">
     {fillTarget ? <p className="fill">Pick a picture for <code>{fillTarget}</code> — or drop a file onto the frame on the stage.</p> : <p className="muted">Images of this presentation. Click one to place it on the current station, or drag it onto the stage where you want it; then move, resize, crop and adjust it there.</p>}
     {err && <p className="error">{err}</p>}
-    <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden ref={input} onChange={e => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = ""; }} />
-    <button type="button" className="primary" disabled={busy} onClick={() => input.current?.click()}>{busy ? "Uploading…" : "Upload an image"}</button>
+    <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden ref={input} onChange={e => { const fs = Array.from(e.target.files || []); if (fs.length) upload(fs); e.target.value = ""; }} />
+    <button type="button" className="primary" disabled={busy} onClick={() => input.current?.click()}>{busy ? "Uploading…" : "Upload images"}</button>
     <h4>Mosaic brand</h4>
     <div className="imggrid brand">
       {BRAND_ASSETS.map(a => <button type="button" key={a.id} className={"imgcell " + a.on} draggable title={`${a.name} — click to place, or drag onto the stage`} onDragStart={e => { e.dataTransfer.setData("application/x-itw-asset", JSON.stringify(a)); e.dataTransfer.effectAllowed = "copy"; }} onClick={() => (onPick ? onPick(a) : place(a))}>

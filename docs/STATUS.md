@@ -254,6 +254,7 @@ Sixth pass (D-027, D-028): the room recedes for the whole run of text and never 
 - Deployed (2026-09-22): Netlify site `mosaicpresentationeditor` → https://mosaicpresentationeditor.netlify.app, continuous deploys from `main` of the product repository; environment set (URL and OWNER_EMAILS by the session, the two keys by the owner); Supabase redirect URL set by the owner
 - Phase 9: unauthenticated checks pass from here (routes gate to sign-in, the sign-in page renders, brand and cover assets served, the not-configured guard silent); the signed-in checks (library, edit, save, Present, share link, invitation, publish) are the owner's to run with Google — see `docs/DEPLOY.md`
 - Refinement (D-048): sharing is immediate — an existing account holds the role at once, a new address at its first sign-in; sharing again sets the role
+- Refinement (D-049): boxes on every station, cropping on the stage, ⌘C/⌘V/⌘D, a leave guard, fewer tabs, multi-upload, an error screen
 - Next: a custom domain when wanted
 
 ## Deployment (2026-09-21)

@@ -695,6 +695,8 @@ body.editing .editline::selection,body.editing .editline *::selection{background
 #editHandles i{position:absolute;width:12px;height:12px;background:var(--signal);border:2px solid #fff;border-radius:2px;pointer-events:auto;box-sizing:border-box}
 #editHandles i[data-h=nw]{left:-7px;top:-7px;cursor:nwse-resize}#editHandles i[data-h=ne]{right:-7px;top:-7px;cursor:nesw-resize}#editHandles i[data-h=sw]{left:-7px;bottom:-7px;cursor:nesw-resize}#editHandles i[data-h=se]{right:-7px;bottom:-7px;cursor:nwse-resize}
 body.editing .editsel{cursor:move}
+section.beat.placed-host{pointer-events:none!important} section.beat.placed-host .placed{pointer-events:auto!important}
+figure.pic.cropping{outline:2px solid rgba(252,100,82,.9);outline-offset:2px;cursor:grab} figure.pic.cropping .rot{overflow:visible} figure.pic.cropping .ghost{position:absolute;opacity:.35;pointer-events:none;max-width:none}
 </style>
 </head>
 <body>
@@ -1087,7 +1089,16 @@ body.editing .editsel{cursor:move}
       rot.style.borderRadius = (s.radius || 0) + "px"; rot.style.aspectRatio = fr.w + " / " + fr.h; rot.style.opacity = adj.opacity === undefined ? "" : String(adj.opacity);
       crop.style.width = "100%"; crop.style.height = "100%"; crop.style.aspectRatio = ""; crop.style.left = "0"; crop.style.top = "0";
       var r0 = adj.rotate || 0; crop.style.transform = "rotate(" + r0 + "deg) scaleX(" + (adj.flipH ? -1 : 1) + ") scaleY(" + (adj.flipV ? -1 : 1) + ")";
-      img.style.width = "100%"; img.style.height = "100%"; img.style.left = "0"; img.style.top = "0"; img.style.objectFit = "cover";
+      var cf = adj.crop || { x: 0, y: 0, w: 1, h: 1 }, Wf = a ? a.width : 0, Hf = a ? a.height : 0, bx = rot.getBoundingClientRect();
+      fig.__repaint = function () { paintImage(fig, e, a); }; fig.__el = e;
+      if (Wf && Hf && bx.width && bx.height) {
+        /* the crop region covers the frame, centred; the whole picture is laid out at that scale so a pan can reveal the rest */
+        var sc = Math.max(bx.width / (cf.w * Wf), bx.height / (cf.h * Hf));
+        var ox = (bx.width - cf.w * Wf * sc) / 2 - cf.x * Wf * sc, oy = (bx.height - cf.h * Hf * sc) / 2 - cf.y * Hf * sc;
+        img.style.width = (Wf * sc / bx.width * 100) + "%"; img.style.height = (Hf * sc / bx.height * 100) + "%"; img.style.left = (ox / bx.width * 100) + "%"; img.style.top = (oy / bx.height * 100) + "%"; img.style.objectFit = "fill"; img.style.maxWidth = "none";
+        fig.__cropState = { c: cf, W: Wf, H: Hf, s: sc, fw: bx.width, fh: bx.height };
+        var ghost = fig.querySelector(".ghost"); if (ghost) { ghost.style.width = img.style.width; ghost.style.height = img.style.height; ghost.style.left = img.style.left; ghost.style.top = img.style.top; }
+      } else { img.style.width = "100%"; img.style.height = "100%"; img.style.left = "0"; img.style.top = "0"; img.style.objectFit = "cover"; fig.__cropState = null; }
       img.style.filter = "brightness(" + (adj.brightness === undefined ? 1 : adj.brightness) + ") contrast(" + (adj.contrast === undefined ? 1 : adj.contrast) + ") saturate(" + (adj.saturate === undefined ? 1 : adj.saturate) + ")" + (adj.blur ? " blur(" + adj.blur + "px)" : "");
       return;
     }
@@ -1123,6 +1134,8 @@ body.editing .editsel{cursor:move}
       }
       sec.elements.forEach(function (e, ei) {
         var el = document.querySelector('[data-id="' + e.id + '"]');
+        /* a section the renderer draws itself (no beat node) still takes free boxes: a host beat is made for them, shown with the section's stations */
+        if (!el && !secEl && e.place) { secEl = document.createElement("section"); secEl.className = "beat placed-host"; secEl.setAttribute("data-k", sec.key); secEl.setAttribute("data-gen", "1"); secEl.innerHTML = '<div class="mv"></div>'; document.getElementById("stagec").appendChild(secEl); }
         /* an element the markup does not have is made from its type and placed: inside its container (`in`) or after the element before it */
         if (!el && secEl) {
           el = makeElement(e); if (!el) return;
@@ -2910,6 +2923,7 @@ body.editing .editsel{cursor:move}
     buildRail();
   }
   window.addEventListener("resize", resize);
+  window.addEventListener("resize", function () { [].slice.call(document.querySelectorAll("figure[data-id]")).forEach(function (f) { if (f.__repaint) f.__repaint(); }); });
 
   /* ================= frame ================= */
   var tmpA = SCENE_OK ? new THREE.Vector3() : null;
@@ -3408,10 +3422,11 @@ body.editing .editsel{cursor:move}
     function rectOf(el) { var r = el.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; }
     /* `user` marks a selection made with the pointer, as opposed to one re-announced after a load or a step */
     function select(id, user) {
+      if (cropping && cropping.getAttribute("data-id") !== id) exitCrop();
       var prev = document.querySelector(".editsel"); if (prev) prev.classList.remove("editsel");
       var el = id ? document.querySelector('[data-id="' + id + '"]') : null;
       selectedId = el ? id : null;
-      if (el) { el.classList.add("editsel"); var sec = el.closest("section.beat"); post({ type: "itw:selected", id: id, user: !!user, rect: rectOf(el), section: sec ? sec.getAttribute("data-k") : null, empty: el.hasAttribute("data-empty"), placed: el.classList.contains("placed") }); }
+      if (el) { el.classList.add("editsel"); var sec = el.closest("section.beat"), rr = rectOf(el); post({ type: "itw:selected", id: id, user: !!user, rect: rr, pct: { x: +vwOf(rr.x).toFixed(2), y: +vhOf(rr.y).toFixed(2), w: +vwOf(rr.w).toFixed(2) }, section: sec ? sec.getAttribute("data-k") : null, empty: el.hasAttribute("data-empty"), placed: el.classList.contains("placed") }); }
       else post({ type: "itw:selected", id: null, user: !!user });
       paintHandles();
     }
@@ -3431,6 +3446,7 @@ body.editing .editsel{cursor:move}
     }
     window.addEventListener("pointermove", function (e) {
       if (!drag) return; var dx = e.clientX - drag.sx, dy = e.clientY - drag.sy; if (!drag.moved && Math.abs(dx) < 4 && Math.abs(dy) < 4) return; drag.moved = true;
+      if (drag.cropPan) { var cs2 = drag.cropPan.__cropState; if (cs2) setCrop(drag.cropPan, { x: drag.c0.x - dx / (cs2.W * cs2.s), y: drag.c0.y - dy / (cs2.H * cs2.s), w: drag.c0.w, h: drag.c0.h }); return; }
       if (drag.copy) { drag.el.style.translate = (drag.dx0 + vwOf(dx)) + "vw " + (drag.dy0 + vhOf(dy)) + "vh"; return; }
       if (drag.handle) {
         var sign = drag.handle.indexOf("e") >= 0 ? 1 : -1, w = Math.max(24, drag.w0 + sign * dx);
@@ -3443,6 +3459,7 @@ body.editing .editsel{cursor:move}
     }, true);
     window.addEventListener("pointerup", function () {
       if (!drag) return; var d = drag; drag = null;
+      if (d.cropPan) return;   /* the crop is written to the document once, when the session closes */
       if (!d.moved) { if (d.pendingEdit) startEdit(d.pendingEdit.hit, d.pendingEdit.x, d.pendingEdit.y); return; }
       if (d.copy) { var t1 = (d.el.style.translate || "").split(" "); post({ type: "itw:copyMoved", path: d.copy, dx: +(parseFloat(t1[0]) || 0).toFixed(2), dy: +(parseFloat(t1[1]) || 0).toFixed(2) }); return; }
       var msg = { type: "itw:placed", id: d.id };
@@ -3541,8 +3558,13 @@ body.editing .editsel{cursor:move}
         else if (e.key === "Escape") { e.preventDefault(); endEdit(); }
         return;
       }
+      if (!editing) return;
+      if (cropping && e.key === "Escape") { e.preventDefault(); e.stopPropagation(); exitCrop(); return; }
+      var mod = e.metaKey || e.ctrlKey, key = e.key.toLowerCase();
+      if (mod && key === "v") { e.preventDefault(); e.stopPropagation(); post({ type: "itw:paste" }); return; }
+      if (mod && selectedId && (key === "c" || key === "d")) { e.preventDefault(); e.stopPropagation(); post({ type: key === "c" ? "itw:copy" : "itw:duplicate", id: selectedId }); return; }
       /* with a selection and nothing open: Delete removes it, Escape lets go, the arrows nudge it (Shift: by more) */
-      if (!editing || !selectedId) return;
+      if (!selectedId) return;
       var step = e.shiftKey ? 5 : 1;
       if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); e.stopPropagation(); post({ type: "itw:delete", id: selectedId }); }
       else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); select(null, true); }
@@ -3551,9 +3573,32 @@ body.editing .editsel{cursor:move}
         post({ type: "itw:nudgeKey", id: selectedId, dx: e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0, dy: e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0 });
       }
     }, true);
+    /* ---- cropping a framed picture: a double click opens it; drag pans, the wheel zooms, Escape or a press elsewhere closes it ---- */
+    var cropping = null;
+    function clampCrop(c) { c.w = Math.max(0.05, Math.min(1, c.w)); c.h = Math.max(0.05, Math.min(1, c.h)); c.x = Math.max(0, Math.min(1 - c.w, c.x)); c.y = Math.max(0, Math.min(1 - c.h, c.y)); return c; }
+    function setCrop(fig, c, done) {
+      var el = fig.__el; if (!el) return; c = clampCrop({ x: +c.x.toFixed(4), y: +c.y.toFixed(4), w: +c.w.toFixed(4), h: +c.h.toFixed(4) });
+      el.adjust = el.adjust || {}; el.adjust.crop = c; fig.__repaint(); paintHandles();
+      post({ type: "itw:crop", id: fig.getAttribute("data-id"), crop: c, done: !!done });
+    }
+    function enterCrop(fig) {
+      if (cropping) exitCrop();
+      if (!fig.__cropState) return;
+      cropping = fig; fig.classList.add("cropping");
+      var img = fig.querySelector(".crop img"), ghost = document.createElement("img"); ghost.className = "ghost"; ghost.src = img.src; ghost.alt = ""; fig.querySelector(".rot").appendChild(ghost); fig.__repaint();
+      post({ type: "itw:cropStart", id: fig.getAttribute("data-id") });
+    }
+    function exitCrop() {
+      if (!cropping) return; var fig = cropping; cropping = null;
+      fig.classList.remove("cropping"); var g = fig.querySelector(".ghost"); if (g) g.parentNode.removeChild(g);
+      if (fig.__el && fig.__el.adjust && fig.__el.adjust.crop) setCrop(fig, fig.__el.adjust.crop, true);
+      post({ type: "itw:cropEnd", id: fig.getAttribute("data-id") });
+    }
     window.addEventListener("dblclick", function (e) {
       if (!editing) return; e.stopPropagation(); e.preventDefault();
       if (editingEl) return;
+      var fig = e.target.closest && e.target.closest("figure[data-id]");
+      if (fig && fig.__cropState) { enterCrop(fig); return; }
       var under = visibleUnder(e.clientX, e.clientY), hit = null, i;
       for (i = 0; i < under.length && !hit; i++) hit = editableAt(under[i]);
       if (hit) startEdit(hit, e.clientX, e.clientY);
@@ -3572,6 +3617,10 @@ body.editing .editsel{cursor:move}
       e.stopPropagation(); e.preventDefault();
       if (editingEl) endEdit();
       if (e.target.closest("#hud") || e.target.closest("#notes")) return;
+      if (cropping) {
+        if (e.target.closest && e.target.closest("figure[data-id]") === cropping) { var cs = cropping.__cropState; drag = { cropPan: cropping, sx: e.clientX, sy: e.clientY, c0: { x: cs.c.x, y: cs.c.y, w: cs.c.w, h: cs.c.h }, moved: false }; return; }
+        exitCrop();
+      }
       var h = e.target.closest && e.target.closest("#editHandles i");
       if (h) { var selEl = selectedId && document.querySelector('[data-id="' + selectedId + '"]'); if (selEl) startDrag(selEl, e, h.getAttribute("data-h")); return; }
       var under = visibleUnder(e.clientX, e.clientY), el = null, hit = null, i;
@@ -3593,7 +3642,14 @@ body.editing .editsel{cursor:move}
       }
     }, true);
     window.addEventListener("click", function (e) { if (editing) { e.stopPropagation(); e.preventDefault(); } }, true);
-    window.addEventListener("wheel", function (e) { if (editing) { e.stopPropagation(); e.preventDefault(); } }, { capture: true, passive: false });
+    window.addEventListener("wheel", function (e) {
+      if (!editing) return; e.stopPropagation(); e.preventDefault();
+      if (cropping && e.target.closest && e.target.closest("figure[data-id]") === cropping && cropping.__cropState) {
+        var c = cropping.__cropState.c, f = e.deltaY > 0 ? 1.08 : 1 / 1.08, w = c.w * f, h = c.h * f, cap = Math.max(w, h);
+        if (cap > 1) { w /= cap; h /= cap; }
+        setCrop(cropping, { x: c.x + (c.w - w) / 2, y: c.y + (c.h - h) / 2, w: w, h: h });
+      }
+    }, { capture: true, passive: false });
     window.addEventListener("contextmenu", function (e) { if (editing) e.preventDefault(); }, true);
     window.addEventListener("dragover", function (e) { if (editing) { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; } }, true);
     window.addEventListener("drop", function (e) {

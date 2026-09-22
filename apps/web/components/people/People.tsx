@@ -29,7 +29,7 @@ export function People({ id, title, me }: { id: string; title: string; me: strin
     <div className="people-body">
       <section>
         <h2>Share</h2>
-        <p className="muted">Type an address and a role. Someone who has signed in before has it in their library at once; someone who has not gets it the first time they sign in with that Google account. Type the same address again to change the role.</p>
+        <p className="muted">Type an address and a role — anyone with a Google account, inside Mosaic or outside. Someone who has signed in before has it in their library at once; someone who has not gets it the first time they sign in with that account. Type the same address again to change the role.</p>
         {err && <p className="error">{err}</p>}
         <form className="invite" onSubmit={submit}>
           <input className="field" type="email" required placeholder="name@mosaicintelligence.xyz" value={email} onChange={e => setEmail(e.target.value)} />

@@ -468,3 +468,17 @@
 - The People page: one list — people with access (role menu, Remove) and those not signed in yet (role menu, Remove) — and a plain confirmation: "in their library now" or "appears the first time they sign in at <site>", with the site link to copy.
 - Links carry the site's own address (`URL` on Netlify), not a deploy permalink.
 - Proof: access tests — an existing account shared with is a member at once and the presentation is in their library; a brand-new address is waiting, then holds the role after its first sign-in without any link; sharing again changes the role; revocation still locks out.
+
+## D-049: Boxes anywhere, cropping on the stage, copy and paste, a leave guard, fewer tabs (2026-09-22)
+
+- Status: accepted (the owner's list after the first day on the deployed editor)
+- What changed:
+  - **Boxes on every station.** The keynote draws some sections itself (the tunnel, the lab) with no beat node, so a text box, image box or image added there landed in the document and never on the stage. The deck now makes a host layer for such a section the moment a free box needs one, shown with the section's stations, taking the pointer only on its boxes.
+  - **Cropping on the stage, like Slides.** A framed picture (an image box, the fluoroscopy frames) is painted from its crop: the named region covers the frame, centred, and the whole picture is laid out at that scale. Double-click opens the crop: drag pans, the wheel zooms, Escape (or a press elsewhere) closes it; the rest of the picture shows dimmed meanwhile; one undo step per session. The inspector's crop box stays for plain pictures.
+  - **⌘C, ⌘V, ⌘D** in either frame: a copy of any element is pasted on the current station as a free box a step aside (a keynote line becomes a free box where it stood); ⌘D duplicates in one go. The clipboard is the editor's own.
+  - **A leave guard.** Autosave has always written every change within a second; still, a close or reload with an unsaved change asks first, and a link out of the editor asks Save and leave / Discard and leave / Stay.
+  - **Tabs**: Marks and Renderer copy are gone — the copy is typed on the stage, the marks are the renderer's own.
+  - **Several pictures at once** in the image library's upload.
+  - **An error screen** for the editor with the message and a way back, instead of a blank page.
+  - Sharing with anyone: any Google account can be shared with; an outside address is admitted at its first sign-in by the share (D-048) — no change was needed, the People copy says so.
+- Proof: slides tests (the tunnel station's box on the stage, ⌘C/⌘V/⌘D from both frames, the crop session and its undo, the leave guard); keynote parity and 54/54 re-proven after the deck change.
