@@ -79,3 +79,7 @@ Rules: only `mosaicintelligence.xyz` accounts may sign in without an invitation,
 Offline mode: `ITW_STORE=file` runs the editor without sign-in against `apps/web/data/` (never in production).
 
 Unit tests: `pnpm test`. Browser tests: `pnpm test:e2e` (needs the local stack, `PW_EXEC` and `PW_MODULES`, see `tools/README.md`).
+
+## Deploying
+
+See `docs/DEPLOY.md`: the product repository, the Netlify site, the environment, the first sign-in.

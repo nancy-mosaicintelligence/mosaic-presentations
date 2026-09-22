@@ -1,0 +1,14 @@
+# The presentations app on Netlify (Next.js, the Netlify Next runtime). The site's base directory is apps/web;
+# pnpm installs the whole workspace from the repository root. The deck and its content are read from the
+# repository at runtime, so next.config.ts traces them into the server bundle.
+[build]
+  command = "pnpm build"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    X-Content-Type-Options = "nosniff"

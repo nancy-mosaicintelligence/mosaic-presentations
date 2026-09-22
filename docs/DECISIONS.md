@@ -453,3 +453,10 @@
   - **One card shape**: a 16:9 cover, a two-line title, one line under it (the note, a link's host, or nothing), the meta line, the action row — so every card is the same height whatever it holds. The link card had been getting the invitation box's `.link` padding and border through a class-name collision; the kind classes are now `kind-deck`, `kind-html`, `kind-link`.
   - The introduction line says what to do: start a deck, copy the keynote, bring in a file or a link, share it.
 - Proof: library test (delete from the card with the warning, refusals for non-owners and built-in decks, rows and page gone); cards measured equal at 1440 px.
+
+## D-047: The product repository and the host (2026-09-22)
+
+- Status: accepted (the user: "push this to a different GitHub repo and publish so that other Mosaic people can use it officially")
+- Decision: a private repository of its own, `nancy-mosaicintelligence/mosaic-presentations`, whose `main` is this platform branch (the keynote repository keeps `main` and `v2` frozen and untouched). The host is **Netlify**: the account is already connected, the two frozen decks live there, and the Next runtime handles the app. Continuous deploys from `main`.
+- Build: `apps/web` is the base directory; pnpm installs the workspace from the root; the deck, its content and the core package are traced into the server bundles (`outputFileTracingIncludes`, rooted at the repository); `repoRoot()` also searches upward from the module itself. `.env.example` names every variable. The runbook is `docs/DEPLOY.md`.
+- Boundary: the site, its environment variables (two of them secrets) and the Supabase redirect URL are set in the dashboards by the owner; no key passes through this session.
