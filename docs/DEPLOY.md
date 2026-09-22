@@ -7,8 +7,8 @@ frozen keynote (`mosaic-ventowave2026keynote` and `…-v2`) deploy from the old 
 
 ## One-time set-up (about ten minutes, all in dashboards)
 
-1. **Netlify → Add new project → Import an existing project → GitHub** → pick `mosaic-presentations`.
-   - Team: Mosaic Special Ops. Project name: `mosaic-presentations` (the site becomes `mosaic-presentations.netlify.app`;
+1. **Netlify → Add new project → Import an existing project → GitHub** → pick `mosaic-presentations` (done 2026-09-22).
+   - Team: Mosaic Special Ops. Project name as created: `mosaicpresentationeditor` (site `https://mosaicpresentationeditor.netlify.app`;
      a custom domain such as `presentations.mosaicintelligence.xyz` can be added later).
    - **Base directory: `apps/web`.** Build command: `pnpm build`. Publish directory: leave to the Next runtime.
      Branch: `main`. (`apps/web/netlify.toml` repeats the command and the Next plugin.)
@@ -19,8 +19,8 @@ frozen keynote (`mosaic-ventowave2026keynote` and `…-v2`) deploy from the old 
    - `SUPABASE_SERVICE_ROLE_KEY` = the service role key (same page; mark it secret)
    - `OWNER_EMAILS` = `nancy@mosaicintelligence.xyz` (add more owners comma-separated)
    - Never set `ITW_TEST_AUTH` or `ITW_STORE` on the host.
-3. **Supabase → Authentication → URL configuration**: Site URL `https://mosaic-presentations.netlify.app`;
-   Redirect URLs: add `https://mosaic-presentations.netlify.app/auth/callback` (and the custom domain's later).
+3. **Supabase → Authentication → URL configuration**: Site URL `https://mosaicpresentationeditor.netlify.app`;
+   Redirect URLs: add `https://mosaicpresentationeditor.netlify.app/auth/callback` (and the custom domain's later).
 4. **Google Cloud → the OAuth client used by Supabase**: nothing changes — Google redirects to Supabase
    (`https://ondzaqafeotuxxsfobvt.supabase.co/auth/v1/callback`), which is already registered.
 5. Trigger the first deploy (Netlify → Deploys → Trigger deploy). Every push to `main` deploys from then on.
