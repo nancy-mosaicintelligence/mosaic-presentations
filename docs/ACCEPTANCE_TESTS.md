@@ -287,3 +287,6 @@ Production cannot be marked complete until the deployed URL has been opened and 
 | An imported HTML deck is stored privately and runs in a sandbox with no access to the platform | PASS | `library.test.mjs`: CSP `sandbox`, `document.cookie` empty inside, members only, no editor |
 | Links are kept and shared, not edited; private addresses and non-HTML refused | PASS | `library.test.mjs` |
 | Archiving hides without deleting, owners only, audited | PASS | `library.test.mjs` |
+| Images: upload into a private per-presentation library, served to members only | PASS | `images.test.mjs`: 201 with pixel size; non-images refused; 401 signed out, 403 without a role |
+| An image is placed on a station and rendered by the deck from document data (crop, turn, flips, filters, width, side) | PASS | `images.test.mjs`: the stage shows `figure.pic` with the served route, `brightness(1.4)`, `rotate(90deg)`, a widened picture inside the crop window, width 80% |
+| Image edits are undoable; removal keeps the file and the asset record | PASS | `images.test.mjs` |

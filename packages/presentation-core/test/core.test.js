@@ -22,10 +22,12 @@ function minimal() {
       hud: { safe: "Safe", notes: "Notes", present: "Present", explore: "Explore", fullscreen: "Fullscreen" }
     },
     animation: { revealSpacing: .46, revealFade: .8, stepMin: 480, stepMax: 1900, stepPerUnit: 16000, stepEaseOut: .72 },
-    assets: { "mark": { kind: "svg-paths", use: "t", viewBox: "0 0 10 10", paths: [{ d: "M0 0L10 10Z" }], sources: [{ path: "presentations/x/mark.svg", sha256: "a".repeat(64) }] } },
+    assets: { "mark": { kind: "svg-paths", use: "t", viewBox: "0 0 10 10", paths: [{ d: "M0 0L10 10Z" }], sources: [{ path: "presentations/x/mark.svg", sha256: "a".repeat(64) }] },
+              "img-1": { kind: "image", src: "storage://images/0b6f4a2e-1c3d-4e5f-8a9b-0c1d2e3f4a5b/" + "b".repeat(64) + ".png", sha256: "b".repeat(64), width: 1200, height: 800, mime: "image/png" } },
     sections: [{ key: "open", layout: { variants: ["mid"], width: "min(940px,76%)", until: 0.05 }, elements: [
       { id: "open.1", type: "text", role: ["hero", "strong"], style: { maxWidth: "17ch", margin: "22px 0 0" }, runs: [{ t: "Hello " }, { t: "world", marks: ["em"] }] },
-      { id: "open.2", type: "group", role: ["acts", "rv"], reveal: { p: 0.03 }, hidden: false }
+      { id: "open.2", type: "group", role: ["acts", "rv"], reveal: { p: 0.03 }, hidden: false },
+      { id: "open.3", type: "image", asset: "img-1", alt: "a room", size: { width: "60%", align: "center", radius: 8 }, adjust: { crop: { x: 0.1, y: 0, w: 0.8, h: 1 }, rotate: 90, flipH: true, brightness: 1.1, contrast: 1, saturate: 0.9, opacity: 1, blur: 0 }, reveal: { p: 0.03, seq: 1 } }
     ] }],
     stations: [{ p: 0, section: "open", camera: "none", chapter: "Open", note: "n" }, { p: 0.03, section: "", camera: "acc", chapter: "Open", note: "n", dur: 2400, black: true }]
   };
@@ -41,7 +43,7 @@ test("unknown element type is rejected", () => {
   const d = minimal(); d.sections[0].elements.push({ id: "x", type: "video", runs: [] });
   const r = validate(d);
   assert.equal(r.ok, false);
-  assert.ok(r.errors.some(e => e.path === "sections[0].elements[2].type"));
+  assert.ok(r.errors.some(e => e.path === "sections[0].elements[3].type"));
 });
 
 test("unsupported properties are rejected at every level", () => {
@@ -65,8 +67,8 @@ test("markup in text, unknown marks, unknown icons and unknown scenes are reject
   assert.ok(paths.includes("sections[0].elements[0].runs[0].t"));
   assert.ok(paths.includes("sections[0].elements[0].runs[1].marks[0]"));
   assert.ok(paths.includes("sections[0].elements[0].runs[2].icon"));
-  assert.ok(paths.includes("sections[0].elements[2].scene"));
-  assert.ok(paths.includes("sections[0].elements[3].params.code"));
+  assert.ok(paths.includes("sections[0].elements[3].scene"));
+  assert.ok(paths.includes("sections[0].elements[4].params.code"));
 });
 
 test("stations must reference sections and increase in progress", () => {
@@ -99,16 +101,26 @@ test("layout, role, style and animation are allow-listed and range-checked", () 
 });
 
 test("a v1 document migrates to the current version unchanged apart from the version, deterministically", () => {
-  const v1 = minimal(); v1.schemaVersion = 1; delete v1.animation; delete v1.assets; delete v1.sections[0].layout; delete v1.sections[0].elements[0].role; delete v1.sections[0].elements[0].style; v1.sections[0].elements.pop();
+  const v1 = minimal(); v1.schemaVersion = 1; delete v1.animation; delete v1.assets; delete v1.sections[0].layout; delete v1.sections[0].elements[0].role; delete v1.sections[0].elements[0].style; v1.sections[0].elements.pop(); v1.sections[0].elements.pop();
   const a = migrate(v1), b = migrate(v1);
   assert.deepEqual(a, b);
   assert.equal(a.schemaVersion, SCHEMA_VERSION);
   assert.deepEqual({ ...a, schemaVersion: 1 }, v1);
   assert.equal(validate(a).ok, true);
-  const v2 = { ...minimal(), schemaVersion: 2 }; delete v2.assets;
+  const v2 = { ...minimal(), schemaVersion: 2 }; delete v2.assets; v2.sections[0].elements.pop();
   assert.equal(validate(migrate(v2)).ok, true);
   const v3 = { ...minimal(), schemaVersion: 3 };
   assert.equal(migrate(v3).schemaVersion, SCHEMA_VERSION); assert.equal(validate(migrate(v3)).ok, true);
+  const v5 = { ...minimal(), schemaVersion: 5 }; assert.equal(migrate(v5).schemaVersion, 6);
+});
+
+test("image elements and assets are range-checked and must point at an image asset", () => {
+  const d = minimal(); const img = d.sections[0].elements[2];
+  img.asset = "mark"; img.size.width = "150%"; img.size.radius = 99; img.adjust.brightness = 5; img.adjust.rotate = 45; img.adjust.crop = { x: 0.5, y: 0, w: 0.8, h: 1 }; img.adjust.sharpen = 1;
+  d.assets["img-1"].src = "javascript:alert(1)"; d.assets["img-1"].mime = "image/svg+xml"; d.assets["img-1"].width = 0.5;
+  const paths = validate(d).errors.map(e => e.path);
+  for (const p of ["sections[0].elements[2].asset", "sections[0].elements[2].size.width", "sections[0].elements[2].size.radius", "sections[0].elements[2].adjust.brightness", "sections[0].elements[2].adjust.rotate", "sections[0].elements[2].adjust.crop.w", "sections[0].elements[2].adjust.sharpen", "assets.img-1.src", "assets.img-1.mime", "assets.img-1.width"]) assert.ok(paths.includes(p), p);
+  const ok = minimal(); ok.assets["img-1"].src = "/img/series-a/" + "b".repeat(64) + ".png"; assert.equal(validate(ok).ok, true, "a served image url is valid");
 });
 
 test("assets and groups are checked: path grammar, hashes, repo-relative files, no copy on a group", () => {

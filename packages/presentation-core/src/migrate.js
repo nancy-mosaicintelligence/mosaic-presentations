@@ -18,7 +18,10 @@ const STEPS = {
   3: (doc) => ({ ...doc, schemaVersion: 4 }),
   // 4 → 5: asset sources may also be objects in the application's private storage (`storage://bucket/path.svg`).
   // A relaxation of the grammar only; every v4 document is a v5 document.
-  4: (doc) => ({ ...doc, schemaVersion: 5 })
+  4: (doc) => ({ ...doc, schemaVersion: 5 }),
+  // 5 → 6: the `image` element (an asset shown in a section, with size and adjustments) and the `image` asset kind.
+  // Additive; the stamp is the migration.
+  5: (doc) => ({ ...doc, schemaVersion: 6 })
 };
 
 /**

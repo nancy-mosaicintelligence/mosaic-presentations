@@ -53,7 +53,7 @@ test("the root is the library, and the keynote is in it", async () => {
 
 test("the draft is seeded from the committed document and an invalid draft never replaces it", async () => {
   const d = await api("/draft");
-  assert.equal(d.status, 200); assert.equal(d.body.document.schemaVersion, 5); assert.equal(d.body.document.stations.length, 55); assert.equal(d.body.basedOn, "source");
+  assert.equal(d.status, 200); assert.equal(d.body.document.schemaVersion, 6); assert.equal(d.body.document.stations.length, 55); assert.equal(d.body.basedOn, "source");
   const bad = structuredClone(d.body.document); bad.sections[0].elements[0].runs = [{ t: "<script>" }]; bad.sections[0].elements[0].onclick = "x";
   const r = await api("/draft", json({ document: bad }));
   assert.equal(r.status, 422); assert.ok(r.body.issues.some(i => i.path === "sections[0].elements[0].runs[0].t")); assert.ok(r.body.issues.some(i => i.path === "sections[0].elements[0].onclick"));

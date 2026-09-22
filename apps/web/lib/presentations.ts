@@ -120,11 +120,16 @@ export async function readStaticDeck(sb: SupabaseClient, p: Presentation): Promi
   if (error || !data) throw new StoreError(403, "not allowed to read this presentation");
   return Buffer.from(await data.arrayBuffer());
 }
+/** Image assets are stored as `storage://images/<presentation>/<file>` and rendered from `/img/<slug>/<file>`. */
+export function forRendering<T>(p: { id: string; slug: string }, document: T): T {
+  const s = JSON.stringify(document); const re = new RegExp(`storage://images/${p.id}/`, "g");
+  return JSON.parse(s.replace(re, `/img/${p.slug}/`));
+}
 /** The renderer's deck file with a document embedded in place of the committed one. */
 export async function deckWithDocument(p: Presentation, document: unknown | null): Promise<string> {
   let html = await fs.readFile(join(repoRoot(), rendererOf(p).deckFile), "utf8");
   if (document) {
-    const json = JSON.stringify(document).replace(/<\//g, "<\\/");
+    const json = JSON.stringify(forRendering(p, document)).replace(/<\//g, "<\\/");
     const re = /<script type="application\/json" id="itw-content">[\s\S]*?<\/script>/;
     if (!re.test(html)) throw new StoreError(500, "the deck has no content block");
     html = html.replace(re, () => `<script type="application/json" id="itw-content">${json}</script>`);

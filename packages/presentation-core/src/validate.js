@@ -1,7 +1,7 @@
 import {
   SCHEMA_VERSION, PRESENTATION_FIELDS, TOKEN_FIELDS, SECTION_FIELDS, ELEMENT_FIELDS,
   RUN_FIELDS, REVEAL_FIELDS, STATION_FIELDS, COPY_FIELDS, CUSTOM_SCENES,
-  COLOR_RE, FONT_STACK_RE, LAYOUT_FIELDS, ANIMATION_FIELDS, STYLE_KEYS, safeCss, ASSET_FIELDS, ASSET_PATH_FIELDS, ASSET_SOURCE_FIELDS } from "./schema.js";
+  COLOR_RE, FONT_STACK_RE, LAYOUT_FIELDS, ANIMATION_FIELDS, STYLE_KEYS, safeCss, ASSET_FIELDS, IMAGE_ASSET_FIELDS, IMAGE_SIZE_FIELDS, IMAGE_ADJUST_FIELDS, ASSET_PATH_FIELDS, ASSET_SOURCE_FIELDS } from "./schema.js";
 
 /**
  * @typedef {{ path: string, message: string }} Issue
@@ -57,6 +57,7 @@ export function validate(doc) {
       const ap = `assets.${id}`;
       if (!/^[a-z][a-z0-9-]*$/.test(id)) err(ap, "asset ids are lower-case kebab");
       if (!isObj(a)) { err(ap, "must be an object"); continue; }
+      if (a.kind === "image") { checkFields(a, IMAGE_ASSET_FIELDS, ap, err); for (const k of ["width", "height"]) if (typeof a[k] === "number" && (!Number.isInteger(a[k]) || a[k] < 1 || a[k] > 20000)) err(`${ap}.${k}`, "must be a whole number of pixels"); continue; }
       checkFields(a, ASSET_FIELDS, ap, err);
       if (Array.isArray(a.paths)) { if (!a.paths.length) err(`${ap}.paths`, "needs at least one path"); a.paths.forEach((pt, i) => { if (!isObj(pt)) return err(`${ap}.paths[${i}]`, "must be an object"); checkFields(pt, ASSET_PATH_FIELDS, `${ap}.paths[${i}]`, err); }); }
       if (Array.isArray(a.sources)) { if (!a.sources.length) err(`${ap}.sources`, "needs at least one source file"); a.sources.forEach((src, i) => { if (!isObj(src)) return err(`${ap}.sources[${i}]`, "must be an object"); checkFields(src, ASSET_SOURCE_FIELDS, `${ap}.sources[${i}]`, err); }); }
@@ -106,6 +107,22 @@ export function validate(doc) {
         case "group":
           if (e.runs !== undefined || e.items !== undefined) err(ep, "a group carries no copy of its own");
           break;
+        case "image": {
+          if (typeof e.asset !== "string") err(`${ep}.asset`, "an image names its asset");
+          else if (!isObj(d.assets) || !isObj(d.assets[e.asset]) || d.assets[e.asset].kind !== "image") err(`${ep}.asset`, `no image asset "${e.asset}"`);
+          if (e.runs !== undefined || e.items !== undefined) err(ep, "an image carries no copy");
+          if (e.size !== undefined) { if (!isObj(e.size)) err(`${ep}.size`, "must be an object"); else { checkFields(e.size, IMAGE_SIZE_FIELDS, `${ep}.size`, err); if (typeof e.size.radius === "number" && (e.size.radius < 0 || e.size.radius > 80)) err(`${ep}.size.radius`, "must be between 0 and 80"); } }
+          if (e.adjust !== undefined) {
+            if (!isObj(e.adjust)) err(`${ep}.adjust`, "must be an object");
+            else {
+              checkFields(e.adjust, IMAGE_ADJUST_FIELDS, `${ep}.adjust`, err);
+              for (const [k, spec] of Object.entries(IMAGE_ADJUST_FIELDS)) { const v = e.adjust[k]; if (typeof v === "number" && spec.min !== undefined && (v < spec.min || v > spec.max)) err(`${ep}.adjust.${k}`, `must be between ${spec.min} and ${spec.max}`); }
+              const c = e.adjust.crop;
+              if (c !== undefined) { if (!isObj(c)) err(`${ep}.adjust.crop`, "must be an object"); else { checkFields(c, { x: { type: "number", req: true }, y: { type: "number", req: true }, w: { type: "number", req: true }, h: { type: "number", req: true } }, `${ep}.adjust.crop`, err); for (const k of ["x", "y", "w", "h"]) if (typeof c[k] === "number" && (c[k] < 0 || c[k] > 1)) err(`${ep}.adjust.crop.${k}`, "fractions of the source, 0 to 1"); if (typeof c.w === "number" && typeof c.x === "number" && c.x + c.w > 1.0001) err(`${ep}.adjust.crop.w`, "the crop leaves the source"); if (typeof c.h === "number" && typeof c.y === "number" && c.y + c.h > 1.0001) err(`${ep}.adjust.crop.h`, "the crop leaves the source"); if ((typeof c.w === "number" && c.w < 0.01) || (typeof c.h === "number" && c.h < 0.01)) err(`${ep}.adjust.crop`, "the crop is too small"); } }
+            }
+          }
+          break;
+        }
         case "custom-scene": {
           if (typeof e.scene !== "string" || !(e.scene in CUSTOM_SCENES)) err(`${ep}.scene`, "unknown custom scene");
           else {

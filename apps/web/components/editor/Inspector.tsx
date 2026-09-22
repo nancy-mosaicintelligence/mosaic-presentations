@@ -3,11 +3,12 @@ import { ROLES, STYLE_KEYS, safeCss, LAYOUT_VARIANTS, MV_VARIANTS, WIDTH_RE } fr
 import type { Doc, Command, Element, Reveal } from "@/lib/doc";
 import { locate, plain } from "@/lib/doc";
 import { RunsEditor } from "./RunsEditor";
+import { ImageInspector } from "./Images";
 import { Row, TextField, NumberField, Tokens } from "./fields";
 
-const TYPE_LABEL: Record<string, string> = { text: "Text", list: "List", chips: "Chips", chain: "Chain", "loop-labels": "Loop labels", "custom-scene": "Scene", group: "Group" };
+const TYPE_LABEL: Record<string, string> = { text: "Text", list: "List", chips: "Chips", chain: "Chain", "loop-labels": "Loop labels", "custom-scene": "Scene", group: "Group", image: "Image" };
 
-export function Inspector({ doc, selectedId, apply, onDeselect }: { doc: Doc; selectedId: string | null; apply: (c: Command) => void; onDeselect: () => void }) {
+export function Inspector({ doc, slug, selectedId, apply, onDeselect }: { doc: Doc; slug: string; selectedId: string | null; apply: (c: Command) => void; onDeselect: () => void }) {
   const hit = locate(doc, selectedId);
   if (!hit) return <div className="panel empty"><p>Click anything on the stage to select it; double-click a line to type into it.</p><p className="muted">The filmstrip under the stage and the arrow keys move between stations. This panel holds the finer controls of whatever is selected.</p></div>;
   const { si, ei, section, element: e } = hit;
@@ -28,11 +29,13 @@ export function Inspector({ doc, selectedId, apply, onDeselect }: { doc: Doc; se
       </div>)}
     </section>}
     {e.type === "custom-scene" && <section><h4>Scene</h4><p className="muted">{e.scene}{e.params && " · " + Object.entries(e.params).map(([k, v]) => `${k}=${v}`).join(", ")}. Drawn by the renderer; only its reveal is editable here.</p></section>}
+    {e.type === "image" && <ImageInspector doc={doc} slug={slug} si={si} ei={ei} element={e} apply={apply} />}
     {e.type === "group" && <section><h4>Container</h4><p className="muted">Holds {section.elements.filter(x => x !== e).length ? "the elements that follow it" : "nothing"}; its reveal times the whole block.</p></section>}
 
     {e.type !== "chips" && <section><h4>Timing</h4>{reveal(e.reveal, r => setField("reveal", r, `reveal of ${e.id}`))}</section>}
+    {e.type === "image" && <section><h4>Appearance</h4><Row label="Visible"><input type="checkbox" checked={!e.hidden} onChange={ev => setField("hidden", !ev.target.checked, ev.target.checked ? `show ${e.id}` : `hide ${e.id}`)} /></Row></section>}
 
-    <section><h4>Appearance</h4>
+    {e.type !== "image" && <section><h4>Appearance</h4>
       <Row label="Visible"><input type="checkbox" checked={!e.hidden} onChange={ev => setField("hidden", !ev.target.checked, ev.target.checked ? `show ${e.id}` : `hide ${e.id}`)} /></Row>
       <Row label="Roles" hint="the deck's named styles"><Tokens value={e.role || []} options={ROLES} fixed={["rv"]} onChange={v => setField("role", v, `roles of ${e.id}`)} /></Row>
       {STYLE_KEYS.map((k: string) => {
@@ -44,7 +47,7 @@ export function Inspector({ doc, selectedId, apply, onDeselect }: { doc: Doc; se
             : <TextField value={v} invalid={invalid} mono onChange={nv => { if (nv !== "" && !safeCss(nv)) return; const st = { ...(e.style || {}) }; if (nv) st[k] = nv; else delete st[k]; apply({ path: [...base, "style"], value: Object.keys(st).length ? st : undefined, label: `${k} of ${e.id}`, coalesce: `${e.id}.${k}` }); }} />}
         </Row>;
       })}
-    </section>
+    </section>}
 
     <section><h4>Section <code>{section.key}</code></h4>
       <Row label="Layout" hint="beat variants"><Tokens value={section.layout?.variants || []} options={LAYOUT_VARIANTS} onChange={v => apply({ path: ["sections", si, "layout", "variants"], value: v, label: `layout of ${section.key}` })} /></Row>

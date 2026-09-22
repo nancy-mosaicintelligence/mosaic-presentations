@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createHistory, contentHash, validate } from "@mosaic/presentation-core";
+import { createHistory, contentHash, validate, ABSENT } from "@mosaic/presentation-core";
 import type { Doc, Command } from "@/lib/doc";
 import { needsReload } from "@/lib/doc";
 import { PlayerBridge, type BridgeMessage } from "./bridge";
@@ -11,9 +11,12 @@ import { locate } from "@/lib/doc";
 import { Outline } from "./Outline";
 import { AnimationPanel, CopyPanel, AssetsPanel } from "./Panels";
 import { VersionsPanel, type VersionMeta } from "./Versions";
+import { ImagesPanel } from "./Images";
 
 type SaveState = { kind: "idle" } | { kind: "dirty" } | { kind: "saving" } | { kind: "saved"; at: string } | { kind: "error"; message: string; issues?: { path: string; message: string }[] };
-type Tab = "element" | "motion" | "copy" | "assets" | "versions";
+type Tab = "element" | "images" | "motion" | "copy" | "assets" | "versions";
+/** The stage renders images from the served route; the stored document keeps storage:// paths. */
+const forStage = (doc: Doc, slug: string): Doc => JSON.parse(JSON.stringify(doc).replace(/storage:\/\/images\/[0-9a-f-]{36}\//g, `/img/${slug}/`));
 
 export function Editor({ id, title, role, email }: { id: string; title: string; role: "owner" | "editor" | "viewer"; email: string }) {
   const api = `/api/presentations/${id}`;
@@ -59,7 +62,7 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
     if (!ready) return;
     bridge.send({ type: "itw:mode", present: true });
     bridge.send({ type: "itw:edit", on: !preview && !previewVersion });
-    if (docRef.current && !previewVersion) bridge.send({ type: "itw:load", doc: docRef.current });
+    if (docRef.current && !previewVersion) bridge.send({ type: "itw:load", doc: forStage(docRef.current, id) });
     bridge.send({ type: "itw:goto", index: station });
     if (selected) bridge.send({ type: "itw:select", id: selected });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -94,18 +97,18 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
 
   const afterChange = useCallback((next: Doc, path?: Command["path"]) => {
     setDoc(next); setHist({ undo: history.canUndo, redo: history.canRedo }); scheduleSave();
-    if (path && needsReload(path)) setPendingReload(true); else if (ready) bridge.send({ type: "itw:load", doc: next });
-  }, [history, scheduleSave, ready, bridge]);
-  const apply = useCallback((c: Command) => { const next = history.apply(c) as Doc; afterChange(next, c.path); }, [history, afterChange]);
+    if (path && needsReload(path)) setPendingReload(true); else if (ready) bridge.send({ type: "itw:load", doc: forStage(next, id) });
+  }, [history, scheduleSave, ready, bridge, id]);
+  const apply = useCallback((c: Command) => { const next = history.apply(c) as Doc; afterChange(next, c.path); if (c.value === ABSENT) { setSelected(null); bridge.send({ type: "itw:select", id: null }); } }, [history, afterChange, bridge]);
   // typing on the stage: into history (coalesced) and autosave, but not sent back while the line is open
   inlineEditRef.current = (id, item, runs, typing) => {
     const d = docRef.current; if (!d) return; const hit = locate(d, id); if (!hit) return;
     const path = item >= 0 ? ["sections", hit.si, "elements", hit.ei, "items", item, "runs"] : ["sections", hit.si, "elements", hit.ei, "runs"];
     const current = item >= 0 ? hit.element.items?.[item]?.runs : hit.element.runs;
-    if (JSON.stringify(current) === JSON.stringify(runs)) { if (!typing && ready) bridge.send({ type: "itw:load", doc: d }); return; }   // closing a line unchanged is not a step
+    if (JSON.stringify(current) === JSON.stringify(runs)) { if (!typing && ready) bridge.send({ type: "itw:load", doc: forStage(d, id) }); return; }   // closing a line unchanged is not a step
     const next = history.apply({ path, value: runs, label: `copy of ${id}`, coalesce: `${id}.${item}` }) as Doc;
     setDoc(next); setHist({ undo: history.canUndo, redo: history.canRedo }); scheduleSave();
-    if (!typing && ready) bridge.send({ type: "itw:load", doc: next });
+    if (!typing && ready) bridge.send({ type: "itw:load", doc: forStage(next, id) });
   };
   /** A style change for the line being edited: into the document, and straight onto the element without a re-apply. */
   const inlineStyle = useCallback((patch: Record<string, string | undefined>) => {
@@ -200,9 +203,10 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
     </main>
 
     {!inPreview && doc && <aside className="side right">
-      <nav className="tabs">{(["element", "motion", "copy", "assets", "versions"] as Tab[]).map(t => <button key={t} type="button" className={tab === t ? "on" : ""} onClick={() => setTab(t)}>{t === "element" ? "Element" : t === "motion" ? "Motion" : t === "copy" ? "Renderer copy" : t === "assets" ? "Marks" : `Versions${versions.length ? ` · ${versions.length}` : ""}`}</button>)}</nav>
+      <nav className="tabs">{(["element", "images", "motion", "copy", "assets", "versions"] as Tab[]).map(t => <button key={t} type="button" className={tab === t ? "on" : ""} onClick={() => setTab(t)}>{t === "element" ? "Element" : t === "images" ? "Images" : t === "motion" ? "Motion" : t === "copy" ? "Renderer copy" : t === "assets" ? "Marks" : `Versions${versions.length ? ` · ${versions.length}` : ""}`}</button>)}</nav>
       {issues.length > 0 && <div className="issues">{issues.slice(0, 5).map((i, k) => <div key={k}><code>{i.path}</code> {i.message}</div>)}</div>}
-      {tab === "element" && <Inspector doc={doc} selectedId={selected} apply={apply} onDeselect={() => { setSelected(null); bridge.send({ type: "itw:select", id: null }); }} />}
+      {tab === "element" && <Inspector doc={doc} slug={id} selectedId={selected} apply={apply} onDeselect={() => { setSelected(null); bridge.send({ type: "itw:select", id: null }); }} />}
+      {tab === "images" && <ImagesPanel doc={doc} slug={id} station={station} apply={apply} onPlaced={pid => { setSelected(pid); setTab("element"); setTimeout(() => bridge.send({ type: "itw:select", id: pid }), 150); }} />}
       {tab === "motion" && <AnimationPanel doc={doc} apply={apply} />}
       {tab === "copy" && <CopyPanel doc={doc} apply={apply} />}
       {tab === "assets" && <AssetsPanel doc={doc} apply={apply} presentationId={id} />}

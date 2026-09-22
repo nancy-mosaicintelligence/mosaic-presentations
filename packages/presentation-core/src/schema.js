@@ -8,7 +8,7 @@
  * by renderer id with a closed set of parameters.
  */
 
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 /** Inline marks a run may carry. The renderer maps each to fixed markup. */
 export const MARKS = Object.freeze(["em", "strong", "i", "hl", "lead", "x2"]);
@@ -17,7 +17,7 @@ export const MARKS = Object.freeze(["em", "strong", "i", "hl", "lead", "x2"]);
 export const ICONS = Object.freeze(["drugs", "radiation", "energy", "embolic-agents", "other-therapies"]);
 
 /** Element types a section may contain. */
-export const ELEMENT_TYPES = Object.freeze(["text", "list", "chips", "chain", "loop-labels", "custom-scene", "group"]);
+export const ELEMENT_TYPES = Object.freeze(["text", "list", "chips", "chain", "loop-labels", "custom-scene", "group", "image"]);
 
 /** Custom scenes the Italian Tech Week renderer provides. Parameters are closed per scene. */
 export const CUSTOM_SCENES = Object.freeze({
@@ -118,7 +118,31 @@ export const ELEMENT_FIELDS = Object.freeze({
   role: { type: { arrayOf: { enum: ROLES } } },
   style: { type: "object" },
   scene: { type: { enum: Object.keys(CUSTOM_SCENES) } },
-  params: { type: "object" }
+  params: { type: "object" },
+  asset: { type: "string" },     // image: the asset id it shows
+  alt: { type: "string" },       // image
+  size: { type: "object" },      // image: width, align, radius
+  adjust: { type: "object" }     // image: crop, rotate, flips, filters
+});
+
+/** An image element's placement inside its section's content box. */
+export const IMAGE_ALIGN = Object.freeze(["left", "center", "right"]);
+export const IMAGE_SIZE_FIELDS = Object.freeze({
+  width: { type: { re: /^(100|[1-9]?\d)(\.\d+)?%$/ } },   // of the content box
+  align: { type: { enum: IMAGE_ALIGN } },
+  radius: { type: "number" }                            // px, 0–80
+});
+/** Adjustments the renderer applies as CSS (crop, transform, filters); all optional, each range-checked. */
+export const IMAGE_ADJUST_FIELDS = Object.freeze({
+  crop: { type: "object" },                 // { x, y, w, h } as fractions of the source, 0–1
+  rotate: { type: { enum: [0, 90, 180, 270] } },
+  flipH: { type: "boolean" },
+  flipV: { type: "boolean" },
+  brightness: { type: "number", min: 0, max: 3 },
+  contrast: { type: "number", min: 0, max: 3 },
+  saturate: { type: "number", min: 0, max: 3 },
+  opacity: { type: "number", min: 0, max: 1 },
+  blur: { type: "number", min: 0, max: 40 }             // px
 });
 
 export const RUN_FIELDS = Object.freeze({
@@ -165,7 +189,19 @@ export const COPY_FIELDS = Object.freeze({
 });
 
 /** Assets: vector geometry the renderer draws itself, with the files it was taken from. */
-export const ASSET_KINDS = Object.freeze(["svg-paths"]);
+export const ASSET_KINDS = Object.freeze(["svg-paths", "image"]);
+/** A raster image kept in the application's private storage (or a same-origin/https URL when embedded for rendering). */
+export const IMAGE_ASSET_FIELDS = Object.freeze({
+  kind: { type: { enum: ["image"] }, req: true },
+  src: { type: { re: /^(storage:\/\/images\/[0-9a-f-]{36}\/[0-9a-f]{64}\.(png|jpg|jpeg|webp|gif)|\/img\/[a-z0-9-]+\/[0-9a-f]{64}\.(png|jpg|jpeg|webp|gif)|https:\/\/[^\s"'<>]+)$/ }, req: true },
+  sha256: { type: { re: /^[0-9a-f]{64}$/ }, req: true },
+  width: { type: "number", req: true },
+  height: { type: "number", req: true },
+  mime: { type: { enum: ["image/png", "image/jpeg", "image/webp", "image/gif"] }, req: true },
+  bytes: { type: "number" },
+  name: { type: "string" },
+  alt: { type: "string" }
+});
 export const ASSET_FIELDS = Object.freeze({
   kind: { type: { enum: ASSET_KINDS }, req: true },
   use: { type: "string" },
