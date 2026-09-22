@@ -251,7 +251,9 @@ Sixth pass (D-027, D-028): the room recedes for the whole run of text and never 
 - Refinement (D-045): the shared link is the current document (members read the draft — migration applied locally and hosted); rename in place; a quieter bar; every bound line opens and drags
 - Refinement (D-046): Delete beside Archive (rows and files; built-in decks refuse); one card shape; plainer copy
 - Phase 8 (2026-09-22, D-047): the product repository `nancy-mosaicintelligence/mosaic-presentations` (`main` = this branch); Netlify chosen; `apps/web/netlify.toml`, file tracing for the deck, `repoRoot()` from the bundle; production build green; runbook in `docs/DEPLOY.md`
-- Next: the Netlify site (created from the dashboard: import the repo, base `apps/web`, the four environment variables, the Supabase redirect URL) — then Phase 9 on the deployed system
+- Deployed (2026-09-22): Netlify site `mosaicpresentationeditor` → https://mosaicpresentationeditor.netlify.app, continuous deploys from `main` of the product repository; environment set (URL and OWNER_EMAILS by the session, the two keys by the owner); Supabase redirect URL set by the owner
+- Phase 9: unauthenticated checks pass from here (routes gate to sign-in, the sign-in page renders, brand and cover assets served, the not-configured guard silent); the signed-in checks (library, edit, save, Present, share link, invitation, publish) are the owner's to run with Google — see `docs/DEPLOY.md`
+- Next: the owner's first sign-in and first invitation; a custom domain when wanted
 
 ## Deployment (2026-09-21)
 
