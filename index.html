@@ -695,7 +695,7 @@ body.editing .editline::selection,body.editing .editline *::selection{background
 #editHandles i{position:absolute;width:12px;height:12px;background:var(--signal);border:2px solid #fff;border-radius:2px;pointer-events:auto;box-sizing:border-box}
 #editHandles i[data-h=nw]{left:-7px;top:-7px;cursor:nwse-resize}#editHandles i[data-h=ne]{right:-7px;top:-7px;cursor:nesw-resize}#editHandles i[data-h=sw]{left:-7px;bottom:-7px;cursor:nesw-resize}#editHandles i[data-h=se]{right:-7px;bottom:-7px;cursor:nwse-resize}
 body.editing .editsel{cursor:move}
-section.beat.placed-host{pointer-events:none!important} section.beat.placed-host .placed{pointer-events:auto!important}
+section.beat.placed-host{pointer-events:none!important;background:none!important} section.beat.placed-host .placed{pointer-events:auto!important}
 figure.pic.cropping{outline:2px solid rgba(252,100,82,.9);outline-offset:2px;cursor:grab} figure.pic.cropping .rot{overflow:visible} figure.pic.cropping .ghost{position:absolute;opacity:.35;pointer-events:none;max-width:none}
 </style>
 </head>
@@ -1135,7 +1135,7 @@ figure.pic.cropping{outline:2px solid rgba(252,100,82,.9);outline-offset:2px;cur
       sec.elements.forEach(function (e, ei) {
         var el = document.querySelector('[data-id="' + e.id + '"]');
         /* a section the renderer draws itself (no beat node) still takes free boxes: a host beat is made for them, shown with the section's stations */
-        if (!el && !secEl && e.place) { secEl = document.createElement("section"); secEl.className = "beat placed-host"; secEl.setAttribute("data-k", sec.key); secEl.setAttribute("data-gen", "1"); secEl.innerHTML = '<div class="mv"></div>'; document.getElementById("stagec").appendChild(secEl); }
+        if (!el && !secEl && e.place) { secEl = document.createElement("section"); secEl.className = "beat placed-host"; secEl.setAttribute("data-k", sec.key); secEl.setAttribute("data-gen", "1"); document.getElementById("stagec").appendChild(secEl); }   /* no content box: it would draw as an empty dark panel; the boxes sit on the layer itself */
         /* an element the markup does not have is made from its type and placed: inside its container (`in`) or after the element before it */
         if (!el && secEl) {
           el = makeElement(e); if (!el) return;
