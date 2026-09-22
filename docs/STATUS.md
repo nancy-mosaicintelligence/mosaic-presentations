@@ -247,6 +247,7 @@ Sixth pass (D-027, D-028): the room recedes for the whole run of text and never 
 - Step 5 (2026-09-21, D-041): the Slides-like layer — free text and image boxes, drag to move, corner handles to resize, nudged flow lines, drag-and-drop from the library and from files, image boxes (the fluoroscopy frames among them) filled by click or drop, every on-page renderer copy typed in place, the bar (Save, Undo, Redo, History, Present, Publish, Share); schema v8; 7 browser tests
 - Refinement (D-042): renderer copy opens on a press (the overlays now take the pointer), a still press on the selection opens text, the side panels fold away by hand and on narrow windows
 - Refinement (D-043): Remove for every element, Delete/Escape/arrow keys on a selection, a draft reset in History; the browser suites use their own copy of the keynote
+- Refinement (D-044): the library's Present shows the working document and the player has a way out; the library redesigned with the Mosaic marks; the brand marks in every image library
 - Next: Phase 8 (build, host, deploy) once the host is chosen; then Phase 9 on the deployed system
 
 ## Deployment (2026-09-21)

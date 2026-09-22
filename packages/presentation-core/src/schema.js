@@ -197,14 +197,15 @@ export const COPY_FIELDS = Object.freeze({
 
 /** Assets: vector geometry the renderer draws itself, with the files it was taken from. */
 export const ASSET_KINDS = Object.freeze(["svg-paths", "image"]);
-/** A raster image kept in the application's private storage (or a same-origin/https URL when embedded for rendering). */
+/** A raster image kept in the application's private storage (or a same-origin/https URL when embedded for rendering),
+ *  or one of the application's own brand marks (`/brand/<name>.svg`, shipped with the app, the same on every host). */
 export const IMAGE_ASSET_FIELDS = Object.freeze({
   kind: { type: { enum: ["image"] }, req: true },
-  src: { type: { re: /^(storage:\/\/images\/[0-9a-f-]{36}\/[0-9a-f]{64}\.(png|jpg|jpeg|webp|gif)|\/img\/[a-z0-9-]+\/[0-9a-f]{64}\.(png|jpg|jpeg|webp|gif)|https:\/\/[^\s"'<>]+)$/ }, req: true },
+  src: { type: { re: /^(storage:\/\/images\/[0-9a-f-]{36}\/[0-9a-f]{64}\.(png|jpg|jpeg|webp|gif)|\/img\/[a-z0-9-]+\/[0-9a-f]{64}\.(png|jpg|jpeg|webp|gif)|\/brand\/[a-z0-9-]+\.svg|https:\/\/[^\s"'<>]+)$/ }, req: true },
   sha256: { type: { re: /^[0-9a-f]{64}$/ }, req: true },
   width: { type: "number", req: true },
   height: { type: "number", req: true },
-  mime: { type: { enum: ["image/png", "image/jpeg", "image/webp", "image/gif"] }, req: true },
+  mime: { type: { enum: ["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml"] }, req: true },
   bytes: { type: "number" },
   name: { type: "string" },
   alt: { type: "string" }

@@ -36,6 +36,19 @@ test("the home page is the library; a company colleague with no role sees an emp
   const g = await (await browser.newContext()).newPage(); const r = await signIn(g, BASE, USERS.guest); assert.equal(r.status, 403);
 });
 
+test("the library's Present shows the working document with a way back; the editor's frame never gets the exit pill", async () => {
+  const o = await as("owner");
+  const home = await (await o.request.get(BASE + "/")).text();
+  assert.ok(home.includes("/player/e2e-keynote?source=draft&amp;back=%2F") || home.includes("/player/e2e-keynote?source=draft&back=%2F"), "Present is the draft player with a way back");
+  const top = await o.request.get(`${BASE}/player/e2e-keynote?source=draft&back=%2F`); assert.equal(top.status(), 200);
+  const html = await top.text(); assert.ok(html.includes('id="itwExit"') && html.includes('href="/"'), "the exit pill, back to the library");
+  assert.ok(!(await (await o.request.get(`${BASE}/player/e2e-keynote?source=draft`)).text()).includes("itwExit"), "no pill inside the editor's frame");
+  assert.ok(!(await (await o.request.get(`${BASE}/player/e2e-keynote?source=draft&back=https%3A%2F%2Fexample.com`)).text()).includes("itwExit"), "another origin is never a way back");
+  // in the browser: the pill is there, Escape leaves for the library
+  await o.goto(`${BASE}/player/e2e-keynote?source=draft&back=%2F`); await o.waitForSelector("#itwExit.show"); await o.mouse.move(300, 300);
+  await o.keyboard.press("Escape"); await o.waitForURL(`${BASE}/`, { timeout: 10000 });
+});
+
 test("an editable copy of the keynote starts from its document, with its own draft and its creator as owner", async () => {
   const c = await as("colleague");
   const made = await json(c, "/api/presentations", { method: "POST", data: { kind: "deck", title: "Series A narrative", renderer: "itw-keynote" } });
@@ -56,7 +69,7 @@ test("an imported HTML deck is stored privately and presented in a sandbox to me
   const c = await as("colleague");
   const r = await c.request.post(BASE + "/api/presentations", { multipart: { title: "Board deck (static)", file: { name: "board.html", mimeType: "text/html", buffer: Buffer.from(HTML) } } });
   const made = await r.json(); assert.equal(r.status(), 201, JSON.stringify(made)); assert.equal(made.kind, "html"); assert.match(made.storagePath, /^[0-9a-f-]{36}\/index\.html$/);
-  const shell = await c.request.get(`${BASE}/p/${made.slug}`); assert.equal(shell.status(), 200); assert.ok((await shell.text()).includes(`/raw/${made.slug}`));
+  const shell = await c.request.get(`${BASE}/p/${made.slug}`); assert.equal(shell.status(), 200); const shellHtml = await shell.text(); assert.ok(shellHtml.includes(`/raw/${made.slug}`)); assert.ok(shellHtml.includes('id="itwExit"'), "the full-window page has its way back");
   const raw = await c.request.get(`${BASE}/raw/${made.slug}`); assert.equal(raw.status(), 200); assert.ok((await raw.text()).includes("Imported deck")); assert.match(raw.headers()["content-security-policy"], /sandbox allow-scripts/);
   // in the browser the file runs, but with an opaque origin: no cookies of ours
   await c.goto(`${BASE}/p/${made.slug}`); const inner = c.frame({ url: /\/raw\// }); await inner.waitForSelector("#h"); assert.match(await inner.locator("#h").textContent(), /no cookies/);

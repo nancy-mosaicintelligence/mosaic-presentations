@@ -57,7 +57,12 @@ export function validate(doc) {
       const ap = `assets.${id}`;
       if (!/^[a-z][a-z0-9-]*$/.test(id)) err(ap, "asset ids are lower-case kebab");
       if (!isObj(a)) { err(ap, "must be an object"); continue; }
-      if (a.kind === "image") { checkFields(a, IMAGE_ASSET_FIELDS, ap, err); for (const k of ["width", "height"]) if (typeof a[k] === "number" && (!Number.isInteger(a[k]) || a[k] < 1 || a[k] > 20000)) err(`${ap}.${k}`, "must be a whole number of pixels"); continue; }
+      if (a.kind === "image") {
+        checkFields(a, IMAGE_ASSET_FIELDS, ap, err); for (const k of ["width", "height"]) if (typeof a[k] === "number" && (!Number.isInteger(a[k]) || a[k] < 1 || a[k] > 20000)) err(`${ap}.${k}`, "must be a whole number of pixels");
+        // an SVG is only ever one of the application's own brand marks; uploads are raster
+        const brand = typeof a.src === "string" && a.src.startsWith("/brand/"); if (brand !== (a.mime === "image/svg+xml")) err(`${ap}.mime`, brand ? "a brand mark is image/svg+xml" : "only a brand mark (/brand/…) may be an SVG");
+        continue;
+      }
       checkFields(a, ASSET_FIELDS, ap, err);
       if (Array.isArray(a.paths)) { if (!a.paths.length) err(`${ap}.paths`, "needs at least one path"); a.paths.forEach((pt, i) => { if (!isObj(pt)) return err(`${ap}.paths[${i}]`, "must be an object"); checkFields(pt, ASSET_PATH_FIELDS, `${ap}.paths[${i}]`, err); }); }
       if (Array.isArray(a.sources)) { if (!a.sources.length) err(`${ap}.sources`, "needs at least one source file"); a.sources.forEach((src, i) => { if (!isObj(src)) return err(`${ap}.sources[${i}]`, "must be an object"); checkFields(src, ASSET_SOURCE_FIELDS, `${ap}.sources[${i}]`, err); }); }

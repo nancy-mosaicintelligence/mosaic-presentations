@@ -1,4 +1,5 @@
 "use client";
+import { BrandMark } from "@/components/Brand";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createHistory, contentHash, validate, ABSENT } from "@mosaic/presentation-core";
 import type { Doc, Command } from "@/lib/doc";
@@ -165,7 +166,7 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
   const placeImage = useCallback((asset: any, at?: { x: number; y: number }, box?: string | null) => {
     const d = docRef.current; if (!d) return;
     let next = d;
-    if (!next.assets?.[asset.id]) { const { url: _u, createdAt: _c, id: _i, ...rec } = asset; next = history.apply({ path: ["assets", asset.id], value: rec, label: `add image ${asset.name || asset.id}` }) as Doc; }
+    if (!next.assets?.[asset.id]) { const { url: _u, createdAt: _c, id: _i, on: _o, ...rec } = asset; next = history.apply({ path: ["assets", asset.id], value: rec, label: `add image ${asset.name || asset.id}` }) as Doc; }
     if (box) { const hit = locate(next, box); if (hit) next = history.apply({ path: ["sections", hit.si, "elements", hit.ei, "asset"], value: asset.id, label: `fill ${box}` }) as Doc; }
     else {
       const st = next.stations[stationRef.current]; const si = next.sections.findIndex(s => s.key === st.section); if (si < 0) { setSave({ kind: "error", message: "this station has no section to hold an image" }); return; }
@@ -272,7 +273,7 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
 
   return <div className={"editor" + (inPreview ? " preview" : "") + (!inPreview && !showLeft ? " no-left" : "") + (!inPreview && !showRight ? " no-right" : "")}>
     <header className="bar">
-      <div className="left">{!inPreview && <button type="button" className={"ghost side-toggle" + (showLeft ? " on" : "")} title={narrow ? "the outline is folded away on a narrow window" : sides.left ? "hide the outline" : "show the outline"} onClick={() => setSides(s => ({ ...s, left: !s.left }))} disabled={narrow}>◧</button>}<a className="brand" href="/" title="Library">Mosaic</a><span className="title">{title}</span></div>
+      <div className="left">{!inPreview && <button type="button" className={"ghost side-toggle" + (showLeft ? " on" : "")} title={narrow ? "the outline is folded away on a narrow window" : sides.left ? "hide the outline" : "show the outline"} onClick={() => setSides(s => ({ ...s, left: !s.left }))} disabled={narrow}>◧</button>}<BrandMark /><span className="title">{title}</span></div>
       <div className="mid">
         {!inPreview && <>
           <button type="button" onClick={() => persist()} disabled={save.kind === "saving"} title="Save now (autosave is on)">Save</button>

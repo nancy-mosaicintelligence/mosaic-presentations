@@ -1,4 +1,5 @@
 "use client";
+import { BrandMark } from "@/components/Brand";
 import { useCallback, useEffect, useState } from "react";
 import type { Member, Invitation } from "@/lib/auth/access";
 
@@ -20,7 +21,7 @@ export function People({ id, title, me }: { id: string; title: string; me: strin
   };
   const invite = async (e: React.FormEvent) => { e.preventDefault(); const r = await call("/invitations", "POST", { email, role }); if (r) { setLink(r.link); setEmail(""); await load(); } };
   return <main className="people">
-    <header className="bar"><div className="left"><a className="brand" href="/" title="Library">Mosaic</a><span className="title">{title}</span></div><div className="mid" /><div className="right"><a className="btn ghost" href={`/presentations/${id}/edit`}>Editor</a><a className="btn ghost" href={`/p/${id}`}>Published</a><form method="post" action="/auth/sign-out"><button type="submit" className="ghost">Sign out · {me}</button></form></div></header>
+    <header className="bar"><div className="left"><BrandMark /><span className="title">{title}</span></div><div className="mid" /><div className="right"><a className="btn ghost" href={`/presentations/${id}/edit`}>Editor</a><a className="btn ghost" href={`/p/${id}`}>Published</a><form method="post" action="/auth/sign-out"><button type="submit" className="ghost">Sign out · {me}</button></form></div></header>
     <div className="people-body">
       <section>
         <h2>Members</h2>

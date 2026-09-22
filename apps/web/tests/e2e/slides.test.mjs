@@ -69,7 +69,7 @@ test("an image box is added and filled from the library; the picture covers its 
   const d = await untilDraft(d => d.sections[0].elements.some(e => e.type === "image" && e.frame && !e.asset && e.place), "the image box");
   const box = d.sections[0].elements.find(e => e.type === "image" && e.frame && e.place);
   await frame().waitForSelector(`figure[data-id="${box.id}"][data-empty]`, { timeout: 15000 });
-  await page.waitForSelector(".panel .fill"); await page.click(".imgcell");
+  await page.waitForSelector(".panel .fill"); await page.click(".imggrid:not(.brand) .imgcell");   /* the upload, not a brand mark */
   await untilDraft(d => el(d, box.id).asset === globalThis.__img.id, "the fill");
   await frame().waitForSelector(`figure[data-id="${box.id}"]:not([data-empty]) img`, { timeout: 15000 });
   assert.equal(await frame().evaluate((id) => document.querySelector(`figure[data-id="${id}"] img`).style.objectFit, box.id), "cover");
@@ -80,7 +80,7 @@ test("the keynote's fluoroscopy frame is an empty box: a click on it opens the l
   await goto(labIdx);
   await frame().waitForFunction(() => { const f = document.querySelector('[data-id="lab.1"]'); return f && parseFloat(getComputedStyle(f).opacity) > 0.9; }, null, { timeout: 30000 });
   const c = await centre("lab.1"); await page.mouse.click(c.x, c.y);
-  await page.waitForSelector('.panel .fill:has-text("lab.1")', { timeout: 10000 }); await page.click(".imgcell");
+  await page.waitForSelector('.panel .fill:has-text("lab.1")', { timeout: 10000 }); await page.click(".imggrid:not(.brand) .imgcell");   /* the upload, not a brand mark */
   await untilDraft(d => el(d, "lab.1").asset === globalThis.__img.id, "the frame's picture");
   await frame().waitForSelector('figure[data-id="lab.1"] img', { timeout: 15000 });
   assert.equal(await frame().evaluate(() => document.querySelector('figure[data-id="lab.1"] .ph')), null, "the placeholder is gone");

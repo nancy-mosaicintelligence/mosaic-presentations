@@ -43,8 +43,8 @@ test("an upload becomes an image asset with its size; wrong files are refused; t
 
 test("placed from the Images tab, the picture appears on the stage and in the document; crop and adjustments are data the stage applies", async () => {
   await page.goto(`${BASE}/presentations/${ID}/edit`); await stageReady();
-  await page.click('.tabs button:has-text("Images")'); await page.waitForSelector(".imgcell");
-  await page.click(".imgcell");
+  await page.click('.tabs button:has-text("Images")'); await page.waitForSelector(".imggrid:not(.brand) .imgcell");   /* the brand marks come first; this is the upload */
+  await page.click(".imggrid:not(.brand) .imgcell");
   const d = await untilDraft(d => d.sections[0].elements.some(e => e.type === "image"), "the image element");
   const el = d.sections[0].elements.find(e => e.type === "image"); assert.equal(el.asset, globalThis.__img.id); assert.equal(d.assets[el.asset].kind, "image"); assert.match(d.assets[el.asset].src, /^storage:\/\//, "the stored document keeps the storage path");
   await frame().waitForSelector(`figure.pic[data-id="${el.id}"] img`, { timeout: 15000 });
@@ -78,4 +78,17 @@ test("undo walks the adjustments back; remove takes the picture off the stage bu
   await frame().waitForSelector(`figure.pic[data-id="${globalThis.__el}"]`, { state: "detached", timeout: 15000 });
   assert.equal((await (await page.request.get(`${API}/images`)).json()).length, 1, "the library keeps the file");
   assert.equal((await draft()).assets[globalThis.__img.id].kind, "image", "the asset record stays in the document (versions may still use it)");
+}, { timeout: 60000 });
+
+test("the Mosaic brand marks are in every library: one placed from the panel is an SVG image asset in the document, drawn on the stage, served from the app", async () => {
+  await page.goto(`${BASE}/presentations/${ID}/edit`); await stageReady();
+  const file = await page.request.get(`${BASE}/brand/mosaic-logo-white.svg`); assert.equal(file.status(), 200); assert.match(file.headers()["content-type"], /image\/svg\+xml/);
+  await page.click('.tabs button:has-text("Images")'); await page.waitForSelector(".imggrid.brand .imgcell");
+  assert.equal(await page.locator(".imggrid.brand .imgcell").count(), 6, "three lockups and three icons");
+  await page.click('.imggrid.brand .imgcell:has-text("Mosaic logo, white")');
+  const d = await untilDraft(d => d.assets?.["brand-logo-white"] && d.sections.some(s => s.elements.some(e => e.type === "image" && e.asset === "brand-logo-white")), "the brand mark in the document");
+  const a = d.assets["brand-logo-white"]; assert.equal(a.src, "/brand/mosaic-logo-white.svg"); assert.equal(a.mime, "image/svg+xml"); assert.equal(a.width, 546); assert.equal(a.on, undefined, "the panel's own hint never enters the document");
+  const el = d.sections.flatMap(s => s.elements).find(e => e.asset === "brand-logo-white");
+  await frame().waitForFunction(id => { const i = document.querySelector(`[data-id="${id}"] img`); return !!i && i.getAttribute("src").endsWith("/brand/mosaic-logo-white.svg") && i.naturalWidth > 0; }, el.id, { timeout: 15000 });
+  const saved = await page.request.get(`${API}/draft`); assert.equal(saved.status(), 200, "the draft with the mark saved (the schema allows the app's own SVGs)");
 }, { timeout: 60000 });

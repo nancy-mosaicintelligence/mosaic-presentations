@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ABSENT } from "@mosaic/presentation-core";
 import type { Doc, Command, Element } from "@/lib/doc";
 import { Row, NumberField, TextField } from "./fields";
+import { BRAND_ASSETS } from "@/lib/brand";
 
 export type ImageAsset = { id: string; kind: "image"; src: string; sha256: string; width: number; height: number; mime: string; bytes?: number; name?: string; alt?: string; url?: string; createdAt?: string };
 export const imageUrl = (slug: string, a: { src: string }) => a.src.replace(/^storage:\/\/images\/[0-9a-f-]{36}\//, `/img/${slug}/`);
@@ -23,7 +24,7 @@ export function ImagesPanel({ doc, slug, station, apply, onPlaced, fillTarget, o
     const st = doc.stations[station]; const si = doc.sections.findIndex(s => s.key === st.section);
     if (si < 0) { setErr("this station has no section to hold an image; move to a station with content"); return; }
     // the document's asset record: only the schema's fields (the route also returns url and createdAt)
-    if (!doc.assets?.[a.id]) { const { url: _u, createdAt: _c, id: _i, ...asset } = a; apply({ path: ["assets", a.id], value: asset, label: `add image ${a.name || a.id}` }); }
+    if (!doc.assets?.[a.id]) { const { url: _u, createdAt: _c, id: _i, on: _o, ...asset } = a as ImageAsset & { on?: string }; apply({ path: ["assets", a.id], value: asset, label: `add image ${a.name || a.id}` }); }
     const sec = doc.sections[si]; let n = sec.elements.length + 1; while (sec.elements.some(e => e.id === `${sec.key}.${n}`)) n++;
     const id = `${sec.key}.${n}`;
     const el: Element = { id, type: "image", asset: a.id, alt: a.name?.replace(/\.[a-z0-9]+$/i, "") || "", size: { width: "50%", align: "center", radius: 0 }, reveal: { p: st.p } } as Element;
@@ -35,6 +36,14 @@ export function ImagesPanel({ doc, slug, station, apply, onPlaced, fillTarget, o
     {err && <p className="error">{err}</p>}
     <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden ref={input} onChange={e => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = ""; }} />
     <button type="button" className="primary" disabled={busy} onClick={() => input.current?.click()}>{busy ? "Uploading…" : "Upload an image"}</button>
+    <h4>Mosaic brand</h4>
+    <div className="imggrid brand">
+      {BRAND_ASSETS.map(a => <button type="button" key={a.id} className={"imgcell " + a.on} draggable title={`${a.name} — click to place, or drag onto the stage`} onDragStart={e => { e.dataTransfer.setData("application/x-itw-asset", JSON.stringify(a)); e.dataTransfer.effectAllowed = "copy"; }} onClick={() => (onPick ? onPick(a) : place(a))}>
+        <img src={a.src} alt={a.name || ""} loading="lazy" />
+        <span className="imgname">{a.name}</span>
+      </button>)}
+    </div>
+    <h4>This presentation</h4>
     <div className="imggrid">
       {items.map(a => <button type="button" key={a.sha256} className="imgcell" draggable title={`${a.name || a.id} · ${a.width}×${a.height} — drag onto the stage`} onDragStart={e => { e.dataTransfer.setData("application/x-itw-asset", JSON.stringify(a)); e.dataTransfer.effectAllowed = "copy"; }} onClick={() => (fillTarget && onPick ? onPick(a) : onPick ? onPick(a) : place(a))}>
         <img src={a.url || imageUrl(slug, a)} alt={a.name || ""} loading="lazy" />

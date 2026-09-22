@@ -118,13 +118,19 @@ test("a v1 document migrates to the current version unchanged apart from the ver
 test("image elements and assets are range-checked and must point at an image asset", () => {
   const d = minimal(); const img = d.sections[0].elements[2];
   img.asset = "mark"; img.size.width = "150%"; img.size.radius = 99; img.adjust.brightness = 5; img.adjust.rotate = 45; img.adjust.crop = { x: 0.5, y: 0, w: 0.8, h: 1 }; img.adjust.sharpen = 1;
-  d.assets["img-1"].src = "javascript:alert(1)"; d.assets["img-1"].mime = "image/svg+xml"; d.assets["img-1"].width = 0.5;
+  d.assets["img-1"].src = "javascript:alert(1)"; d.assets["img-1"].mime = "text/html"; d.assets["img-1"].width = 0.5;
   const paths = validate(d).errors.map(e => e.path);
   for (const p of ["sections[0].elements[2].asset", "sections[0].elements[2].size.width", "sections[0].elements[2].size.radius", "sections[0].elements[2].adjust.brightness", "sections[0].elements[2].adjust.rotate", "sections[0].elements[2].adjust.crop.w", "sections[0].elements[2].adjust.sharpen", "assets.img-1.src", "assets.img-1.mime", "assets.img-1.width"]) assert.ok(paths.includes(p), p);
   const ok = minimal(); ok.assets["img-1"].src = "/img/series-a/" + "b".repeat(64) + ".png"; assert.equal(validate(ok).ok, true, "a served image url is valid");
   const box = minimal(); box.sections[0].elements.push({ id: "open.4", type: "image", frame: { w: 1, h: 1 }, place: { x: 10, y: 20, w: 30 } }); assert.deepEqual(validate(box).errors, [], "an empty image box, placed");
   const bad = minimal(); bad.sections[0].elements.push({ id: "open.4", type: "image", place: { x: 10, y: 20, w: 300 } }, { id: "open.5", type: "text", runs: [{ t: "x" }], nudge: { dx: 500, dy: 0 } });
   const bp = validate(bad).errors.map(e => e.path); assert.ok(bp.includes("sections[0].elements[3].asset") && bp.includes("sections[0].elements[3].place.w") && bp.includes("sections[0].elements[4].nudge.dx"));
+  // the application's brand marks are the one SVG allowed, and only they may carry the SVG mime
+  const b = minimal(); b.assets.brand = { kind: "image", src: "/brand/mosaic-logo-white.svg", sha256: "a".repeat(64), width: 546, height: 150, mime: "image/svg+xml", name: "Mosaic logo" };
+  assert.equal(validate(b).ok, true, "a brand mark is a valid image asset");
+  b.assets.brand.mime = "image/png"; assert.ok(validate(b).errors.some(i => i.path === "assets.brand.mime"), "a brand mark carries the SVG mime");
+  b.assets.brand = { kind: "image", src: "storage://images/" + "0b6f4a2e-1c3d-4e5f-8a9b-0c1d2e3f4a5b" + "/" + "c".repeat(64) + ".png", sha256: "a".repeat(64), width: 10, height: 10, mime: "image/svg+xml" };
+  assert.ok(validate(b).errors.some(i => i.path === "assets.brand.mime"), "an upload is never an SVG");
 });
 
 test("assets and groups are checked: path grammar, hashes, repo-relative files, no copy on a group", () => {
