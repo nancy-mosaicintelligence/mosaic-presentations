@@ -35,9 +35,9 @@ test("the home page is the library; a company colleague with no role sees an emp
   const g = await (await browser.newContext()).newPage(); const r = await signIn(g, BASE, USERS.guest); assert.equal(r.status, 403);
 });
 
-test("a new editable deck starts from the engine's template, with its own draft and its creator as owner", async () => {
+test("an editable copy of the keynote starts from its document, with its own draft and its creator as owner", async () => {
   const c = await as("colleague");
-  const made = await json(c, "/api/presentations", { method: "POST", data: { kind: "deck", title: "Series A narrative" } });
+  const made = await json(c, "/api/presentations", { method: "POST", data: { kind: "deck", title: "Series A narrative", renderer: "itw-keynote" } });
   assert.equal(made.status, 201, JSON.stringify(made.body)); assert.equal(made.body.slug, "series-a-narrative"); assert.equal(made.body.kind, "deck");
   const lib = (await json(c, "/api/presentations")).body; assert.equal(lib.length, 1); assert.equal(lib[0].role, "owner");
   const draft = await json(c, "/api/presentations/series-a-narrative/draft"); assert.equal(draft.status, 200); assert.equal(draft.body.document.stations.length, 55);

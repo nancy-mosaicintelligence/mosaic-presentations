@@ -17,11 +17,11 @@ export function stationWords(doc: Doc, i: number): string {
 }
 
 /** One card per station, grouped by chapter; the current one is marked and kept in view. */
-export function Filmstrip({ doc, station, onGoto }: { doc: Doc; station: number; onGoto: (i: number) => void }) {
+export function Filmstrip({ doc, station, onGoto, tools }: { doc: Doc; station: number; onGoto: (i: number) => void; tools?: React.ReactNode }) {
   const ref = useRef<HTMLDivElement | null>(null);
   useEffect(() => { const el = ref.current?.querySelector<HTMLElement>(`[data-i="${station}"]`); el?.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" }); }, [station]);
   let last = "";
-  return <div className="filmstrip" ref={ref} role="listbox" aria-label="Stations">
+  return <div className="filmstrip-wrap">{tools}<div className="filmstrip" ref={ref} role="listbox" aria-label="Stations">
     {doc.stations.map((s, i) => {
       const chapter = s.chapter.replace(/^\d+ · /, ""); const head = chapter !== last; last = chapter;
       return <div key={i} className={"cell" + (head ? " head" : "")}>
@@ -32,5 +32,5 @@ export function Filmstrip({ doc, station, onGoto }: { doc: Doc; station: number;
         </button>
       </div>;
     })}
-  </div>;
+  </div></div>;
 }

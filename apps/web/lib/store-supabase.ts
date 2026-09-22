@@ -1,7 +1,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { validate, migrate, contentHash, SCHEMA_VERSION } from "@mosaic/presentation-core";
+import { validate, migrate, contentHash, SCHEMA_VERSION, newDeckDocument } from "@mosaic/presentation-core";
 import { promises as fs } from "node:fs";
 import { join } from "node:path";
 import { repoRoot } from "./repo";
@@ -43,8 +43,11 @@ export class SupabaseStore implements Store {
     }
     // first use: the committed document seeds the draft
     const p = await getPresentation(this.slug); if (!p) throw new StoreError(404, "unknown presentation");
-    const def = { contentFile: rendererOf(p).templateContent };
-    const { doc, hash } = checked(JSON.parse(await fs.readFile(join(repoRoot(), def.contentFile), "utf8")));
+    const r = rendererOf(p), def = { contentFile: r.templateContent };
+    const template = JSON.parse(await fs.readFile(join(repoRoot(), def.contentFile), "utf8"));
+    // a composed deck starts from the engine's tokens, motion and lockup with an opening and a close; the keynote from its own words
+    const seed = r.compose ? newDeckDocument({ id: this.slug, title: p.title, event: p.description || "", tokens: template.tokens, animation: template.animation, lockup: template.assets["mosaic-lockup"] }) : template;
+    const { doc, hash } = checked(seed);
     const { data: made, error: e2 } = await this.sb.from("presentation_drafts").insert({ presentation_id: this.presentationId, document: doc, content_hash: hash, updated_by: this.user.id }).select("document, content_hash, based_on, updated_at").single();
     if (e2) dbFail(e2);
     await this.log("draft.seeded", { from: def.contentFile, contentHash: hash });

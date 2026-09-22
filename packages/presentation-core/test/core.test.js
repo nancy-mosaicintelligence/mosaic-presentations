@@ -111,7 +111,7 @@ test("a v1 document migrates to the current version unchanged apart from the ver
   assert.equal(validate(migrate(v2)).ok, true);
   const v3 = { ...minimal(), schemaVersion: 3 };
   assert.equal(migrate(v3).schemaVersion, SCHEMA_VERSION); assert.equal(validate(migrate(v3)).ok, true);
-  const v5 = { ...minimal(), schemaVersion: 5 }; assert.equal(migrate(v5).schemaVersion, 6);
+  const v5 = { ...minimal(), schemaVersion: 5 }; assert.equal(migrate(v5).schemaVersion, SCHEMA_VERSION);
 });
 
 test("image elements and assets are range-checked and must point at an image asset", () => {

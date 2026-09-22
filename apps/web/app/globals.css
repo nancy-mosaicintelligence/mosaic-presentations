@@ -19,7 +19,7 @@ code { font: 12px/1.4 "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, mono
 .bar .save { color: var(--ink-3); font-size: 13px; margin-left: 8px; } .bar .save.saved { color: var(--ink-2); } .bar .save.error { color: var(--signal); } .bar .save.dirty { color: var(--ink-2); }
 
 .side { overflow: auto; background: var(--panel); border-right: 1px solid var(--hair); } .side.right { border-right: 0; border-left: 1px solid var(--hair); }
-.stage { position: relative; background: #000; display: grid; grid-template-rows: 1fr auto; overflow: hidden; --strip: 112px; }
+.stage { position: relative; background: #000; display: grid; grid-template-rows: 1fr auto; overflow: hidden; --strip: 148px; }
 .stage-fit { width: 100%; min-height: 0; display: grid; place-items: center; padding: 16px 16px 8px; }
 .stage iframe { width: min(100%, calc((100vh - var(--bar) - var(--strip) - 24px) * 16 / 9)); aspect-ratio: 16 / 9; height: auto; border: 0; background: #000; border-radius: 4px; box-shadow: 0 0 0 1px var(--hair); }
 .editor.preview .stage { grid-template-rows: 1fr; }
@@ -135,3 +135,14 @@ code { font: 12px/1.4 "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, mono
 .cropstage .win .nw { left: 0; top: 0; cursor: nwse-resize; } .cropstage .win .ne { right: 0; top: 0; cursor: nesw-resize; } .cropstage .win .sw { left: 0; bottom: 0; cursor: nesw-resize; } .cropstage .win .se { right: 0; bottom: 0; cursor: nwse-resize; }
 .cropinfo { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; }
 button.danger { color: var(--signal); }
+
+/* structure */
+.filmstrip-wrap { position: relative; z-index: 2; min-width: 0; max-width: 100%; background: var(--panel); border-top: 1px solid var(--hair); }
+.stage, .stage-fit { min-width: 0; }
+.filmstrip-wrap .filmstrip { border-top: 0; height: 112px; }
+.station-tools { display: flex; gap: 6px; align-items: center; padding: 6px 16px 0; position: relative; }
+.beatpicker { position: absolute; left: 16px; bottom: calc(100% + 6px); z-index: 6; width: min(560px, calc(100vw - 32px)); background: var(--panel-2); border: 1px solid var(--hair-2); border-radius: 8px; box-shadow: 0 12px 40px rgba(0,0,0,.5); padding: 10px 12px 12px; }
+.beatpicker header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.beatpicker .beats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+.beatpicker .beat { display: grid; gap: 2px; text-align: left; padding: 8px 10px; border-radius: 6px; background: var(--panel); }
+.beatpicker .beat:hover { border-color: var(--signal); } .beatpicker .bl { font-weight: 500; } .beatpicker .bh { font-size: 12px; color: var(--ink-2); }

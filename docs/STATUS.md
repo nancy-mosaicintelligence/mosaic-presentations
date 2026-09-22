@@ -243,7 +243,8 @@ Sixth pass (D-027, D-028): the room recedes for the whole run of text and never 
 - Step 1 (2026-09-21, D-037): filmstrip with live text cards, arrows and keys; typing on the stage with a floating toolbar (marks, size, alignment, colour); 4 browser tests; deck parity and 54/54 re-proven
 - Step 2 (2026-09-21, D-038): home = the library; three kinds (editable deck, static HTML in a CSP sandbox, link); create from the engine's template; import by file or link; archive; 5 browser tests; migration `20260921100000_library.sql` applied locally and to the hosted project
 - Step 3 (2026-09-21, D-039): images — schema v6 `image` element and asset; the deck renders crop/turn/flip/filters from data; private `images` bucket and `/img/` route; Images tab, crop box, sliders; 3 browser tests; migration `20260921120000_images.sql` applied locally and hosted
-- Planned next: the create harness (V2 engine as a template with beat types)
+- Step 4 (2026-09-21, D-040): the composer — a plain scene on the engine, document-created sections and elements, schema v7, ten beats with re-spacing, station tools (add from the picker, move, remove), "New presentation" composes; 5 browser tests, 4 unit tests
+- Next: Phase 8 (build, host, deploy) once the host is chosen; then Phase 9 on the deployed system
 
 ## Deployment (2026-09-21)
 

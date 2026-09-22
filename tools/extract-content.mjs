@@ -197,7 +197,7 @@ await browser.close();
 const bindingsOut = dom.bindings.filter(b => !(b.section === "open" && !dom.sections[0].elements.some(e => e.id === b.id)));
 
 const doc = {
-  schemaVersion: 6,
+  schemaVersion: 7,
   id: "italian-tech-week-2026",
   title: "The Room and the Vessel",
   renderer: "itw-keynote",

@@ -8,7 +8,7 @@
  * by renderer id with a closed set of parameters.
  */
 
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 /** Inline marks a run may carry. The renderer maps each to fixed markup. */
 export const MARKS = Object.freeze(["em", "strong", "i", "hl", "lead", "x2"]);
@@ -25,7 +25,8 @@ export const CUSTOM_SCENES = Object.freeze({
   "itw-sense-icons": { params: ["set"] },
   "itw-sense-tie": { params: [] },
   "itw-chalkboard": { params: [] },
-  "itw-loop": { params: [] }
+  "itw-loop": { params: [] },
+  "itw-lockup": { params: [] }
 });
 
 /** Section layout variants: the beat's class tokens, all defined in the renderer's stylesheet. */
@@ -39,7 +40,7 @@ export const WIDTH_RE = /^min\(\d{2,4}px,\d{1,3}%\)$/;
 
 /** Typographic and structural roles an element may carry (its class tokens); each is a rule in the stylesheet. */
 export const ROLES = Object.freeze(["hero", "strong", "big", "huge", "lede", "lead-in", "ask", "askline", "senseh", "sensenote", "btitle", "bsynth", "loopcap", "src", "x2line", "mk",
-  "vopen", "vhero", "c1", "c2", "c3", "lp", "lp1", "lp2", "lp3", "acts", "sense", "nature", "eng", "mnode", "marrow", "up", "down", "mv1", "pts", "chips", "chain", "loop", "impchart", "icons", "sensetie", "boardsk", "rv"]);
+  "vopen", "vhero", "c1", "c2", "c3", "lp", "lp1", "lp2", "lp3", "acts", "sense", "nature", "eng", "mnode", "marrow", "up", "down", "mv1", "cols", "col", "chapno", "pts", "chips", "chain", "loop", "impchart", "icons", "sensetie", "boardsk", "rv"]);
 
 /** Inline style overrides an element may carry, and the shape a value must have (no urls, no expressions, no delimiters). */
 export const STYLE_KEYS = Object.freeze(["maxWidth", "margin", "marginTop", "marginBottom", "textAlign", "fontSize", "lineHeight", "color"]);
@@ -85,6 +86,7 @@ export const PRESENTATION_FIELDS = Object.freeze({
   tokens: { type: "object", req: true },
   copy: { type: "object", req: true },
   animation: { type: "object" },
+  scene: { type: "object" },     // { kind: "itw" | "plain" }: the keynote's room and road, or the type and the rail alone
   assets: { type: "object" },
   sections: { type: "array", req: true },
   stations: { type: "array", req: true }
@@ -119,6 +121,7 @@ export const ELEMENT_FIELDS = Object.freeze({
   style: { type: "object" },
   scene: { type: { enum: Object.keys(CUSTOM_SCENES) } },
   params: { type: "object" },
+  in: { type: "string" },        // the group this element sits inside (a composed deck)
   asset: { type: "string" },     // image: the asset id it shows
   alt: { type: "string" },       // image
   size: { type: "object" },      // image: width, align, radius
@@ -167,7 +170,8 @@ export const STATION_FIELDS = Object.freeze({
   black: { type: "boolean" },
   road: { type: "boolean" },
   lite: { type: "boolean" },
-  vessel: { type: "boolean" }
+  vessel: { type: "boolean" },
+  close: { type: "boolean" }     // the closing lockup rides this station (plain scene)
 });
 
 /** The copy that the renderer draws itself (canvas, SVG, generated DOM). Each is a list of strings or runs. */

@@ -290,3 +290,7 @@ Production cannot be marked complete until the deployed URL has been opened and 
 | Images: upload into a private per-presentation library, served to members only | PASS | `images.test.mjs`: 201 with pixel size; non-images refused; 401 signed out, 403 without a role |
 | An image is placed on a station and rendered by the deck from document data (crop, turn, flips, filters, width, side) | PASS | `images.test.mjs`: the stage shows `figure.pic` with the served route, `brightness(1.4)`, `rotate(90deg)`, a widened picture inside the crop window, width 80% |
 | Image edits are undoable; removal keeps the file and the asset record | PASS | `images.test.mjs` |
+| A new presentation starts on the engine with an opening, a close, a plain scene and the lockup | PASS | `composer.test.mjs` |
+| Every beat in the catalogue adds a valid section with its stations and renders on the stage | PASS | `beats.test.js`, `composer.test.mjs` (eight beats via the picker, columns nested, re-spaced) |
+| Beats move as a whole; stations are removed with unused sections; undo restores the structure | PASS | `composer.test.mjs` |
+| A composed deck versions, publishes and presents; the keynote is unchanged | PASS | `composer.test.mjs`; parity and 54/54 behavioural checks |

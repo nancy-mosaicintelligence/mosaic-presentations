@@ -8,8 +8,10 @@ import { fileMode } from "./auth/config";
 import { StoreError } from "./store";
 
 /** Renderers: the deck file that draws a document, and the document a new presentation starts from. Paths are repository-relative. */
-export const RENDERERS: Record<string, { deckFile: string; templateContent: string; label: string }> = {
-  "itw-keynote": { deckFile: "index.html", templateContent: "presentations/italian-tech-week/content/presentation.json", label: "The Room and the Vessel (V2 engine)" }
+export const RENDERERS: Record<string, { deckFile: string; templateContent: string; compose?: boolean; label: string }> = {
+  "itw-keynote": { deckFile: "index.html", templateContent: "presentations/italian-tech-week/content/presentation.json", label: "The Room and the Vessel (V2 engine)" },
+  // the same engine, starting empty: the composer's beats on a plain scene, with the keynote's tokens, motion and lockup
+  "mosaic-deck": { deckFile: "index.html", templateContent: "presentations/italian-tech-week/content/presentation.json", compose: true, label: "A new deck (V2 engine)" }
 };
 /** Presentations the application seeds into the library on first use (the committed ones). */
 export const SEEDS: Record<string, { title: string; renderer: string; kind: "deck"; description: string }> = {
@@ -78,7 +80,7 @@ export async function createPresentation(admin: SupabaseClient, user: { id: stri
   const slug = await freeSlug(admin, slugify(title));
   const base: Record<string, unknown> = { slug, title, kind: input.kind, description, created_by: user.id };
   let html: Buffer | null = null;
-  if (input.kind === "deck") { const r = input.renderer || "itw-keynote"; if (!RENDERERS[r]) throw new StoreError(422, "unknown renderer"); base.renderer = r; }
+  if (input.kind === "deck") { const r = input.renderer || "mosaic-deck"; if (!RENDERERS[r]) throw new StoreError(422, "unknown renderer"); base.renderer = r; }
   else if (input.kind === "link") { base.source_url = checkUrl(input.url || "").toString(); }
   else {
     if (input.html) html = input.html;

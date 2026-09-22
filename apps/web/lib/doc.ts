@@ -4,12 +4,13 @@ export type Run = { t?: string; marks?: string[]; icon?: string; reveal?: Reveal
 export type Item = { runs: Run[]; reveal?: Reveal };
 export type ImageSize = { width?: string; align?: "left" | "center" | "right"; radius?: number };
 export type ImageAdjust = { crop?: { x: number; y: number; w: number; h: number }; rotate?: 0 | 90 | 180 | 270; flipH?: boolean; flipV?: boolean; brightness?: number; contrast?: number; saturate?: number; opacity?: number; blur?: number };
-export type Element = { id: string; type: string; runs?: Run[]; items?: Item[]; reveal?: Reveal; hidden?: boolean; role?: string[]; style?: Record<string, string>; scene?: string; params?: Record<string, string>; asset?: string; alt?: string; size?: ImageSize; adjust?: ImageAdjust };
+export type Element = { id: string; type: string; runs?: Run[]; items?: Item[]; reveal?: Reveal; hidden?: boolean; role?: string[]; style?: Record<string, string>; scene?: string; params?: Record<string, string>; asset?: string; alt?: string; size?: ImageSize; adjust?: ImageAdjust; in?: string };
 export type Layout = { variants?: string[]; width?: string; box?: string; until?: number };
 export type Section = { key: string; layout?: Layout; elements: Element[] };
-export type Station = { p: number; section: string; camera: string; chapter: string; note: string; dur?: number; black?: boolean; road?: boolean; lite?: boolean; vessel?: boolean };
+export type Station = { p: number; section: string; camera: string; chapter: string; note: string; dur?: number; black?: boolean; road?: boolean; lite?: boolean; vessel?: boolean; close?: boolean };
+export type Element_in = { in?: string };
 export type Asset = { kind: string; use?: string; viewBox: string; paths: { d: string }[]; sources: { path: string; sha256: string }[] };
-export type Doc = { schemaVersion: number; id: string; title: string; renderer: string; tokens: any; copy: any; animation?: Record<string, number>; assets?: Record<string, Asset>; sections: Section[]; stations: Station[]; meta?: any };
+export type Doc = { schemaVersion: number; id: string; title: string; renderer: string; scene?: { kind: "itw" | "plain" }; tokens: any; copy: any; animation?: Record<string, number>; assets?: Record<string, Asset>; sections: Section[]; stations: Station[]; meta?: any };
 export type Path = (string | number)[];
 export type Command = { path: Path; value: any; label?: string; coalesce?: string };
 

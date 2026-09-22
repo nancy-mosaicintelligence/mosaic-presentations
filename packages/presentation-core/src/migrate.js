@@ -21,7 +21,9 @@ const STEPS = {
   4: (doc) => ({ ...doc, schemaVersion: 5 }),
   // 5 → 6: the `image` element (an asset shown in a section, with size and adjustments) and the `image` asset kind.
   // Additive; the stamp is the migration.
-  5: (doc) => ({ ...doc, schemaVersion: 6 })
+  5: (doc) => ({ ...doc, schemaVersion: 6 }),
+  // 6 → 7: the composer — `scene` on the document, `in` on elements, `close` on stations, the `itw-lockup` scene. Stamp.
+  6: (doc) => ({ ...doc, schemaVersion: 7 })
 };
 
 /**

@@ -12,6 +12,7 @@ import { Outline } from "./Outline";
 import { AnimationPanel, CopyPanel, AssetsPanel } from "./Panels";
 import { VersionsPanel, type VersionMeta } from "./Versions";
 import { ImagesPanel } from "./Images";
+import { StationTools, addBeat, removeStation, moveStation } from "./Structure";
 
 type SaveState = { kind: "idle" } | { kind: "dirty" } | { kind: "saving" } | { kind: "saved"; at: string } | { kind: "error"; message: string; issues?: { path: string; message: string }[] };
 type Tab = "element" | "images" | "motion" | "copy" | "assets" | "versions";
@@ -99,6 +100,11 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
     setDoc(next); setHist({ undo: history.canUndo, redo: history.canRedo }); scheduleSave();
     if (path && needsReload(path)) setPendingReload(true); else if (ready) bridge.send({ type: "itw:load", doc: forStage(next, id) });
   }, [history, scheduleSave, ready, bridge, id]);
+  /** A structural change: the whole document as one undo step, then the stage moves to the station concerned. */
+  const restructure = useCallback((next: Doc, label: string, goto?: number) => {
+    const d = history.apply({ path: [], value: next, label }) as Doc; afterChange(d);
+    if (goto !== undefined) setTimeout(() => bridge.send({ type: "itw:goto", index: goto }), 80);
+  }, [history, afterChange, bridge]);
   const apply = useCallback((c: Command) => { const next = history.apply(c) as Doc; afterChange(next, c.path); if (c.value === ABSENT) { setSelected(null); bridge.send({ type: "itw:select", id: null }); } }, [history, afterChange, bridge]);
   // typing on the stage: into history (coalesced) and autosave, but not sent back while the line is open
   inlineEditRef.current = (id, item, runs, typing) => {
@@ -198,7 +204,10 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
       </div>
       {!ready && <div className="loading">Loading the stage…</div>}
       <div className={"preview-nav" + (inPreview ? "" : " always")}><button type="button" aria-label="previous station" onClick={() => bridge.send({ type: "itw:goto", index: station - 1 })}>‹</button><span>{String(station + 1).padStart(2, "0")} / {doc?.stations.length ?? "—"}</span><button type="button" aria-label="next station" onClick={() => bridge.send({ type: "itw:goto", index: station + 1 })}>›</button></div>
-      {!inPreview && doc && <Filmstrip doc={doc} station={station} onGoto={i => bridge.send({ type: "itw:goto", index: i })} />}
+      {!inPreview && doc && <Filmstrip doc={doc} station={station} onGoto={i => bridge.send({ type: "itw:goto", index: i })} tools={<StationTools doc={doc} station={station}
+        onAdd={t => { const r = addBeat(doc, t, station); restructure(r.doc, `add ${t}`, r.station); }}
+        onRemove={() => restructure(removeStation(doc, station), `remove station ${station + 1}`, Math.max(0, station - 1))}
+        onMove={dir => { const r = moveStation(doc, station, dir); if (r) restructure(r.doc, "move station", r.station); }} />} />}
       {inline && frameBox && doc && !inPreview && <InlineToolbar caret={inline.caret} frameBox={frameBox} element={locate(doc, inline.id)?.element ?? null} fontSize={inline.fontSize} onMark={m => bridge.send({ type: "itw:format", mark: m })} onStyle={inlineStyle} onDone={() => bridge.send({ type: "itw:endEdit" })} />}
     </main>
 

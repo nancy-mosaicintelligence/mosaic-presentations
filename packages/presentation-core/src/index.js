@@ -5,3 +5,4 @@ export { canonicalJSON, contentHash } from "./hash.js";
 export { renderRuns } from "./render-runs.js";
 export { createHistory, getAt, setAt, ABSENT } from "./history.js";
 export * from "./schema.js";
+export { BEATS, STEP, makeBeat, newDeckDocument, respace, nextKey } from "./beats.js";

@@ -3,7 +3,7 @@ import { useState } from "react";
 import type { LibraryEntry, Kind } from "@/lib/presentations";
 
 const KIND: Record<Kind, string> = { deck: "Editable", html: "HTML", link: "Link" };
-type Mode = null | "deck" | "html" | "link";
+type Mode = null | "deck" | "copy" | "html" | "link";
 
 /** The library: cards for every presentation with a role, and the three ways to add one. */
 export function Library({ entries, me, canCreate }: { entries: LibraryEntry[]; me: string; canCreate: boolean }) {
@@ -17,7 +17,7 @@ export function Library({ entries, me, canCreate }: { entries: LibraryEntry[]; m
     try {
       let r: Response;
       if (mode === "html" && file) { const fd = new FormData(); fd.append("file", file); fd.append("title", title || file.name.replace(/\.html?$/i, "")); if (desc) fd.append("description", desc); r = await fetch("/api/presentations", { method: "POST", body: fd }); }
-      else r = await fetch("/api/presentations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind: mode, title, description: desc || undefined, url: url || undefined }) });
+      else r = await fetch("/api/presentations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind: mode === "copy" ? "deck" : mode, renderer: mode === "copy" ? "itw-keynote" : mode === "deck" ? "mosaic-deck" : undefined, title, description: desc || undefined, url: url || undefined }) });
       const body = await r.json(); if (!r.ok) throw new Error(body.error || r.statusText);
       const entry: LibraryEntry = { ...body, role: "owner", published: body.kind !== "deck" };
       setList([entry, ...list]); setMode(null); setTitle(""); setUrl(""); setFile(null); setDesc("");
@@ -35,19 +35,21 @@ export function Library({ entries, me, canCreate }: { entries: LibraryEntry[]; m
       {canCreate && <section className="add">
         <div className="add-buttons">
           <button type="button" className={mode === "deck" ? "primary" : ""} onClick={() => setMode(mode === "deck" ? null : "deck")}>New presentation</button>
+          <button type="button" className={mode === "copy" ? "primary" : ""} onClick={() => setMode(mode === "copy" ? null : "copy")}>Copy of the keynote</button>
           <button type="button" className={mode === "html" ? "primary" : ""} onClick={() => setMode(mode === "html" ? null : "html")}>Import HTML</button>
           <button type="button" className={mode === "link" ? "primary" : ""} onClick={() => setMode(mode === "link" ? null : "link")}>Add a link</button>
         </div>
         {mode && <form className="add-form" onSubmit={submit}>
-          {mode === "deck" && <p className="muted">A new editable presentation on the keynote engine — the room, the rail, the type system — starting from the Italian Tech Week document. Edit every line on the stage; the guided composer for new decks comes next.</p>}
+          {mode === "deck" && <p className="muted">A new presentation on the keynote engine — its type, motion and rail — starting with an opening and a close. Add stations from the beat picker, type on the stage, place images.</p>}
+          {mode === "copy" && <p className="muted">An editable copy of the Italian Tech Week keynote, room and all — its own draft, versions and people.</p>}
           {mode === "html" && <p className="muted">A finished HTML presentation (a file, or a link to one). It is stored privately and presented as is — shared with the same roles and invitations — but its text cannot be edited here.</p>}
           {mode === "link" && <p className="muted">A link to a presentation kept elsewhere (Google Drive, Slides, a site). Listed here with roles and invitations; opening it goes to the link.</p>}
           <label className="row"><span className="lab">Title</span><span className="ctl"><input className="field" value={title} onChange={e => setTitle(e.target.value)} required={mode !== "html" || !file} placeholder={mode === "html" ? "defaults to the file name" : "e.g. Series A narrative"} /></span></label>
           {mode !== "deck" && <label className="row"><span className="lab">{mode === "link" ? "Link" : "Link to the HTML"}</span><span className="ctl"><input className="field" type="url" value={url} onChange={e => setUrl(e.target.value)} placeholder="https://…" required={mode === "link" || !file} /></span></label>}
           {mode === "html" && <label className="row"><span className="lab">or a file</span><span className="ctl"><input type="file" accept=".html,.htm,text/html" onChange={e => setFile(e.target.files?.[0] ?? null)} /></span></label>}
-          <label className="row"><span className="lab">Note</span><span className="ctl"><input className="field" value={desc} onChange={e => setDesc(e.target.value)} placeholder="optional" /></span></label>
+          <label className="row"><span className="lab">{mode === "deck" ? "Event line" : "Note"}</span><span className="ctl"><input className="field" value={desc} onChange={e => setDesc(e.target.value)} placeholder={mode === "deck" ? "e.g. Milan, March 2027 — shown top right" : "optional"} /></span></label>
           {err && <p className="error">{err}</p>}
-          <div className="actions"><button type="submit" className="primary" disabled={busy}>{busy ? "Working…" : mode === "deck" ? "Create" : mode === "html" ? "Import" : "Add"}</button><button type="button" className="ghost" onClick={() => setMode(null)}>Cancel</button></div>
+          <div className="actions"><button type="submit" className="primary" disabled={busy}>{busy ? "Working…" : mode === "deck" || mode === "copy" ? "Create" : mode === "html" ? "Import" : "Add"}</button><button type="button" className="ghost" onClick={() => setMode(null)}>Cancel</button></div>
         </form>}
       </section>}
       {!canCreate && <p className="muted">You see the presentations you were invited to.</p>}

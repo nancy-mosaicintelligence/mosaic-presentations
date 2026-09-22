@@ -64,6 +64,9 @@ export function validate(doc) {
     }
   }
 
+  // scene
+  if (d.scene !== undefined) { if (!isObj(d.scene)) err("scene", "must be an object"); else { checkFields(d.scene, { kind: { type: { enum: ["itw", "plain"] }, req: true } }, "scene", err); } }
+
   // animation
   if (d.animation !== undefined) {
     if (!isObj(d.animation)) err("animation", "must be an object");
@@ -88,6 +91,7 @@ export function validate(doc) {
       if (!isObj(e)) return err(ep, "must be an object");
       checkFields(e, ELEMENT_FIELDS, ep, err);
       if (typeof e.id === "string") { if (ids.has(e.id)) err(`${ep}.id`, `duplicate element id "${e.id}"`); ids.add(e.id); }
+      if (e.in !== undefined) { const host = s.elements.slice(0, j).find((x) => x && x.id === e.in); if (!host) err(`${ep}.in`, "must name a group earlier in the same section"); else if (host.type !== "group") err(`${ep}.in`, "must name a group"); }
       switch (e.type) {
         case "text":
           if (!Array.isArray(e.runs)) err(`${ep}.runs`, "text needs runs"); else checkRuns(e.runs, `${ep}.runs`, err);
