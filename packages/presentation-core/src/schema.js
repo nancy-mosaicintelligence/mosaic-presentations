@@ -8,7 +8,7 @@
  * by renderer id with a closed set of parameters.
  */
 
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 
 /** Inline marks a run may carry. The renderer maps each to fixed markup. */
 export const MARKS = Object.freeze(["em", "strong", "i", "hl", "lead", "x2"]);
@@ -40,7 +40,7 @@ export const WIDTH_RE = /^min\(\d{2,4}px,\d{1,3}%\)$/;
 
 /** Typographic and structural roles an element may carry (its class tokens); each is a rule in the stylesheet. */
 export const ROLES = Object.freeze(["hero", "strong", "big", "huge", "lede", "lead-in", "ask", "askline", "senseh", "sensenote", "btitle", "bsynth", "loopcap", "src", "x2line", "mk",
-  "vopen", "vhero", "c1", "c2", "c3", "lp", "lp1", "lp2", "lp3", "acts", "sense", "nature", "eng", "mnode", "marrow", "up", "down", "mv1", "cols", "col", "chapno", "pts", "chips", "chain", "loop", "impchart", "icons", "sensetie", "boardsk", "rv"]);
+  "vopen", "vhero", "c1", "c2", "c3", "lp", "lp1", "lp2", "lp3", "acts", "sense", "nature", "eng", "mnode", "marrow", "up", "down", "mv1", "cols", "col", "chapno", "fluo", "pts", "chips", "chain", "loop", "impchart", "icons", "sensetie", "boardsk", "rv"]);
 
 /** Inline style overrides an element may carry, and the shape a value must have (no urls, no expressions, no delimiters). */
 export const STYLE_KEYS = Object.freeze(["maxWidth", "margin", "marginTop", "marginBottom", "textAlign", "fontSize", "lineHeight", "color"]);
@@ -122,6 +122,9 @@ export const ELEMENT_FIELDS = Object.freeze({
   scene: { type: { enum: Object.keys(CUSTOM_SCENES) } },
   params: { type: "object" },
   in: { type: "string" },        // the group this element sits inside (a composed deck)
+  place: { type: "object" },     // { x, y, w } in % of the stage: the element is placed freely (a text box, a dropped image)
+  nudge: { type: "object" },     // { dx, dy } in % of the stage: a flow element moved off its position
+  frame: { type: "object" },     // image: { w, h } the box's aspect; the picture fills it (an image box); may be empty
   asset: { type: "string" },     // image: the asset id it shows
   alt: { type: "string" },       // image
   size: { type: "object" },      // image: width, align, radius

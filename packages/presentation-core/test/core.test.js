@@ -112,6 +112,7 @@ test("a v1 document migrates to the current version unchanged apart from the ver
   const v3 = { ...minimal(), schemaVersion: 3 };
   assert.equal(migrate(v3).schemaVersion, SCHEMA_VERSION); assert.equal(validate(migrate(v3)).ok, true);
   const v5 = { ...minimal(), schemaVersion: 5 }; assert.equal(migrate(v5).schemaVersion, SCHEMA_VERSION);
+  const v7 = { ...minimal(), schemaVersion: 7 }; assert.equal(validate(migrate(v7)).ok, true);
 });
 
 test("image elements and assets are range-checked and must point at an image asset", () => {
@@ -121,6 +122,9 @@ test("image elements and assets are range-checked and must point at an image ass
   const paths = validate(d).errors.map(e => e.path);
   for (const p of ["sections[0].elements[2].asset", "sections[0].elements[2].size.width", "sections[0].elements[2].size.radius", "sections[0].elements[2].adjust.brightness", "sections[0].elements[2].adjust.rotate", "sections[0].elements[2].adjust.crop.w", "sections[0].elements[2].adjust.sharpen", "assets.img-1.src", "assets.img-1.mime", "assets.img-1.width"]) assert.ok(paths.includes(p), p);
   const ok = minimal(); ok.assets["img-1"].src = "/img/series-a/" + "b".repeat(64) + ".png"; assert.equal(validate(ok).ok, true, "a served image url is valid");
+  const box = minimal(); box.sections[0].elements.push({ id: "open.4", type: "image", frame: { w: 1, h: 1 }, place: { x: 10, y: 20, w: 30 } }); assert.deepEqual(validate(box).errors, [], "an empty image box, placed");
+  const bad = minimal(); bad.sections[0].elements.push({ id: "open.4", type: "image", place: { x: 10, y: 20, w: 300 } }, { id: "open.5", type: "text", runs: [{ t: "x" }], nudge: { dx: 500, dy: 0 } });
+  const bp = validate(bad).errors.map(e => e.path); assert.ok(bp.includes("sections[0].elements[3].asset") && bp.includes("sections[0].elements[3].place.w") && bp.includes("sections[0].elements[4].nudge.dx"));
 });
 
 test("assets and groups are checked: path grammar, hashes, repo-relative files, no copy on a group", () => {
@@ -184,8 +188,9 @@ test("the extracted Italian Tech Week document validates", { skip: !existsSync(j
   const r = validate(doc);
   assert.deepEqual(r.errors, []);
   assert.equal(doc.stations.length, 55);
-  assert.equal(doc.sections.length, 27);
-  assert.equal(doc.sections.reduce((a, s) => a + s.elements.length, 0), 70);
+  assert.equal(doc.sections.length, 28);
+  assert.equal(doc.sections.reduce((a, s) => a + s.elements.length, 0), 73);
+  assert.equal(doc.sections.find(s => s.key === "lab").elements.filter(e => e.type === "image" && e.frame && !e.asset).length, 3, "the fluoroscopy frames are empty image boxes");
   assert.equal(doc.sections.reduce((a, s) => a + s.elements.filter(e => e.type === "group").length, 0), 11);
 });
 

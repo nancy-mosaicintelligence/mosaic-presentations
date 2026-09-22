@@ -174,9 +174,11 @@ const dom = await page.evaluate(() => {
   };
   // the cue lives inside the open section but is chrome, not copy of the section: drop it from the section's elements
   for (const s of sections) s.elements = s.elements.filter(e => !(s.key === "open" && e.type === "text" && e.runs.length === 1 && e.runs[0].t === copy.cue));
+  // the fluoroscopy frames: empty image boxes in the white act's lab overlay (bound by static ids, not by position)
+  const lab = [...document.querySelectorAll("#lab .fluo[data-id]")].map(f => ({ id: f.getAttribute("data-id"), type: "image", role: [...f.classList], frame: { w: 1, h: 1 } }));
   const psvg = document.querySelector("#partner svg");
   const partner = { viewBox: psvg.getAttribute("viewBox"), paths: [...psvg.querySelectorAll("path")].map(p => ({ d: p.getAttribute("d") })) };
-  return { sections, bindings, copy, partner };
+  return { sections, bindings, copy, partner, lab };
 });
 
 /* ---------- assets: the geometry the renderer draws, from the embedded document once bound, else from the source constants
@@ -197,7 +199,7 @@ await browser.close();
 const bindingsOut = dom.bindings.filter(b => !(b.section === "open" && !dom.sections[0].elements.some(e => e.id === b.id)));
 
 const doc = {
-  schemaVersion: 7,
+  schemaVersion: 8,
   id: "italian-tech-week-2026",
   title: "The Room and the Vessel",
   renderer: "itw-keynote",
@@ -221,7 +223,7 @@ const doc = {
     safeNote: dom.copy.safeNote,
     hud: dom.copy.hud
   },
-  sections: (() => { const out = [...dom.sections]; const at = out.findIndex(s => s.key === "ves2") + 1; out.splice(at, 0, { key: "tun", elements: jsCopy.tunnel }); return out; })(),
+  sections: (() => { const out = [...dom.sections]; const at = out.findIndex(s => s.key === "ves2") + 1; out.splice(at, 0, { key: "tun", elements: jsCopy.tunnel }); out.splice(at + 1, 0, { key: "lab", elements: dom.lab }); return out; })(),
   stations
 };
 

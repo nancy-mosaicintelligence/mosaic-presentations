@@ -62,15 +62,16 @@ test("placed from the Images tab, the picture appears on the stage and in the do
   const css = await frame().evaluate((id) => { const f = document.querySelector(`figure.pic[data-id="${id}"]`); return { filter: f.querySelector("img").style.filter, transform: f.querySelector(".crop").style.transform, imgW: f.querySelector("img").style.width }; }, el.id);
   assert.match(css.filter, /brightness\(1\.4\)/); assert.match(css.transform, /rotate\(90deg\)/); assert.notEqual(css.imgW, "100%", "the crop widens the picture inside its window");
   // width and side
-  await page.locator('.row:has(.lab:has-text("Width")) input.num').fill("80");
-  await untilDraft(d => d.sections[0].elements.find(e => e.type === "image")?.size?.width === "80%", "the width");
+  // a picture picked from the library is a free box on the stage: its width lives in Position
+  await page.locator('.row:has(.lab:has-text("Width")) input.num').nth(1).fill("80");
+  await untilDraft(d => d.sections[0].elements.find(e => e.type === "image")?.place?.w === 80, "the width");
   assert.equal(await frame().evaluate((id) => document.querySelector(`figure.pic[data-id="${id}"]`).style.width, el.id), "80%");
   globalThis.__el = el.id;
 }, { timeout: 120000 });
 
 test("undo walks the adjustments back; remove takes the picture off the stage but keeps the file", async () => {
   await page.click(".bar .title"); await page.keyboard.press("Meta+z");
-  await untilDraft(d => d.sections[0].elements.find(e => e.type === "image")?.size?.width !== "80%", "the undo");
+  await untilDraft(d => d.sections[0].elements.find(e => e.type === "image")?.place?.w !== 80, "the undo");
   page.once("dialog", d => d.accept());
   await page.click('button:has-text("Remove from the station")');
   await untilDraft(d => !d.sections[0].elements.some(e => e.type === "image"), "the removal");

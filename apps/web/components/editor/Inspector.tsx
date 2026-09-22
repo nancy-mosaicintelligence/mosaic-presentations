@@ -8,7 +8,7 @@ import { Row, TextField, NumberField, Tokens } from "./fields";
 
 const TYPE_LABEL: Record<string, string> = { text: "Text", list: "List", chips: "Chips", chain: "Chain", "loop-labels": "Loop labels", "custom-scene": "Scene", group: "Group", image: "Image" };
 
-export function Inspector({ doc, slug, selectedId, apply, onDeselect }: { doc: Doc; slug: string; selectedId: string | null; apply: (c: Command) => void; onDeselect: () => void }) {
+export function Inspector({ doc, slug, selectedId, apply, onDeselect, onFill }: { doc: Doc; slug: string; selectedId: string | null; apply: (c: Command) => void; onDeselect: () => void; onFill?: (id: string) => void }) {
   const hit = locate(doc, selectedId);
   if (!hit) return <div className="panel empty"><p>Click anything on the stage to select it; double-click a line to type into it.</p><p className="muted">The filmstrip under the stage and the arrow keys move between stations. This panel holds the finer controls of whatever is selected.</p></div>;
   const { si, ei, section, element: e } = hit;
@@ -29,7 +29,23 @@ export function Inspector({ doc, slug, selectedId, apply, onDeselect }: { doc: D
       </div>)}
     </section>}
     {e.type === "custom-scene" && <section><h4>Scene</h4><p className="muted">{e.scene}{e.params && " · " + Object.entries(e.params).map(([k, v]) => `${k}=${v}`).join(", ")}. Drawn by the renderer; only its reveal is editable here.</p></section>}
+    {e.type === "image" && e.frame && !e.asset && <section><h4>Image box</h4><p className="muted">An empty frame ({e.frame.w}:{e.frame.h}). Drop a picture onto it on the stage, or pick one from the library.</p><button type="button" className="primary" onClick={() => onFill?.(e.id)}>Fill from the library</button></section>}
     {e.type === "image" && <ImageInspector doc={doc} slug={slug} si={si} ei={ei} element={e} apply={apply} />}
+    <section><h4>Position</h4>
+      {e.place
+        ? <>
+          <Row label="Free box" hint="% of the stage"><span className="muted small">drag it on the stage; corners resize</span></Row>
+          <Row label="Left"><NumberField value={e.place.x} step={1} onChange={v => { if (v !== undefined) setField("place", { ...e.place!, x: v }, `move ${e.id}`); }} /></Row>
+          <Row label="Top"><NumberField value={e.place.y} step={1} onChange={v => { if (v !== undefined) setField("place", { ...e.place!, y: v }, `move ${e.id}`); }} /></Row>
+          <Row label="Width"><NumberField value={e.place.w} step={1} min={1} max={100} onChange={v => { if (v !== undefined) setField("place", { ...e.place!, w: Math.max(1, Math.min(100, v)) }, `resize ${e.id}`); }} /></Row>
+          <Row label=" "><button type="button" className="ghost" onClick={() => setField("place", undefined, `back into the flow ${e.id}`)}>Back into the flow</button></Row>
+        </>
+        : <>
+          <Row label="In the flow" hint="drag to nudge"><span className="muted small">{e.nudge ? `moved ${e.nudge.dx.toFixed(1)}% × ${e.nudge.dy.toFixed(1)}%` : "at its place"}</span></Row>
+          {e.nudge && <Row label=" "><button type="button" className="ghost" onClick={() => setField("nudge", undefined, `reset ${e.id}`)}>Put back</button></Row>}
+          <Row label=" "><button type="button" className="ghost" onClick={() => setField("place", { x: 30, y: 35, w: 40 }, `free ${e.id}`)}>Make it a free box</button></Row>
+        </>}
+    </section>
     {e.type === "group" && <section><h4>Container</h4><p className="muted">Holds {section.elements.filter(x => x !== e).length ? "the elements that follow it" : "nothing"}; its reveal times the whole block.</p></section>}
 
     {e.type !== "chips" && <section><h4>Timing</h4>{reveal(e.reveal, r => setField("reveal", r, `reveal of ${e.id}`))}</section>}

@@ -53,7 +53,7 @@ test("the root is the library, and the keynote is in it", async () => {
 
 test("the draft is seeded from the committed document and an invalid draft never replaces it", async () => {
   const d = await api("/draft");
-  assert.equal(d.status, 200); assert.equal(d.body.document.schemaVersion, 7); assert.equal(d.body.document.stations.length, 55); assert.equal(d.body.basedOn, "source");
+  assert.equal(d.status, 200); assert.equal(d.body.document.schemaVersion, 8); assert.equal(d.body.document.stations.length, 55); assert.equal(d.body.basedOn, "source");
   const bad = structuredClone(d.body.document); bad.sections[0].elements[0].runs = [{ t: "<script>" }]; bad.sections[0].elements[0].onclick = "x";
   const r = await api("/draft", json({ document: bad }));
   assert.equal(r.status, 422); assert.ok(r.body.issues.some(i => i.path === "sections[0].elements[0].runs[0].t")); assert.ok(r.body.issues.some(i => i.path === "sections[0].elements[0].onclick"));
@@ -139,7 +139,9 @@ test("a named version is immutable; later edits, restore, duplicate and preview"
 }, { timeout: 180000 });
 
 test("preview hides the editor and returns without losing work", async () => {
-  await page.click('button:has-text("Preview")'); await page.waitForSelector(".editor.preview");
+  await page.click('.bar button:has-text("Present")'); await page.waitForSelector(".editor.preview");
+  await page.waitForFunction(() => !!document.fullscreenElement, null, { timeout: 4000 }).catch(() => {});
+  await page.evaluate(() => document.fullscreenElement ? document.exitFullscreen() : null); await page.waitForFunction(() => !document.fullscreenElement, null, { timeout: 4000 });
   assert.equal(await page.locator(".side").count(), 0); assert.ok(page.url().includes("preview=1"));
   await page.click('button:has-text("Back to editor")'); await page.waitForSelector(".editor:not(.preview)");
   assert.equal(await page.locator(".side").count(), 2);

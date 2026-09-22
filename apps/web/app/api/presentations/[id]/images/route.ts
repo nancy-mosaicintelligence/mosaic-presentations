@@ -32,7 +32,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     const sha256 = createHash("sha256").update(bytes).digest("hex");
     const objectPath = `${a.presentationId}/${sha256}.${dims.ext}`;
     const sb = await supabaseServer();
-    const { error } = await sb.storage.from("images").upload(objectPath, bytes, { contentType: dims.mime, upsert: true });
+    const { data: had } = await sb.from("presentation_assets").select("presentation_id, storage_path, name, sha256, bytes, mime, width, height, created_at").eq("presentation_id", a.presentationId).eq("storage_path", objectPath).maybeSingle();
+    if (had) return ok(record(id, had), 200);   // the same bytes are already in the library
+    const { error } = await sb.storage.from("images").upload(objectPath, bytes, { contentType: dims.mime, upsert: false });
     if (error) throw new StoreError(/row-level|policy|unauthorized/i.test(error.message) ? 403 : 500, error.message);
     const row = { presentation_id: a.presentationId, storage_path: objectPath, name: file.name, sha256, bytes: bytes.length, uploaded_by: a.user.id, kind: "image", mime: dims.mime, width: dims.width, height: dims.height };
     const { data, error: e2 } = await sb.from("presentation_assets").upsert(row, { onConflict: "storage_path" }).select("presentation_id, storage_path, name, sha256, bytes, mime, width, height, created_at").single();

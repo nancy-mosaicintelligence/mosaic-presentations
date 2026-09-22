@@ -112,8 +112,9 @@ export function validate(doc) {
           if (e.runs !== undefined || e.items !== undefined) err(ep, "a group carries no copy of its own");
           break;
         case "image": {
-          if (typeof e.asset !== "string") err(`${ep}.asset`, "an image names its asset");
-          else if (!isObj(d.assets) || !isObj(d.assets[e.asset]) || d.assets[e.asset].kind !== "image") err(`${ep}.asset`, `no image asset "${e.asset}"`);
+          if (e.asset === undefined && !isObj(e.frame)) err(`${ep}.asset`, "an image names its asset (an image box may be empty)");
+          else if (e.asset !== undefined && (typeof e.asset !== "string" || !isObj(d.assets) || !isObj(d.assets[e.asset]) || d.assets[e.asset].kind !== "image")) err(`${ep}.asset`, `no image asset "${e.asset}"`);
+          if (e.frame !== undefined) { if (!isObj(e.frame)) err(`${ep}.frame`, "must be an object"); else { checkFields(e.frame, { w: { type: "number", req: true }, h: { type: "number", req: true } }, `${ep}.frame`, err); for (const k of ["w", "h"]) if (typeof e.frame[k] === "number" && (e.frame[k] <= 0 || e.frame[k] > 100)) err(`${ep}.frame.${k}`, "a positive ratio"); } }
           if (e.runs !== undefined || e.items !== undefined) err(ep, "an image carries no copy");
           if (e.size !== undefined) { if (!isObj(e.size)) err(`${ep}.size`, "must be an object"); else { checkFields(e.size, IMAGE_SIZE_FIELDS, `${ep}.size`, err); if (typeof e.size.radius === "number" && (e.size.radius < 0 || e.size.radius > 80)) err(`${ep}.size.radius`, "must be between 0 and 80"); } }
           if (e.adjust !== undefined) {
@@ -139,6 +140,8 @@ export function validate(doc) {
         default: /* type errors already reported */ break;
       }
       if (e.reveal !== undefined) checkReveal(e.reveal, `${ep}.reveal`, err);
+      if (e.place !== undefined) { if (!isObj(e.place)) err(`${ep}.place`, "must be an object"); else { checkFields(e.place, { x: { type: "number", req: true }, y: { type: "number", req: true }, w: { type: "number", req: true } }, `${ep}.place`, err); for (const k of ["x", "y"]) if (typeof e.place[k] === "number" && (e.place[k] < -50 || e.place[k] > 150)) err(`${ep}.place.${k}`, "percent of the stage, -50 to 150"); if (typeof e.place.w === "number" && (e.place.w < 1 || e.place.w > 100)) err(`${ep}.place.w`, "percent of the stage, 1 to 100"); } }
+      if (e.nudge !== undefined) { if (!isObj(e.nudge)) err(`${ep}.nudge`, "must be an object"); else { checkFields(e.nudge, { dx: { type: "number", req: true }, dy: { type: "number", req: true } }, `${ep}.nudge`, err); for (const k of ["dx", "dy"]) if (typeof e.nudge[k] === "number" && (e.nudge[k] < -100 || e.nudge[k] > 100)) err(`${ep}.nudge.${k}`, "percent of the stage, -100 to 100"); } }
       if (e.style !== undefined) {
         if (!isObj(e.style)) err(`${ep}.style`, "must be an object");
         else for (const [k, v] of Object.entries(e.style)) {

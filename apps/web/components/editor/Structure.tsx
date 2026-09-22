@@ -49,10 +49,15 @@ export function BeatPicker({ onPick, onClose }: { onPick: (type: string) => void
   </div>;
 }
 
-export function StationTools({ doc, station, onAdd, onRemove, onMove }: { doc: Doc; station: number; onAdd: (type: string) => void; onRemove: () => void; onMove: (dir: -1 | 1) => void }) {
+export function StationTools({ doc, station, onAdd, onRemove, onMove, onAddBox, onAddImage }: { doc: Doc; station: number; onAdd: (type: string) => void; onRemove: () => void; onMove: (dir: -1 | 1) => void; onAddBox: (kind: "text" | "imagebox") => void; onAddImage: () => void }) {
   const [picking, setPicking] = useState(false);
   return <div className="station-tools">
     <button type="button" className="primary" onClick={() => setPicking(p => !p)}>+ Add station</button>
+    <span className="sep" />
+    <button type="button" onClick={() => onAddBox("text")} title="a free text box on this station">+ Text box</button>
+    <button type="button" onClick={() => onAddBox("imagebox")} title="an empty frame to fill with a picture">+ Image box</button>
+    <button type="button" onClick={onAddImage} title="upload a picture and place it">+ Image</button>
+    <span className="sep" />
     <button type="button" className="ghost" onClick={() => onMove(-1)} disabled={station === 0} title="move this beat earlier">◀</button>
     <button type="button" className="ghost" onClick={() => onMove(1)} disabled={station >= doc.stations.length - 1} title="move this beat later">▶</button>
     <button type="button" className="ghost danger" onClick={() => { if (window.confirm(`Remove station ${station + 1}?`)) onRemove(); }} disabled={doc.stations.length <= 1}>Remove</button>

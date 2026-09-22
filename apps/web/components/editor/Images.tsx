@@ -8,7 +8,7 @@ export type ImageAsset = { id: string; kind: "image"; src: string; sha256: strin
 export const imageUrl = (slug: string, a: { src: string }) => a.src.replace(/^storage:\/\/images\/[0-9a-f-]{36}\//, `/img/${slug}/`);
 
 /** The presentation's image library: upload, and place an image on the current station. */
-export function ImagesPanel({ doc, slug, station, apply, onPlaced }: { doc: Doc; slug: string; station: number; apply: (c: Command) => void; onPlaced: (id: string) => void }) {
+export function ImagesPanel({ doc, slug, station, apply, onPlaced, fillTarget, onPick }: { doc: Doc; slug: string; station: number; apply: (c: Command) => void; onPlaced: (id: string) => void; fillTarget?: string | null; onPick?: (a: ImageAsset) => void }) {
   const [items, setItems] = useState<ImageAsset[]>([]); const [busy, setBusy] = useState(false); const [err, setErr] = useState<string | null>(null);
   const input = useRef<HTMLInputElement | null>(null);
   const load = useCallback(async () => { const r = await fetch(`/api/presentations/${slug}/images`, { cache: "no-store" }); if (r.ok) setItems(await r.json()); }, [slug]);
@@ -31,12 +31,12 @@ export function ImagesPanel({ doc, slug, station, apply, onPlaced }: { doc: Doc;
     onPlaced(id);
   };
   return <div className="panel">
-    <p className="muted">Images of this presentation. Place one on the current station, then click it on the stage to crop, adjust and size it.</p>
+    {fillTarget ? <p className="fill">Pick a picture for <code>{fillTarget}</code> — or drop a file onto the frame on the stage.</p> : <p className="muted">Images of this presentation. Click one to place it on the current station, or drag it onto the stage where you want it; then move, resize, crop and adjust it there.</p>}
     {err && <p className="error">{err}</p>}
     <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden ref={input} onChange={e => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = ""; }} />
     <button type="button" className="primary" disabled={busy} onClick={() => input.current?.click()}>{busy ? "Uploading…" : "Upload an image"}</button>
     <div className="imggrid">
-      {items.map(a => <button type="button" key={a.sha256} className="imgcell" title={`${a.name || a.id} · ${a.width}×${a.height}`} onClick={() => place(a)}>
+      {items.map(a => <button type="button" key={a.sha256} className="imgcell" draggable title={`${a.name || a.id} · ${a.width}×${a.height} — drag onto the stage`} onDragStart={e => { e.dataTransfer.setData("application/x-itw-asset", JSON.stringify(a)); e.dataTransfer.effectAllowed = "copy"; }} onClick={() => (fillTarget && onPick ? onPick(a) : onPick ? onPick(a) : place(a))}>
         <img src={a.url || imageUrl(slug, a)} alt={a.name || ""} loading="lazy" />
         <span className="imgname">{a.name || a.id}</span>
       </button>)}

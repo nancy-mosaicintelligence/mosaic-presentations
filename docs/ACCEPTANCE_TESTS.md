@@ -294,3 +294,9 @@ Production cannot be marked complete until the deployed URL has been opened and 
 | Every beat in the catalogue adds a valid section with its stations and renders on the stage | PASS | `beats.test.js`, `composer.test.mjs` (eight beats via the picker, columns nested, re-spaced) |
 | Beats move as a whole; stations are removed with unused sections; undo restores the structure | PASS | `composer.test.mjs` |
 | A composed deck versions, publishes and presents; the keynote is unchanged | PASS | `composer.test.mjs`; parity and 54/54 behavioural checks |
+| Free boxes: a text box or an image box is added, dragged to a place and resized by a handle, all stored in % of the stage | PASS | `slides.test.mjs` |
+| Flow lines are nudged by dragging and put back; images are dropped from the library or from files where the pointer is | PASS | `slides.test.mjs` |
+| Image boxes (the keynote's fluoroscopy frames included) are filled by click or drop; the picture covers the frame | PASS | `slides.test.mjs` |
+| The renderer's on-page copy is typed in place and the stage reloads with it | PASS | `slides.test.mjs` |
+| Save, History, Present, Publish (one press: a version, published, the link) and Share | PASS | `slides.test.mjs` |
+| The keynote unchanged for the audience | PASS | parity; 54/54 (`verify-slides`) |

@@ -37,7 +37,10 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
   const [ready, setReady] = useState(false);
   const [notes, setNotes] = useState(false);
   const [pendingReload, setPendingReload] = useState(false);
-  const [inline, setInline] = useState<{ id: string; item: number; caret: Caret; fontSize: number } | null>(null);
+  const [inline, setInline] = useState<{ id: string | null; item: number; copy?: string | null; caret: Caret; fontSize: number } | null>(null);
+  const [fillTarget, setFillTarget] = useState<string | null>(null);   // an empty image box waiting for a picture
+  const [shareOpen, setShareOpen] = useState(false); const [publishedLink, setPublishedLink] = useState<string | null>(null); const [publishing, setPublishing] = useState(false);
+  const fileDrop = useRef<HTMLInputElement | null>(null);
   const inlineRef = useRef(inline); inlineRef.current = inline;
   const [frameBox, setFrameBox] = useState<DOMRect | null>(null);
   const frame = useRef<HTMLIFrameElement | null>(null);
@@ -48,13 +51,18 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
   const onMessage = useCallback((m: BridgeMessage) => {
     if (m.type === "itw:ready" || m.type === "itw:state") { setReady(true); if (m.type === "itw:state") { setStation(m.step); setNotes(!!m.notes); } }
     else if (m.type === "itw:station") setStation(m.index);
-    else if (m.type === "itw:selected") { setSelected(m.id); if (m.id && m.user) setTab("element"); }
-    else if (m.type === "itw:editStart") { setInline({ id: m.id, item: m.item, caret: m.caret, fontSize: m.fontSize }); setFrameBox(frame.current?.getBoundingClientRect() ?? null); }
+    else if (m.type === "itw:selected") { setSelected(m.id); if (m.id && m.user) { if (m.empty) { setFillTarget(m.id); setTab("images"); } else setTab("element"); } }
+    else if (m.type === "itw:placed") placedRef.current(m);
+    else if (m.type === "itw:drop") dropRef.current(m);
+    else if (m.type === "itw:editStart") { setInline({ id: m.id, item: m.item, copy: m.copy, caret: m.caret, fontSize: m.fontSize }); setFrameBox(frame.current?.getBoundingClientRect() ?? null); }
     else if (m.type === "itw:caret") { if (m.caret) setInline(s => (s ? { ...s, caret: m.caret } : s)); }
-    else if (m.type === "itw:edited" || m.type === "itw:editDone") { inlineEditRef.current(m.id, m.item, m.runs, m.type === "itw:edited"); if (m.type === "itw:editDone") setInline(null); else if (m.caret) setInline(s => (s ? { ...s, caret: m.caret, fontSize: m.fontSize } : s)); }
+    else if (m.type === "itw:edited" || m.type === "itw:editDone") { if (m.copy) copyEditRef.current(m.copy, m.runs, m.text, m.type === "itw:edited"); else inlineEditRef.current(m.id, m.item, m.runs, m.type === "itw:edited"); if (m.type === "itw:editDone") setInline(null); else if (m.caret) setInline(s => (s ? { ...s, caret: m.caret, fontSize: m.fontSize } : s)); }
     else if (m.type === "itw:error") setSave({ kind: "error", message: m.message });
   }, []);
   const inlineEditRef = useRef<(id: string, item: number, runs: any[], typing: boolean) => void>(() => {});
+  const copyEditRef = useRef<(path: string, runs: any[], text: string, typing: boolean) => void>(() => {});
+  const placedRef = useRef<(m: BridgeMessage) => void>(() => {});
+  const dropRef = useRef<(m: BridgeMessage) => void>(() => {});
   const bridge = useMemo(() => new PlayerBridge(() => frame.current, onMessage), [onMessage]);
   // attach, and ask the frame for its state in case it is already running (a remount never reloads the frame)
   useEffect(() => { bridge.attach(); bridge.send({ type: "itw:state" }); return () => bridge.detach(); }, [bridge]);
@@ -116,6 +124,69 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
     setDoc(next); setHist({ undo: history.canUndo, redo: history.canRedo }); scheduleSave();
     if (!typing && ready) bridge.send({ type: "itw:load", doc: forStage(next, id) });
   };
+  // the renderer's own copy, typed on the stage: strings or runs under copy.*; the stage reloads once the line closes
+  copyEditRef.current = (path, runs, text, typing) => {
+    const d = docRef.current; if (!d) return; const keys = path.split(".").map(k => (/^\d+$/.test(k) ? Number(k) : k));
+    const current = keys.reduce((o: any, k) => (o ? o[k] : undefined), d.copy);
+    const value = Array.isArray(current) ? runs : text;
+    if (JSON.stringify(current) === JSON.stringify(value)) return;
+    const next = history.apply({ path: ["copy", ...keys], value, label: `copy ${path}`, coalesce: `copy.${path}` }) as Doc;
+    setDoc(next); setHist({ undo: history.canUndo, redo: history.canRedo }); scheduleSave(); setPendingReload(true);
+  };
+  // a move or a resize on the stage
+  placedRef.current = (m) => {
+    const d = docRef.current; if (!d) return; const hit = locate(d, m.id); if (!hit) return; const base = ["sections", hit.si, "elements", hit.ei];
+    if (m.place) apply({ path: [...base, "place"], value: m.place, label: `move ${m.id}` });
+    else if (m.nudge) apply({ path: [...base, "nudge"], value: Math.abs(m.nudge.dx) < 0.05 && Math.abs(m.nudge.dy) < 0.05 ? undefined : m.nudge, label: `move ${m.id}` });
+    else if (m.width) apply({ path: [...base, "size"], value: { ...(hit.element.size || {}), width: m.width }, label: `resize ${m.id}` });
+    else if (m.maxWidth) apply({ path: [...base, "style"], value: { ...(hit.element.style || {}), maxWidth: m.maxWidth }, label: `resize ${m.id}` });
+  };
+  /** Place an image asset: into a box (fill) or as a free picture at a point on the stage. */
+  const placeImage = useCallback((asset: any, at?: { x: number; y: number }, box?: string | null) => {
+    const d = docRef.current; if (!d) return;
+    let next = d;
+    if (!next.assets?.[asset.id]) { const { url: _u, createdAt: _c, id: _i, ...rec } = asset; next = history.apply({ path: ["assets", asset.id], value: rec, label: `add image ${asset.name || asset.id}` }) as Doc; }
+    if (box) { const hit = locate(next, box); if (hit) next = history.apply({ path: ["sections", hit.si, "elements", hit.ei, "asset"], value: asset.id, label: `fill ${box}` }) as Doc; }
+    else {
+      const st = next.stations[stationRef.current]; const si = next.sections.findIndex(s => s.key === st.section); if (si < 0) { setSave({ kind: "error", message: "this station has no section to hold an image" }); return; }
+      const sec = next.sections[si]; let n = sec.elements.length + 1; while (sec.elements.some(e => e.id === `${sec.key}.${n}`)) n++;
+      const w = 32, x = at ? Math.max(0, Math.min(100 - w, at.x - w / 2)) : 34, y = at ? Math.max(0, Math.min(90, at.y - 10)) : 30;
+      next = history.apply({ path: ["sections", si, "elements", sec.elements.length], value: { id: `${sec.key}.${n}`, type: "image", asset: asset.id, alt: asset.name || "", place: { x, y, w }, reveal: { p: st.p } }, label: "place image" }) as Doc;
+      setSelected(`${sec.key}.${n}`);
+    }
+    afterChange(next); setFillTarget(null); setTab("element");
+  }, [history, afterChange]);
+  const uploadFiles = useCallback(async (files: File[]): Promise<any[]> => {
+    const out: any[] = [];
+    for (const f of files) { const fd = new FormData(); fd.append("file", f); const r = await fetch(`${api}/images`, { method: "POST", body: fd }); const body = await r.json(); if (!r.ok) { setSave({ kind: "error", message: body.error || r.statusText }); continue; } out.push(body); }
+    return out;
+  }, [api]);
+  dropRef.current = async (m) => {
+    if (m.asset) { try { placeImage(JSON.parse(m.asset), { x: m.x, y: m.y }, m.box); } catch { /* not ours */ } return; }
+    if (m.files && m.files.length) { const made = await uploadFiles(m.files.filter((f: File) => /^image\//.test(f.type))); made.forEach((a, i) => placeImage(a, { x: m.x + i * 3, y: m.y + i * 3 }, i === 0 ? m.box : null)); }
+  };
+  /** New boxes on the current station: a free text box, an empty image box. */
+  const addBox = useCallback((kind: "text" | "imagebox") => {
+    const d = docRef.current; if (!d) return; const st = d.stations[stationRef.current]; const si = d.sections.findIndex(s => s.key === st.section); if (si < 0) { setSave({ kind: "error", message: "this station has no section to hold a box" }); return; }
+    const sec = d.sections[si]; let n = sec.elements.length + 1; while (sec.elements.some(e => e.id === `${sec.key}.${n}`)) n++;
+    const id = `${sec.key}.${n}`;
+    const el = kind === "text" ? { id, type: "text", role: ["lede"], runs: [{ t: "New text" }], place: { x: 30, y: 40, w: 40 }, reveal: { p: st.p } } : { id, type: "image", frame: { w: 16, h: 9 }, place: { x: 30, y: 30, w: 40 }, reveal: { p: st.p } };
+    apply({ path: ["sections", si, "elements", sec.elements.length], value: el, label: kind === "text" ? "add text box" : "add image box" });
+    setSelected(id); setTimeout(() => bridge.send({ type: "itw:select", id }), 120); if (kind === "imagebox") { setFillTarget(id); setTab("images"); } else setTab("element");
+  }, [apply, bridge]);
+  /** Present: the draft, fullscreen, from the current station. */
+  const present = useCallback(() => { setPreview(true); const f = frame.current; if (f && f.requestFullscreen) f.requestFullscreen().catch(() => {}); }, []);
+  /** Publish in one step: a version named by the moment, published; the link to share. */
+  const publishNow = useCallback(async () => {
+    const d = docRef.current; if (!d || publishing) return; setPublishing(true);
+    try {
+      await persist();
+      const name = `Published ${new Date().toLocaleString()}`;
+      const v = await fetch(`${api}/versions`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, document: d }) }); const vb = await v.json(); if (!v.ok) throw new Error(vb.error);
+      const p = await fetch(`${api}/publication`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ versionId: vb.id }) }); const pb = await p.json(); if (!p.ok) throw new Error(pb.error);
+      await loadVersions(); setPublishedLink(`${window.location.origin}/p/${id}`); setShareOpen(true);
+    } catch (e: any) { setSave({ kind: "error", message: e.message }); } finally { setPublishing(false); }
+  }, [api, id, persist, loadVersions, publishing]);
   /** A style change for the line being edited: into the document, and straight onto the element without a re-apply. */
   const inlineStyle = useCallback((patch: Record<string, string | undefined>) => {
     const d = docRef.current, s = inlineRef.current; if (!d || !s) return; const hit = locate(d, s.id); if (!hit) return;
@@ -177,23 +248,31 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
       <div className="left"><a className="brand" href="/" title="Library">Mosaic</a><span className="title">{title}</span></div>
       <div className="mid">
         {!inPreview && <>
+          <button type="button" onClick={() => persist()} disabled={save.kind === "saving"} title="Save now (autosave is on)">Save</button>
           <button type="button" onClick={undo} disabled={!hist.undo} title="Undo (⌘Z)">Undo</button>
           <button type="button" onClick={redo} disabled={!hist.redo} title="Redo (⇧⌘Z)">Redo</button>
+          <button type="button" className="ghost" onClick={() => setTab("versions")} title="Versions: preview, restore, duplicate">History{versions.length ? ` · ${versions.length}` : ""}</button>
           <span className={"save " + save.kind} aria-live="polite">{save.kind === "idle" ? "" : save.kind === "dirty" ? "Unsaved" : save.kind === "saving" ? "Saving…" : save.kind === "saved" ? `Saved ${new Date(save.at).toLocaleTimeString()}` : `Not saved: ${save.message}`}</span>
           {pendingReload && <button type="button" className="ghost" onClick={() => { if (save.kind === "saved") reloadPlayer(); else persist(); }}>Reload stage</button>}
         </>}
         {previewVersion && <span className="save">Previewing “{previewVersion.name}” — read only</span>}
       </div>
       <div className="right">
-        {role === "owner" && !inPreview && <a className="btn ghost" href={`/presentations/${id}/people`}>People</a>}
         {!inPreview && <form method="post" action="/auth/sign-out" className="inline"><button type="submit" className="ghost" title={email}>Sign out</button></form>}
         <button type="button" className="ghost" onClick={() => { bridge.send({ type: "itw:notes", on: !notes }); setNotes(n => !n); }}>{notes ? "Hide notes" : "Notes"}</button>
-        <button type="button" className="ghost" onClick={() => bridge.send({ type: "itw:fullscreen", on: true })}>Fullscreen</button>
         {previewVersion
           ? <button type="button" onClick={() => previewVersionToggle(null)}>Back to draft</button>
-          : <button type="button" onClick={() => setPreview(p => !p)}>{preview ? "Back to editor" : "Preview"}</button>}
-        {!inPreview && <button type="button" className="primary" onClick={newVersion} disabled={!doc}>New version</button>}
+          : preview ? <button type="button" onClick={() => setPreview(false)}>Back to editor</button> : <button type="button" onClick={present} title="The draft, fullscreen, from this station">Present</button>}
+        {!inPreview && role === "owner" && <button type="button" className="ghost" onClick={() => setShareOpen(s => !s)}>Share</button>}
+        {!inPreview && <button type="button" className={role === "owner" ? "" : "primary"} onClick={newVersion} disabled={!doc} title="Name the current state as a version, without publishing">New version</button>}
+        {!inPreview && role === "owner" && <button type="button" className="primary" onClick={publishNow} disabled={!doc || publishing}>{publishing ? "Publishing…" : "Publish"}</button>}
       </div>
+      {shareOpen && !inPreview && <div className="share" role="dialog" aria-label="Share">
+        <header><strong>Share</strong><button type="button" className="ghost" onClick={() => setShareOpen(false)}>×</button></header>
+        {published ? <p>Published: <strong>{published.name}</strong>. Everyone with access sees it at<br /><code>{typeof window !== "undefined" ? window.location.origin : ""}/p/{id}</code> <button type="button" className="ghost" onClick={() => navigator.clipboard?.writeText(`${window.location.origin}/p/${id}`)}>Copy link</button></p> : <p className="muted">Nothing is published yet. Publish makes the current draft the presentation everyone with access sees.</p>}
+        {publishedLink && <p className="muted small">Just published.</p>}
+        <p className="muted">Who has access — roles and invitations — is on the <a href={`/presentations/${id}/people`}>People</a> page.</p>
+      </div>}
     </header>
 
     {!inPreview && doc && <aside className="side left"><Outline doc={doc} station={station} onGoto={i => bridge.send({ type: "itw:goto", index: i })} apply={apply} /></aside>}
@@ -204,18 +283,19 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
       </div>
       {!ready && <div className="loading">Loading the stage…</div>}
       <div className={"preview-nav" + (inPreview ? "" : " always")}><button type="button" aria-label="previous station" onClick={() => bridge.send({ type: "itw:goto", index: station - 1 })}>‹</button><span>{String(station + 1).padStart(2, "0")} / {doc?.stations.length ?? "—"}</span><button type="button" aria-label="next station" onClick={() => bridge.send({ type: "itw:goto", index: station + 1 })}>›</button></div>
-      {!inPreview && doc && <Filmstrip doc={doc} station={station} onGoto={i => bridge.send({ type: "itw:goto", index: i })} tools={<StationTools doc={doc} station={station}
+      {!inPreview && doc && <Filmstrip doc={doc} station={station} onGoto={i => bridge.send({ type: "itw:goto", index: i })} tools={<StationTools doc={doc} station={station} onAddBox={addBox} onAddImage={() => { fileDrop.current?.click(); }}
         onAdd={t => { const r = addBeat(doc, t, station); restructure(r.doc, `add ${t}`, r.station); }}
         onRemove={() => restructure(removeStation(doc, station), `remove station ${station + 1}`, Math.max(0, station - 1))}
         onMove={dir => { const r = moveStation(doc, station, dir); if (r) restructure(r.doc, "move station", r.station); }} />} />}
-      {inline && frameBox && doc && !inPreview && <InlineToolbar caret={inline.caret} frameBox={frameBox} element={locate(doc, inline.id)?.element ?? null} fontSize={inline.fontSize} onMark={m => bridge.send({ type: "itw:format", mark: m })} onStyle={inlineStyle} onDone={() => bridge.send({ type: "itw:endEdit" })} />}
+      {inline && frameBox && doc && !inPreview && <InlineToolbar caret={inline.caret} frameBox={frameBox} element={inline.id ? locate(doc, inline.id)?.element ?? null : null} fontSize={inline.fontSize} onMark={m => bridge.send({ type: "itw:format", mark: m })} onStyle={inlineStyle} onDone={() => bridge.send({ type: "itw:endEdit" })} copy={!!inline.copy} />}
     </main>
 
     {!inPreview && doc && <aside className="side right">
       <nav className="tabs">{(["element", "images", "motion", "copy", "assets", "versions"] as Tab[]).map(t => <button key={t} type="button" className={tab === t ? "on" : ""} onClick={() => setTab(t)}>{t === "element" ? "Element" : t === "images" ? "Images" : t === "motion" ? "Motion" : t === "copy" ? "Renderer copy" : t === "assets" ? "Marks" : `Versions${versions.length ? ` · ${versions.length}` : ""}`}</button>)}</nav>
       {issues.length > 0 && <div className="issues">{issues.slice(0, 5).map((i, k) => <div key={k}><code>{i.path}</code> {i.message}</div>)}</div>}
-      {tab === "element" && <Inspector doc={doc} slug={id} selectedId={selected} apply={apply} onDeselect={() => { setSelected(null); bridge.send({ type: "itw:select", id: null }); }} />}
-      {tab === "images" && <ImagesPanel doc={doc} slug={id} station={station} apply={apply} onPlaced={pid => { setSelected(pid); setTab("element"); setTimeout(() => bridge.send({ type: "itw:select", id: pid }), 150); }} />}
+      {tab === "element" && <Inspector doc={doc} slug={id} selectedId={selected} apply={apply} onDeselect={() => { setSelected(null); bridge.send({ type: "itw:select", id: null }); }} onFill={eid => { setFillTarget(eid); setTab("images"); }} />}
+      {tab === "images" && <ImagesPanel doc={doc} slug={id} station={station} apply={apply} fillTarget={fillTarget} onPick={a => placeImage(a, undefined, fillTarget)} onPlaced={pid => { setSelected(pid); setTab("element"); setTimeout(() => bridge.send({ type: "itw:select", id: pid }), 150); }} />}
+      <input type="file" accept="image/*" multiple hidden ref={fileDrop} onChange={async e => { const files = Array.from(e.target.files || []); e.target.value = ""; const made = await uploadFiles(files); made.forEach((a, i) => placeImage(a, { x: 34 + i * 3, y: 30 + i * 3 }, i === 0 ? fillTarget : null)); }} />
       {tab === "motion" && <AnimationPanel doc={doc} apply={apply} />}
       {tab === "copy" && <CopyPanel doc={doc} apply={apply} />}
       {tab === "assets" && <AssetsPanel doc={doc} apply={apply} presentationId={id} />}

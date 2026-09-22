@@ -244,6 +244,7 @@ Sixth pass (D-027, D-028): the room recedes for the whole run of text and never 
 - Step 2 (2026-09-21, D-038): home = the library; three kinds (editable deck, static HTML in a CSP sandbox, link); create from the engine's template; import by file or link; archive; 5 browser tests; migration `20260921100000_library.sql` applied locally and to the hosted project
 - Step 3 (2026-09-21, D-039): images — schema v6 `image` element and asset; the deck renders crop/turn/flip/filters from data; private `images` bucket and `/img/` route; Images tab, crop box, sliders; 3 browser tests; migration `20260921120000_images.sql` applied locally and hosted
 - Step 4 (2026-09-21, D-040): the composer — a plain scene on the engine, document-created sections and elements, schema v7, ten beats with re-spacing, station tools (add from the picker, move, remove), "New presentation" composes; 5 browser tests, 4 unit tests
+- Step 5 (2026-09-21, D-041): the Slides-like layer — free text and image boxes, drag to move, corner handles to resize, nudged flow lines, drag-and-drop from the library and from files, image boxes (the fluoroscopy frames among them) filled by click or drop, every on-page renderer copy typed in place, the bar (Save, Undo, Redo, History, Present, Publish, Share); schema v8; 7 browser tests
 - Next: Phase 8 (build, host, deploy) once the host is chosen; then Phase 9 on the deployed system
 
 ## Deployment (2026-09-21)

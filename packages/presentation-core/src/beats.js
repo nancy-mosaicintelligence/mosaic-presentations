@@ -1,6 +1,7 @@
 // The composer's beats: what a station can be, made from the engine's own vocabulary (roles, layouts, reveals) so a
 // deck composed here looks like the keynote without design work. A beat is a section plus the stations that play it.
 
+import { SCHEMA_VERSION } from "./schema.js";
 export const STEP = 0.04;   // progress between consecutive stations of a composed deck (55 stations fit in the rail's 2.4)
 
 /** The catalogue, in the order the picker shows it. */
@@ -72,7 +73,7 @@ export function newDeckDocument(o) {
   const a = makeBeat("opening", { key: "opening1", p: 0, chapter }), z = makeBeat("close", { key: "close1", p: STEP, chapter });
   a.section.elements[0].runs = t(o.title);
   return {
-    schemaVersion: 7, id: o.id, title: o.title, renderer: "itw-keynote",
+    schemaVersion: SCHEMA_VERSION, id: o.id, title: o.title, renderer: "itw-keynote",
     scene: { kind: "plain" },
     tokens: o.tokens, animation: o.animation,
     assets: { "mosaic-lockup": o.lockup },

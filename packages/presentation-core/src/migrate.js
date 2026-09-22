@@ -23,7 +23,9 @@ const STEPS = {
   // Additive; the stamp is the migration.
   5: (doc) => ({ ...doc, schemaVersion: 6 }),
   // 6 → 7: the composer — `scene` on the document, `in` on elements, `close` on stations, the `itw-lockup` scene. Stamp.
-  6: (doc) => ({ ...doc, schemaVersion: 7 })
+  6: (doc) => ({ ...doc, schemaVersion: 7 }),
+  // 7 → 8: free placement (`place`), nudges, image frames (image boxes, possibly empty). Stamp.
+  7: (doc) => ({ ...doc, schemaVersion: 8 })
 };
 
 /**

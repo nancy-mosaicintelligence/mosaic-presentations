@@ -146,3 +146,9 @@ button.danger { color: var(--signal); }
 .beatpicker .beats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
 .beatpicker .beat { display: grid; gap: 2px; text-align: left; padding: 8px 10px; border-radius: 6px; background: var(--panel); }
 .beatpicker .beat:hover { border-color: var(--signal); } .beatpicker .bl { font-weight: 500; } .beatpicker .bh { font-size: 12px; color: var(--ink-2); }
+
+/* share, tools */
+.share { position: absolute; right: 16px; top: calc(var(--bar) + 6px); z-index: 7; width: min(460px, calc(100vw - 32px)); background: var(--panel-2); border: 1px solid var(--hair-2); border-radius: 8px; box-shadow: 0 12px 40px rgba(0,0,0,.5); padding: 12px 14px; }
+.share header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; } .share code { display: block; margin: 6px 0; overflow-wrap: anywhere; color: var(--ink); } .share a { color: var(--ink); }
+.station-tools .sep { width: 1px; height: 22px; background: var(--hair-2); margin: 0 4px; }
+.panel .fill { padding: 8px 10px; border: 1px solid rgba(252,100,82,.5); border-radius: 6px; }
