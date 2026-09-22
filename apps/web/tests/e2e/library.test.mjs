@@ -21,7 +21,8 @@ before(async () => {
   browser = await chromium.launch({ executablePath: process.env.PW_EXEC });
   await ensureUsers(); await resetPresentation();
   // any presentation left by a previous run of this suite goes away too
-  const sb = admin(); const { data } = await sb.from("presentations").select("id, slug").neq("slug", "italian-tech-week"); for (const p of data || []) await sb.from("presentations").delete().eq("id", p.id);
+  const sb = admin(); const { data } = await sb.from("presentations").select("id, slug, created_by"); const users = await ensureUsers(); const mine = new Set(Object.values(users).map(u => u.id));
+  for (const p of data || []) if (p.slug !== "italian-tech-week" && p.slug !== "e2e-keynote" && mine.has(p.created_by)) await sb.from("presentations").delete().eq("id", p.id);   // only what the test accounts made
 }, { timeout: 180000 });
 after(async () => { await browser?.close(); server?.kill(); });
 
@@ -30,7 +31,7 @@ test("the home page is the library; a company colleague with no role sees an emp
   const home = await c.request.get(BASE + "/", { maxRedirects: 0 }); assert.equal(home.status(), 200); assert.ok((await home.text()).includes("New presentation"));
   assert.deepEqual((await json(c, "/api/presentations")).body, []);
   const o = await as("owner");
-  const lib = (await json(o, "/api/presentations")).body; assert.equal(lib.length, 1); assert.equal(lib[0].slug, "italian-tech-week"); assert.equal(lib[0].role, "owner"); assert.equal(lib[0].kind, "deck");
+  const lib = (await json(o, "/api/presentations")).body; assert.ok(lib.some(p => p.slug === "italian-tech-week" && p.role === "owner" && p.kind === "deck"), "the keynote, as owner"); assert.ok(lib.some(p => p.slug === "e2e-keynote"));
   // the guest is admitted only through an invitation (from the access suite's rules); here they hold none → refused at sign-in
   const g = await (await browser.newContext()).newPage(); const r = await signIn(g, BASE, USERS.guest); assert.equal(r.status, 403);
 });
@@ -45,7 +46,7 @@ test("an editable copy of the keynote starts from its document, with its own dra
   const doc = draft.body.document; doc.stations[0].note = "series A note"; assert.equal((await json(c, "/api/presentations/series-a-narrative/draft", { method: "PUT", data: { document: doc } })).status, 200);
   const o = await as("owner");
   assert.equal((await json(o, "/api/presentations/series-a-narrative/draft")).status, 403, "the keynote's owner has no role on the colleague's deck");
-  assert.notEqual((await json(o, "/api/presentations/italian-tech-week/draft")).body.document.stations[0].note, "series A note");
+  assert.notEqual((await json(o, "/api/presentations/e2e-keynote/draft")).body.document.stations[0].note, "series A note");
   assert.equal((await c.request.get(`${BASE}/presentations/series-a-narrative/edit`)).status(), 200);
   // a second with the same title gets a different slug
   const again = await json(c, "/api/presentations", { method: "POST", data: { kind: "deck", title: "Series A narrative" } }); assert.equal(again.status, 201); assert.notEqual(again.body.slug, "series-a-narrative");

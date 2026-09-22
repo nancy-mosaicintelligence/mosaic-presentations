@@ -3392,6 +3392,8 @@ body.editing .editsel{cursor:move}
       if (step >= STATIONS.length) step = STATIONS.length - 1;
       var known = {}, keys = {}; doc.sections.forEach(function (s) { keys[s.key] = 1; s.elements.forEach(function (e) { known[e.id] = 1; }); });
       [].slice.call(document.querySelectorAll("[data-gen][data-id]")).forEach(function (n) { if (!known[n.getAttribute("data-id")] && n.parentNode) n.parentNode.removeChild(n); });
+      /* a bound node whose element left the document is hidden (it returns with the element, e.g. on undo) */
+      [].slice.call(document.querySelectorAll("[data-id]:not([data-gen])")).forEach(function (n) { n.style.display = known[n.getAttribute("data-id")] ? n.style.display : "none"; });
       [].slice.call(document.querySelectorAll("section.beat[data-gen]")).forEach(function (n) { if (!keys[n.getAttribute("data-k")]) n.parentNode.removeChild(n); });
       fillLockupScenes(); beats = computeBeats();
       rebuildChapters(); rebuildReveals(); buildRail(); PT = STATIONS[step].p; paintNote(); paintHud();
@@ -3527,10 +3529,21 @@ body.editing .editsel{cursor:move}
     document.addEventListener("input", function (e) { if (editingEl && editingEl.contains(e.target)) postEdited("itw:edited"); }, true);
     document.addEventListener("selectionchange", function () { if (editingEl) post({ type: "itw:caret", caret: caretRect() }); });
     window.addEventListener("keydown", function (e) {
-      if (!editingEl) return;
-      e.stopPropagation();
-      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); endEdit(); }
-      else if (e.key === "Escape") { e.preventDefault(); endEdit(); }
+      if (editingEl) {
+        e.stopPropagation();
+        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); endEdit(); }
+        else if (e.key === "Escape") { e.preventDefault(); endEdit(); }
+        return;
+      }
+      /* with a selection and nothing open: Delete removes it, Escape lets go, the arrows nudge it (Shift: by more) */
+      if (!editing || !selectedId) return;
+      var step = e.shiftKey ? 5 : 1;
+      if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); e.stopPropagation(); post({ type: "itw:delete", id: selectedId }); }
+      else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); select(null, true); }
+      else if (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "ArrowUp" || e.key === "ArrowDown") {
+        e.preventDefault(); e.stopPropagation();
+        post({ type: "itw:nudgeKey", id: selectedId, dx: e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0, dy: e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0 });
+      }
     }, true);
     window.addEventListener("dblclick", function (e) {
       if (!editing) return; e.stopPropagation(); e.preventDefault();

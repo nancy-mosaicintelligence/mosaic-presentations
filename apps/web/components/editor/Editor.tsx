@@ -59,6 +59,8 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
     else if (m.type === "itw:station") setStation(m.index);
     else if (m.type === "itw:selected") { setSelected(m.id); if (m.id && m.user) { if (m.empty) { setFillTarget(m.id); setTab("images"); } else setTab("element"); } }
     else if (m.type === "itw:placed") placedRef.current(m);
+    else if (m.type === "itw:delete") removeRef.current(m.id);
+    else if (m.type === "itw:nudgeKey") nudgeRef.current(m.id, m.dx, m.dy);
     else if (m.type === "itw:drop") dropRef.current(m);
     else if (m.type === "itw:editStart") { setInline({ id: m.id, item: m.item, copy: m.copy, caret: m.caret, fontSize: m.fontSize }); setFrameBox(frame.current?.getBoundingClientRect() ?? null); }
     else if (m.type === "itw:caret") { if (m.caret) setInline(s => (s ? { ...s, caret: m.caret } : s)); }
@@ -68,6 +70,8 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
   const inlineEditRef = useRef<(id: string, item: number, runs: any[], typing: boolean) => void>(() => {});
   const copyEditRef = useRef<(path: string, runs: any[], text: string, typing: boolean) => void>(() => {});
   const placedRef = useRef<(m: BridgeMessage) => void>(() => {});
+  const removeRef = useRef<(id: string) => void>(() => {});
+  const nudgeRef = useRef<(id: string, dx: number, dy: number) => void>(() => {});
   const dropRef = useRef<(m: BridgeMessage) => void>(() => {});
   const bridge = useMemo(() => new PlayerBridge(() => frame.current, onMessage), [onMessage]);
   // attach, and ask the frame for its state in case it is already running (a remount never reloads the frame)
@@ -139,6 +143,16 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
     const next = history.apply({ path: ["copy", ...keys], value, label: `copy ${path}`, coalesce: `copy.${path}` }) as Doc;
     setDoc(next); setHist({ undo: history.canUndo, redo: history.canRedo }); scheduleSave(); setPendingReload(true);
   };
+  /** Remove the selected element (the keynote's own lines are hidden rather than lost; undo brings anything back). */
+  removeRef.current = (id) => {
+    const d = docRef.current; if (!d) return; const hit = locate(d, id); if (!hit) return;
+    apply({ path: ["sections", hit.si, "elements", hit.ei], value: ABSENT, label: `remove ${id}` });
+  };
+  nudgeRef.current = (id, dx, dy) => {
+    const d = docRef.current; if (!d) return; const hit = locate(d, id); if (!hit) return; const base = ["sections", hit.si, "elements", hit.ei]; const e = hit.element;
+    if (e.place) apply({ path: [...base, "place"], value: { ...e.place, x: +(e.place.x + dx).toFixed(2), y: +(e.place.y + dy).toFixed(2) }, label: `nudge ${id}`, coalesce: `${id}.key` });
+    else { const n = { dx: +((e.nudge?.dx || 0) + dx).toFixed(2), dy: +((e.nudge?.dy || 0) + dy).toFixed(2) }; apply({ path: [...base, "nudge"], value: n.dx === 0 && n.dy === 0 ? undefined : n, label: `nudge ${id}`, coalesce: `${id}.key` }); }
+  };
   // a move or a resize on the stage
   placedRef.current = (m) => {
     const d = docRef.current; if (!d) return; const hit = locate(d, m.id); if (!hit) return; const base = ["sections", hit.si, "elements", hit.ei];
@@ -206,12 +220,19 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
   const undo = useCallback(() => { const e = history.peekUndo(); if (!e) return; afterChange(history.undo() as Doc, e.path); }, [history, afterChange]);
   const redo = useCallback(() => { const e = history.peekRedo(); if (!e) return; afterChange(history.redo() as Doc, e.path); }, [history, afterChange]);
   const stationRef = useRef(station); stationRef.current = station;
+  const selectedRef = useRef(selected); selectedRef.current = selected;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null; const inField = !!t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable);
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key.toLowerCase() === "z") { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
       if (inField || mod) return;
+      if (selectedRef.current && !inlineRef.current) {
+        const step = e.shiftKey ? 5 : 1;
+        if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); removeRef.current(selectedRef.current); return; }
+        if (e.key === "Escape") { e.preventDefault(); setSelected(null); bridge.send({ type: "itw:select", id: null }); return; }
+        if (e.key.startsWith("Arrow")) { e.preventDefault(); nudgeRef.current(selectedRef.current, e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0, e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0); return; }
+      }
       if (e.key === "ArrowRight" || e.key === "PageDown") { e.preventDefault(); bridge.send({ type: "itw:goto", index: stationRef.current + 1 }); }
       else if (e.key === "ArrowLeft" || e.key === "PageUp") { e.preventDefault(); bridge.send({ type: "itw:goto", index: stationRef.current - 1 }); }
       else if (e.key === "Home") { e.preventDefault(); bridge.send({ type: "itw:goto", index: 0 }); }
@@ -300,13 +321,13 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
     {!inPreview && showRight && doc && <aside className="side right">
       <nav className="tabs">{(["element", "images", "motion", "copy", "assets", "versions"] as Tab[]).map(t => <button key={t} type="button" className={tab === t ? "on" : ""} onClick={() => setTab(t)}>{t === "element" ? "Element" : t === "images" ? "Images" : t === "motion" ? "Motion" : t === "copy" ? "Renderer copy" : t === "assets" ? "Marks" : `Versions${versions.length ? ` · ${versions.length}` : ""}`}</button>)}</nav>
       {issues.length > 0 && <div className="issues">{issues.slice(0, 5).map((i, k) => <div key={k}><code>{i.path}</code> {i.message}</div>)}</div>}
-      {tab === "element" && <Inspector doc={doc} slug={id} selectedId={selected} apply={apply} onDeselect={() => { setSelected(null); bridge.send({ type: "itw:select", id: null }); }} onFill={eid => { setFillTarget(eid); setTab("images"); }} />}
+      {tab === "element" && <Inspector doc={doc} slug={id} selectedId={selected} apply={apply} onDeselect={() => { setSelected(null); bridge.send({ type: "itw:select", id: null }); }} onFill={eid => { setFillTarget(eid); setTab("images"); }} onRemove={eid => removeRef.current(eid)} />}
       {tab === "images" && <ImagesPanel doc={doc} slug={id} station={station} apply={apply} fillTarget={fillTarget} onPick={a => placeImage(a, undefined, fillTarget)} onPlaced={pid => { setSelected(pid); setTab("element"); setTimeout(() => bridge.send({ type: "itw:select", id: pid }), 150); }} />}
       <input type="file" accept="image/*" multiple hidden ref={fileDrop} onChange={async e => { const files = Array.from(e.target.files || []); e.target.value = ""; const made = await uploadFiles(files); made.forEach((a, i) => placeImage(a, { x: 34 + i * 3, y: 30 + i * 3 }, i === 0 ? fillTarget : null)); }} />
       {tab === "motion" && <AnimationPanel doc={doc} apply={apply} />}
       {tab === "copy" && <CopyPanel doc={doc} apply={apply} />}
       {tab === "assets" && <AssetsPanel doc={doc} apply={apply} presentationId={id} />}
-      {tab === "versions" && <VersionsPanel versions={versions} currentHash={hash} draftBasedOn={draftBasedOn} previewing={null} onPreview={previewVersionToggle} onDuplicate={duplicate} onRestore={restore} published={published} onPublish={role === "owner" ? publish : undefined} />}
+      {tab === "versions" && <VersionsPanel versions={versions} currentHash={hash} draftBasedOn={draftBasedOn} previewing={null} onPreview={previewVersionToggle} onDuplicate={duplicate} onRestore={restore} published={published} onPublish={role === "owner" ? publish : undefined} onReset={async () => { if (!window.confirm("Reset the draft to the committed document? Versions are kept; the current draft is replaced.")) return; const r = await fetch(`${api}/draft/reset`, { method: "POST" }); if (!r.ok) { setSave({ kind: "error", message: (await r.json()).error }); return; } await loadDraft(); reloadPlayer(); }} />}
     </aside>}
   </div>;
 }

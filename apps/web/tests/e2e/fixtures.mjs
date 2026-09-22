@@ -29,13 +29,21 @@ export async function ensureUsers() {
   return out;
 }
 
-/** Delete the presentation row (everything under it cascades: memberships, invitations, draft, versions, publication, assets, audit); the app recreates it on first access. */
-export async function resetPresentation(slug = "italian-tech-week") {
-  const sb = admin();
-  const { data: p } = await sb.from("presentations").select("id").eq("slug", slug).maybeSingle();
-  if (!p) return;
-  const { error } = await sb.storage.from("assets").list(p.id); if (!error) { const { data: files } = await sb.storage.from("assets").list(p.id); if (files?.length) await sb.storage.from("assets").remove(files.map(f => `${p.id}/${f.name}`)); }
-  const { error: e2 } = await sb.from("presentations").delete().eq("id", p.id); if (e2) throw e2;
+/** The tests' own copy of the keynote: made fresh for every run, owned by the test owner. The real keynote and the
+ *  operator's own drafts are never touched (the local database is shared with the running app). */
+export const TEST_SLUG = "e2e-keynote";
+export async function resetPresentation(slug = TEST_SLUG) {
+  if (slug === "italian-tech-week") throw new Error("the tests never reset the keynote");
+  const sb = admin(); const users = await ensureUsers();
+  const { data: old } = await sb.from("presentations").select("id").eq("slug", slug).maybeSingle();
+  if (old) { for (const bucket of ["assets", "images"]) { const { data: files } = await sb.storage.from(bucket).list(old.id); if (files?.length) await sb.storage.from(bucket).remove(files.map(f => `${old.id}/${f.name}`)); } const { error } = await sb.from("presentations").delete().eq("id", old.id); if (error) throw error; }
+  const { data: p, error: e2 } = await sb.from("presentations").insert({ slug, title: "E2E keynote", kind: "deck", renderer: "itw-keynote", created_by: users.owner.id }).select("id").single(); if (e2) throw e2;
+  const { error: e3 } = await sb.from("presentation_memberships").insert({ presentation_id: p.id, user_id: users.owner.id, role: "owner", granted_by: users.owner.id }); if (e3) throw e3;
+  // memberships and invitations the test accounts hold elsewhere from earlier runs go too (never the operator's)
+  const ids = Object.values(users).map(u => u.id);
+  await sb.from("presentation_memberships").delete().in("user_id", ids).neq("presentation_id", p.id);
+  await sb.from("invitations").delete().in("email", Object.values(USERS));
+  return p.id;
 }
 
 /** Sign a test account into a Playwright page through the app's own admission path. */

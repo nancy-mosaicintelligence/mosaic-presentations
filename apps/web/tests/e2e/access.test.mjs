@@ -8,10 +8,10 @@ import { spawn } from "node:child_process";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
-import { startApp, ensureUsers, resetPresentation, signIn, signOut, USERS, admin } from "./fixtures.mjs";
+import { startApp, ensureUsers, resetPresentation, signIn, signOut, USERS, admin, TEST_SLUG } from "./fixtures.mjs";
 const { chromium } = createRequire((process.env.PW_MODULES || process.env.NODE_PATH || "") + "/")("playwright");
 
-const APP = join(dirname(fileURLToPath(import.meta.url)), "..", ".."), PORT = 3124, BASE = `http://localhost:${PORT}`, ID = "italian-tech-week", API = `${BASE}/api/presentations/${ID}`;
+const APP = join(dirname(fileURLToPath(import.meta.url)), "..", ".."), PORT = 3124, BASE = `http://localhost:${PORT}`, ID = TEST_SLUG, API = `${BASE}/api/presentations/${ID}`, KEYNOTE = "italian-tech-week";
 let server, browser, users; const pages = {};
 const as = async (who) => { if (pages[who]) return pages[who]; const p = await (await browser.newContext({ viewport: { width: 1400, height: 800 } })).newPage(); pages[who] = p; if (who !== "nobody") { const r = await signIn(p, BASE, USERS[who]); assert.equal(r.status, 200, `${who}: ${JSON.stringify(r.body)}`); } return p; };
 const status = async (p, path, init) => (await p.request.fetch(BASE + path, { maxRedirects: 0, ...init })).status();
@@ -46,6 +46,8 @@ test("a stranger's Google account is refused at admission; a colleague without a
 
 test("the owner (bootstrapped from OWNER_EMAILS) manages people: roles, invitations, the last-owner rule", async () => {
   const o = await as("owner");
+  // OWNER_EMAILS bootstraps the test owner onto the keynote (alongside whoever else owns it); the test deck is theirs alone
+  const kn = await json(o, `/api/presentations/${KEYNOTE}/members`); assert.equal(kn.status, 200); assert.ok(kn.body.some(m => m.email === USERS.owner && m.role === "owner"), "bootstrapped onto the keynote");
   const members = await json(o, `/api/presentations/${ID}/members`); assert.equal(members.status, 200); assert.deepEqual(members.body.map(m => [m.email, m.role]), [[USERS.owner, "owner"]]);
   // the owner cannot demote or remove the last owner
   assert.equal((await json(o, `/api/presentations/${ID}/members`, { method: "PUT", data: { userId: users.owner.id, role: "editor" } })).status, 409);

@@ -10,11 +10,11 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
-import { startApp, ensureUsers, resetPresentation, signIn, USERS } from "./fixtures.mjs";
+import { startApp, ensureUsers, resetPresentation, signIn, USERS, TEST_SLUG } from "./fixtures.mjs";
 const { chromium } = createRequire((process.env.PW_MODULES || process.env.NODE_PATH || "") + "/")("playwright");
 
 const here = dirname(fileURLToPath(import.meta.url)), APP = join(here, "..", "..");
-const PORT = 3123, BASE = `http://localhost:${PORT}`, ID = "italian-tech-week";
+const PORT = 3123, BASE = `http://localhost:${PORT}`, ID = TEST_SLUG;
 let server, browser, page, data; const answers = [];
 // API calls go through the signed-in page's context so they carry the session cookies
 const api = async (path, init = {}) => { const r = await page.request.fetch(BASE + "/api/presentations/" + ID + path, { method: init.method || "GET", headers: init.headers, data: init.body }); return { status: r.status(), body: await r.json().catch(() => ({})) }; };
@@ -48,7 +48,7 @@ after(async () => { await browser?.close(); server?.kill(); rmSync(data, { recur
 
 test("the root is the library, and the keynote is in it", async () => {
   const r = await page.request.get(BASE + "/", { maxRedirects: 0 });
-  assert.equal(r.status(), 200); assert.ok((await r.text()).includes("Italian Tech Week"));
+  assert.equal(r.status(), 200); assert.ok((await r.text()).includes("E2E keynote"));
 });
 
 test("the draft is seeded from the committed document and an invalid draft never replaces it", async () => {

@@ -7,10 +7,10 @@ import { spawn } from "node:child_process";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
-import { startApp, ensureUsers, resetPresentation, signIn, USERS } from "./fixtures.mjs";
+import { startApp, ensureUsers, resetPresentation, signIn, USERS, TEST_SLUG } from "./fixtures.mjs";
 const { chromium } = createRequire((process.env.PW_MODULES || process.env.NODE_PATH || "") + "/")("playwright");
 
-const APP = join(dirname(fileURLToPath(import.meta.url)), "..", ".."), PORT = 3130, BASE = `http://localhost:${PORT}`, ID = "italian-tech-week", API = `${BASE}/api/presentations/${ID}`;
+const APP = join(dirname(fileURLToPath(import.meta.url)), "..", ".."), PORT = 3130, BASE = `http://localhost:${PORT}`, ID = TEST_SLUG, API = `${BASE}/api/presentations/${ID}`;
 let server, browser, page;
 const frame = () => page.frame({ url: /\/player\// });
 const api = async (path, init) => { const r = await page.request.fetch(API + path, { maxRedirects: 0, ...init }); return { status: r.status(), body: await r.json().catch(() => ({})) }; };
@@ -113,7 +113,7 @@ test("the bar: Save, History, Present, Publish and Share", async () => {
   await page.click('.bar button:has-text("History")', { timeout: 10000 }); await page.waitForSelector(".versions", { state: "attached", timeout: 10000 });
   await page.click('.bar button:has-text("Publish")', { timeout: 10000 }).catch(async e => { throw new Error("Publish click failed: " + e.message.split("\n").slice(0, 6).join(" | ") + " — bar: " + JSON.stringify(await page.locator(".bar").innerText())); });
   try { await page.waitForSelector(".share", { timeout: 30000 }); } catch (e) { throw new Error("no share dialog after Publish — save: " + await page.locator(".bar .save").textContent() + " versions: " + JSON.stringify((await api("/versions")).body.map(v => v.name))); }
-  await page.waitForFunction(() => document.querySelector(".share")?.textContent.includes("/p/italian-tech-week"), null, { timeout: 15000 });
+  await page.waitForFunction((slug) => document.querySelector(".share")?.textContent.includes("/p/" + slug), ID, { timeout: 15000 });
   const pub = await api("/publication"); assert.ok(pub.body && pub.body.versionId, "published"); assert.match(pub.body.name, /^Published /);
   const list = await api("/versions"); assert.equal(list.body.length, 1);
   await page.click('.share button:has-text("×")');
@@ -156,3 +156,38 @@ test("the side panels fold away by hand and on a narrow window, and the stage ta
   await page.setViewportSize({ width: 1000, height: 700 }); await page.waitForSelector(".editor.no-left.no-right", { timeout: 5000 }); assert.equal(await page.locator(".side").count(), 0);
   await page.setViewportSize({ width: 1600, height: 900 }); await page.waitForSelector(".editor:not(.no-left):not(.no-right)", { timeout: 5000 });
 }, { timeout: 60000 });
+
+test("Delete removes the selection (a free box, then a keynote line which is hidden, not lost); arrows nudge; Escape lets go; undo brings back", async () => {
+  await goto(0); await landed("open.1");
+  const had = new Set((await draft()).sections[0].elements.map(e => e.id));   /* earlier tests left boxes of their own */
+  await page.click('.station-tools button:has-text("+ Text box")');
+  const d0 = await untilDraft(d => d.sections[0].elements.some(e => !had.has(e.id) && e.place && e.type === "text"), "a fresh text box");
+  const box = d0.sections[0].elements.find(e => !had.has(e.id) && e.place && e.type === "text");
+  await page.waitForSelector(`.ph code:has-text("${box.id}")`); await page.click(".bar .title");
+  await page.keyboard.press("ArrowRight"); await page.keyboard.press("Shift+ArrowDown");
+  const nudged = await untilDraft(d => { const e = el(d, box.id); return e && e.place.x === 31 && e.place.y === 45; }, "the arrow nudge");
+  assert.ok(nudged);
+  await page.keyboard.press("Delete");
+  await untilDraft(d => !el(d, box.id), "the deletion");
+  await frame().waitForSelector(`[data-id="${box.id}"]`, { state: "detached", timeout: 15000 });
+  assert.equal(await page.locator(".ph code").count(), 0, "nothing selected afterwards");
+  // the inspector's Remove on a keynote line hides its node; undo restores the element and the node
+  const c = await centre("open.1"); await page.mouse.click(c.b.x + 5, c.y); await page.waitForSelector('.ph code:has-text("open.1")');
+  await page.click('.ph button:has-text("Remove")');
+  await untilDraft(d => !el(d, "open.1"), "the keynote line's removal");
+  await frame().waitForFunction(() => document.querySelector('[data-id="open.1"]').style.display === "none", null, { timeout: 15000 });
+  await page.click(".bar .title"); await page.keyboard.press("Meta+z");
+  await untilDraft(d => !!el(d, "open.1"), "the undo");
+  await frame().waitForFunction(() => document.querySelector('[data-id="open.1"]').style.display !== "none", null, { timeout: 15000 });
+  // Escape in the frame lets go of the selection
+  const c2 = await centre("open.1"); await page.mouse.click(c2.b.x + 5, c2.y); await page.waitForSelector('.ph code:has-text("open.1")');
+  await page.keyboard.press("Escape"); await page.waitForSelector(".ph code", { state: "detached", timeout: 5000 });
+}, { timeout: 120000 });
+
+test("History offers a reset of the draft to the committed document", async () => {
+  await page.click('.bar button:has-text("History")'); await page.waitForSelector('button:has-text("Reset the draft")');
+  await page.click('button:has-text("Reset the draft")');
+  const d = await untilDraft(d => d.copy.partnerLine === "October 2026, Italy" && !d.sections.some(s => s.elements.some(e => e.place || e.nudge)), "the reset");
+  assert.equal(d.sections.find(s => s.key === "lab").elements[0].asset, undefined, "the fluoroscopy frame is empty again");
+  await stageReady();
+}, { timeout: 90000 });

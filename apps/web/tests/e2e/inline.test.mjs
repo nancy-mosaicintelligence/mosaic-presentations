@@ -6,10 +6,10 @@ import { spawn } from "node:child_process";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
-import { startApp, ensureUsers, resetPresentation, signIn, USERS } from "./fixtures.mjs";
+import { startApp, ensureUsers, resetPresentation, signIn, USERS, TEST_SLUG } from "./fixtures.mjs";
 const { chromium } = createRequire((process.env.PW_MODULES || process.env.NODE_PATH || "") + "/")("playwright");
 
-const APP = join(dirname(fileURLToPath(import.meta.url)), "..", ".."), PORT = 3125, BASE = `http://localhost:${PORT}`, ID = "italian-tech-week";
+const APP = join(dirname(fileURLToPath(import.meta.url)), "..", ".."), PORT = 3125, BASE = `http://localhost:${PORT}`, ID = TEST_SLUG;
 let server, browser, page;
 const frame = () => page.frame({ url: /\/player\// });
 const draft = async () => (await (await page.request.get(`${BASE}/api/presentations/${ID}/draft`)).json()).document;

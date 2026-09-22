@@ -53,6 +53,20 @@ export class SupabaseStore implements Store {
     await this.log("draft.seeded", { from: def.contentFile, contentHash: hash });
     return { ...this.draftOf(made), basedOn: "source" };
   }
+  /** The starting document: the renderer's template, or a composed deck's fresh opening and close. */
+  private async seedDocument(): Promise<any> {
+    const p = await getPresentation(this.slug); if (!p) throw new StoreError(404, "unknown presentation");
+    const r = rendererOf(p); const template = JSON.parse(await fs.readFile(join(repoRoot(), r.templateContent), "utf8"));
+    return r.compose ? newDeckDocument({ id: this.slug, title: p.title, event: p.description || "", tokens: template.tokens, animation: template.animation, lockup: template.assets["mosaic-lockup"] }) : template;
+  }
+  /** The draft back to the starting document (an update under the editor's own rights; versions stay). */
+  async resetDraft(): Promise<Draft> {
+    const { doc, hash } = checked(await this.seedDocument());
+    const { data, error } = await this.sb.from("presentation_drafts").upsert({ presentation_id: this.presentationId, document: doc, content_hash: hash, based_on: null, updated_at: nowISO(), updated_by: this.user.id }).select("document, content_hash, based_on, updated_at").single();
+    if (error) dbFail(error);
+    await this.log("draft.reset", { contentHash: hash });
+    return { ...this.draftOf(data), basedOn: "source" };
+  }
   async saveDraft(_id: string, document: unknown): Promise<Draft> {
     const { doc, hash } = checked(document);
     const { data, error } = await this.sb.from("presentation_drafts").upsert({ presentation_id: this.presentationId, document: doc, content_hash: hash, based_on: null, updated_at: nowISO(), updated_by: this.user.id }).select("document, content_hash, based_on, updated_at").single();

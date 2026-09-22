@@ -8,6 +8,7 @@ import { SupabaseStore } from "./store-supabase";
 /** The store for one request, after the role gate: the database as the signed-in user, or the file store in offline mode. */
 /** What only the database store offers; the file store leaves these undefined and the routes answer 501. */
 export interface Publishing {
+  resetDraft?: (actor: string) => Promise<unknown>;
   publish?: (versionId: string) => Promise<{ versionId: string; publishedAt: string }>;
   published?: () => Promise<{ versionId: string; publishedAt: string; name: string; document: unknown } | null>;
 }

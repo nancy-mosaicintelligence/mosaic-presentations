@@ -3,12 +3,13 @@ import { useState } from "react";
 
 export type VersionMeta = { id: string; name: string; note?: string; author: string; createdAt: string; contentHash: string; schemaVersion: number; duplicatedFrom?: string };
 
-export function VersionsPanel({ versions, currentHash, draftBasedOn, onPreview, onDuplicate, onRestore, previewing, published, onPublish }: { versions: VersionMeta[]; currentHash: string; draftBasedOn?: string; onPreview: (v: VersionMeta | null) => void; onDuplicate: (v: VersionMeta) => void; onRestore: (v: VersionMeta) => void; previewing: string | null; published?: { versionId: string; publishedAt: string; name: string } | null; onPublish?: (v: VersionMeta) => void }) {
+export function VersionsPanel({ versions, currentHash, draftBasedOn, onPreview, onDuplicate, onRestore, previewing, published, onPublish, onReset }: { versions: VersionMeta[]; currentHash: string; draftBasedOn?: string; onPreview: (v: VersionMeta | null) => void; onDuplicate: (v: VersionMeta) => void; onRestore: (v: VersionMeta) => void; previewing: string | null; published?: { versionId: string; publishedAt: string; name: string } | null; onPublish?: (v: VersionMeta) => void; onReset?: () => void }) {
   const [confirm, setConfirm] = useState<string | null>(null);
   return <div className="panel">
     <p className="muted">Every version is a complete, immutable snapshot. Restoring copies one into the working draft; nothing made later is lost.{onPublish ? " Publishing makes one the presentation everyone with access sees." : ""}</p>
     {published && <p className="muted small">Published: <strong>{published.name}</strong> · {new Date(published.publishedAt).toLocaleString()}</p>}
     {versions.length === 0 && <p className="muted">No versions yet. “New version” in the bar above names the current state.</p>}
+    {onReset && <p><button type="button" className="ghost danger" onClick={onReset}>Reset the draft to the committed document</button></p>}
     <ul className="versions">
       {versions.map(v => <li key={v.id} className={previewing === v.id ? "previewing" : ""}>
         <div className="vh"><strong>{v.name}</strong>{v.contentHash === currentHash && <span className="tag">current</span>}{draftBasedOn === v.id && <span className="tag">restored</span>}{published?.versionId === v.id && <span className="tag live">published</span>}</div>

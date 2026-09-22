@@ -300,3 +300,6 @@ Production cannot be marked complete until the deployed URL has been opened and 
 | The renderer's on-page copy is typed in place and the stage reloads with it | PASS | `slides.test.mjs` |
 | Save, History, Present, Publish (one press: a version, published, the link) and Share | PASS | `slides.test.mjs` |
 | The keynote unchanged for the audience | PASS | parity; 54/54 (`verify-slides`) |
+| Delete/Backspace removes the selection, Remove in the inspector does the same; a keynote line is hidden, not lost, and undo brings it back; the arrows nudge; Escape lets go | PASS | `slides.test.mjs` (D-043) |
+| History resets the draft to the committed document; versions stay | PASS | `slides.test.mjs` (D-043) |
+| The browser suites work on their own copy of the keynote (`e2e-keynote`) and never reset the keynote or its drafts | PASS | `fixtures.mjs`; parity; 54/54 (`verify-keys`) |

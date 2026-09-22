@@ -8,7 +8,7 @@ import { Row, TextField, NumberField, Tokens } from "./fields";
 
 const TYPE_LABEL: Record<string, string> = { text: "Text", list: "List", chips: "Chips", chain: "Chain", "loop-labels": "Loop labels", "custom-scene": "Scene", group: "Group", image: "Image" };
 
-export function Inspector({ doc, slug, selectedId, apply, onDeselect, onFill }: { doc: Doc; slug: string; selectedId: string | null; apply: (c: Command) => void; onDeselect: () => void; onFill?: (id: string) => void }) {
+export function Inspector({ doc, slug, selectedId, apply, onDeselect, onFill, onRemove }: { doc: Doc; slug: string; selectedId: string | null; apply: (c: Command) => void; onDeselect: () => void; onFill?: (id: string) => void; onRemove?: (id: string) => void }) {
   const hit = locate(doc, selectedId);
   if (!hit) return <div className="panel empty"><p>Click anything on the stage to select it; double-click a line to type into it.</p><p className="muted">The filmstrip under the stage and the arrow keys move between stations. This panel holds the finer controls of whatever is selected.</p></div>;
   const { si, ei, section, element: e } = hit;
@@ -19,7 +19,7 @@ export function Inspector({ doc, slug, selectedId, apply, onDeselect, onFill }: 
     <Row label="Sequence" hint="seconds after"><NumberField value={rv?.seq} step={0.1} onChange={seq => { if (!rv) return; const n = { ...rv }; if (seq === undefined) delete n.seq; else n.seq = seq; set(n); }} /></Row>
   </>;
   return <div className="panel">
-    <header className="ph"><span className="kind">{TYPE_LABEL[e.type] || e.type}</span><code>{e.id}</code><button type="button" className="ghost" onClick={onDeselect}>Deselect</button></header>
+    <header className="ph"><span className="kind">{TYPE_LABEL[e.type] || e.type}</span><code>{e.id}</code><button type="button" className="ghost danger" title="Delete key" onClick={() => onRemove?.(e.id)}>Remove</button><button type="button" className="ghost" onClick={onDeselect}>Deselect</button></header>
 
     {e.type === "text" && <section><h4>Copy</h4><RunsEditor runs={e.runs || []} coalesceKey={e.id} onChange={(runs, co) => apply({ path: [...base, "runs"], value: runs, label: `copy of ${e.id}`, coalesce: co ? e.id : undefined })} /></section>}
     {(e.type === "list" || e.type === "chips" || e.type === "chain" || e.type === "loop-labels") && <section><h4>Items</h4>

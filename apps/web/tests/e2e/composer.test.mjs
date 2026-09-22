@@ -25,7 +25,8 @@ before(async () => {
   page.on("pageerror", e => console.error("pageerror:", e.message));
   page.on("dialog", d => d.accept());
   await ensureUsers(); await resetPresentation();
-  const sb = admin(); const { data } = await sb.from("presentations").select("id, slug").neq("slug", "italian-tech-week"); for (const p of data || []) await sb.from("presentations").delete().eq("id", p.id);
+  const sb = admin(); const { data } = await sb.from("presentations").select("id, slug, created_by"); const users = await ensureUsers(); const mine = new Set(Object.values(users).map(u => u.id));
+  for (const p of data || []) if (p.slug !== "italian-tech-week" && p.slug !== "e2e-keynote" && mine.has(p.created_by)) await sb.from("presentations").delete().eq("id", p.id);
   const r = await signIn(page, BASE, USERS.owner); assert.equal(r.status, 200, JSON.stringify(r.body));
 }, { timeout: 180000 });
 after(async () => { await browser?.close(); server?.kill(); });

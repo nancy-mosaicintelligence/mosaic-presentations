@@ -3,22 +3,22 @@
     {
       "url": "http://localhost:4173/presentations/italian-tech-week/snapshots/phase4c/index.html",
       "type": "warning",
-      "text": "[.WebGL-0x12c00537200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+      "text": "[.WebGL-0x10400537200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
     },
     {
       "url": "http://localhost:4173/presentations/italian-tech-week/snapshots/phase4c/index.html",
       "type": "warning",
-      "text": "[.WebGL-0x12c00537200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+      "text": "[.WebGL-0x10400537200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
     },
     {
       "url": "http://localhost:4173/presentations/italian-tech-week/snapshots/phase4c/index.html",
       "type": "warning",
-      "text": "[.WebGL-0x12c00537200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+      "text": "[.WebGL-0x10400537200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
     },
     {
       "url": "http://localhost:4173/presentations/italian-tech-week/snapshots/phase4c/index.html",
       "type": "warning",
-      "text": "[.WebGL-0x12c00537200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+      "text": "[.WebGL-0x10400537200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
     }
   ],
   "failedRequests": [],
@@ -77,7 +77,7 @@
     {
       "name": "buttons appear on mouse movement and hide again after ~2 s",
       "pass": true,
-      "detail": "awake 0.717429, later 0"
+      "detail": "awake 0.796257, later 0"
     },
     {
       "name": "vessel rail: straight symmetric lumen (top/bottom mirror within 0.05px), 13 chapter nodes, one current, tip + ring, no branch, old ticks gone, spans the bar",
@@ -258,7 +258,7 @@
     {
       "name": "16: the four organ tags land one by one, ≥1 s apart, each with a landing ring",
       "pass": true,
-      "detail": "arrivals [2.62,3.7,4.81,5.91] gaps [1.08,1.11,1.1] rings 4"
+      "detail": "arrivals [2.62,3.71,4.81,5.9] gaps [1.09,1.1,1.09] rings 4"
     },
     {
       "name": "close: sentence gone by ~2.5 s (it holds solid at its station, D-026), mark solid by ~6 s, held orange ≥1.5 s, wordmark done by ~9 s",

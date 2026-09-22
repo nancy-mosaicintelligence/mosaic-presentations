@@ -414,3 +414,13 @@
   - The outline and the inspector fold away with ◧ ◨ in the bar (remembered per browser) and fold on their own below 1180 px, so a split screen gives the stage the width; the stage keeps 16:9 and takes the room.
 - Proof: two more browser tests in `slides.test.mjs` (milestone copy typed on a press; a selected line opened by a still press; panels folded by hand and by width, the stage growing); the inline and editor suites unchanged; keynote parity and behavioural checks re-proven.
 - Still open on feel: transitions between stations while editing are the deck's own (cinematic), which reads as slow in an editor; a faster "edit" stepping speed is the next refinement. Keyboard: Delete removes the selection, arrows nudge it — to add.
+
+## D-043: Removing things, keys on a selection, a draft reset; the tests keep their hands off the keynote (2026-09-21)
+
+- Status: accepted (the user could not delete a text box; the local keynote carried leftovers from test runs)
+- What changed:
+  - **Remove** in the inspector for every element, and **Delete / Backspace** on the selection in either frame; **Escape** lets go; the **arrow keys** nudge the selection by 1 % of the stage (Shift: 5 %). Removing one of the keynote's own bound lines hides its node rather than losing it; undo brings the element and the node back. Free boxes and generated elements are removed outright.
+  - **History → Reset the draft to the committed document**: the starting document again (the template, or a composed deck's fresh opening and close) as an editor-rights update; versions stay; the stage reloads.
+  - **The library page re-runs the owner bootstrap**, so an `OWNER_EMAILS` account always holds the seeded decks even if a membership was lost.
+  - **The browser suites work on a deck of their own** (`e2e-keynote`, an editable copy of the keynote created fresh per run) and never reset the keynote or the operator's drafts; the shared local database had let the tests wipe the operator's memberships and edits. The access suite still checks the bootstrap on the keynote, read-only.
+- Proof: two more tests in `slides.test.mjs` (a fresh text box nudged by keys and deleted; a keynote line removed and hidden, then restored by undo; Escape; the reset); every suite green on the test deck; keynote parity and behavioural checks re-proven.
