@@ -115,6 +115,15 @@ export async function archivePresentation(sb: SupabaseClient, admin: SupabaseCli
   await sb.from("audit_events").insert({ presentation_id: p.id, actor_id: user.id, actor_email: user.email, action: "presentation.archived" });
 }
 
+/** Owners and editors rename a presentation: the title the library and the bar show (a deck's own text is its own). */
+export async function renamePresentation(sb: SupabaseClient, admin: SupabaseClient, p: Presentation, user: { id: string; email: string }, title: string): Promise<string> {
+  const t = title.replace(/\s+/g, " ").trim(); if (!t) throw new StoreError(422, "a title is needed"); if (t.length > 160) throw new StoreError(422, "a title is at most 160 characters");
+  const { error } = await admin.from("presentations").update({ title: t }).eq("id", p.id);
+  if (error) throw new StoreError(500, error.message);
+  await sb.from("audit_events").insert({ presentation_id: p.id, actor_id: user.id, actor_email: user.email, action: "presentation.renamed", detail: { from: p.title, to: t } });
+  return t;
+}
+
 /** The static HTML of an `html` presentation, read as the user (storage policies apply). */
 export async function readStaticDeck(sb: SupabaseClient, p: Presentation): Promise<Buffer> {
   if (!p.storagePath) throw new StoreError(404, "this presentation has no file");

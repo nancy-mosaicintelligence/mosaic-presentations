@@ -5,10 +5,10 @@ import { StoreError } from "@/lib/store";
 import { withExit } from "@/lib/player-chrome";
 
 // The presentation as the room sees it, for any member (viewer, editor, owner):
-//  - an editable deck: its published version, embedded in the renderer (unpublished = not found);
+//  - an editable deck: the current document (what the editor shows), or `?source=published` for the published version;
 //  - a static HTML deck: a full-window frame of the sandboxed file (see /raw/[slug]);
 //  - a link: sent on to it.
-// Nothing about drafts or history leaves this route. A station deep link is `#s=<n>`.
+// Versions and history never leave this route. A station deep link is `#s=<n>`.
 export async function GET(req: Request, ctx: { params: Promise<{ slug: string }> }) {
   const { slug } = await ctx.params;
   const p = await getPresentation(slug);
@@ -22,10 +22,16 @@ export async function GET(req: Request, ctx: { params: Promise<{ slug: string }>
       return new Response(withExit(shell, "/", "Library"), { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "private, no-store" } });
     }
     const { store } = await storeFor(slug, "viewer");
-    if (!store.published) return new Response("nothing is published", { status: 404 });
-    const pub = await store.published();
-    if (!pub) return new Response("nothing is published yet", { status: 404 });
-    const html = withExit(await deckWithDocument(p, pub.document), "/", "Library");
+    let document: unknown;
+    if (new URL(req.url).searchParams.get("source") === "published") {
+      if (!store.published) return new Response("nothing is published", { status: 404 });
+      const pub = await store.published(); if (!pub) return new Response("nothing is published yet", { status: 404 });
+      document = pub.document;
+    } else {
+      // the current document — what the editor shows — for every member; a deck no editor has opened yet is its starting document
+      try { document = (await store.getDraft(slug)).document; } catch (e) { if (e instanceof StoreError && (e.status === 403 || e.status === 404)) document = null; else throw e; }
+    }
+    const html = withExit(await deckWithDocument(p, document), "/", "Library");
     return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "private, no-store", "X-Frame-Options": "SAMEORIGIN", "Content-Security-Policy": "frame-ancestors 'self'" } });
   } catch (e) {
     if (e instanceof StoreError) return e.status === 401 ? Response.redirect(new URL(`/sign-in?next=${encodeURIComponent(`/p/${slug}`)}`, req.url), 302) : new Response(e.message, { status: e.status });

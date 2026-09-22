@@ -25,6 +25,12 @@ export function Library({ entries, me, canCreate }: { entries: LibraryEntry[]; m
       if (body.kind === "deck") window.location.href = `/presentations/${body.slug}/edit`;
     } catch (ex: any) { setErr(ex.message); } finally { setBusy(false); }
   };
+  const [renaming, setRenaming] = useState<string | null>(null);
+  const rename = async (p: LibraryEntry, title: string) => {
+    setRenaming(null); const t = title.replace(/\s+/g, " ").trim(); if (!t || t === p.title) return;
+    const r = await fetch(`/api/presentations/${p.slug}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: t }) });
+    if (r.ok) setList(l => l.map(x => (x.id === p.id ? { ...x, title: t } : x))); else setErr((await r.json()).error);
+  };
   const archive = async (p: LibraryEntry) => {
     if (!window.confirm(`Archive “${p.title}”? It leaves the library; nothing is deleted.`)) return;
     const r = await fetch(`/api/presentations/${p.slug}/archive`, { method: "POST" }); if (r.ok) setList(list.filter(x => x.id !== p.id)); else setErr((await r.json()).error);
@@ -64,13 +70,15 @@ export function Library({ entries, me, canCreate }: { entries: LibraryEntry[]; m
       {list.length > 0 && <section className="lib-section">
         <h2>{list.length === 1 ? "One presentation" : `${list.length} presentations`}</h2>
         <div className="grid">
-          {list.map(p => <article key={p.id} className={"pcard " + p.kind}>
+          {list.map(p => <article key={p.id} className={"pcard " + p.kind} data-slug={p.slug}>
             <a className="cover" href={openHref(p)} target={p.kind === "link" ? "_blank" : undefined} rel={p.kind === "link" ? "noreferrer" : undefined} aria-label={p.title}>
               {cover(p) ? <img className="shot" src={cover(p)!} alt="" /> : <span className={"cover-gen " + p.kind}><img className="mk" src="/brand/mosaic-icon-orange.svg" alt="" /><span className="cover-title">{p.title}</span></span>}
               <span className="cover-tags"><span className="tag">{KIND[p.kind]}</span>{p.kind === "deck" && p.published && <span className="tag live">Published</span>}</span>
             </a>
             <div className="pcard-body">
-              <h3><a href={openHref(p)} target={p.kind === "link" ? "_blank" : undefined} rel={p.kind === "link" ? "noreferrer" : undefined}>{p.title}</a></h3>
+              <h3>{renaming === p.id
+                ? <input className="field rename" defaultValue={p.title} autoFocus aria-label="Title" onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); rename(p, (e.target as HTMLInputElement).value); } if (e.key === "Escape") setRenaming(null); }} onBlur={e => rename(p, e.target.value)} />
+                : <><a href={openHref(p)} target={p.kind === "link" ? "_blank" : undefined} rel={p.kind === "link" ? "noreferrer" : undefined}>{p.title}</a>{p.role !== "viewer" && <button type="button" className="ghost rename-btn" title="Rename" aria-label="Rename" onClick={() => setRenaming(p.id)}>✎</button>}</>}</h3>
               {p.description && <p className="muted">{p.description}</p>}
               {p.sourceUrl && <p className="muted small src">{host(p.sourceUrl)}</p>}
               <p className="meta"><b>{p.role}</b>{p.updatedAt ? ` · updated ${when(p.updatedAt)}` : ""}</p>
@@ -78,7 +86,7 @@ export function Library({ entries, me, canCreate }: { entries: LibraryEntry[]; m
             <div className="pcard-actions">
               {p.kind === "deck" && (p.role === "viewer" ? <a className="btn primary" href={`/p/${p.slug}`}>Open</a> : <a className="btn primary" href={`/presentations/${p.slug}/edit`}>Edit</a>)}
               {p.kind === "deck" && p.role !== "viewer" && <a className="btn" href={`/player/${p.slug}?source=draft&back=%2F`} title="The working document, exactly as Edit shows it">Present</a>}
-              {p.kind === "deck" && p.role !== "viewer" && p.published && <a className="btn" href={`/p/${p.slug}`} title="The published version — what viewers open">Published</a>}
+              {p.kind === "deck" && p.role !== "viewer" && p.published && <a className="btn" href={`/p/${p.slug}?source=published`} title="The published version, frozen">Published</a>}
               {p.kind === "html" && <a className="btn primary" href={`/p/${p.slug}`}>Present</a>}
               {p.kind === "link" && <a className="btn primary" href={`/p/${p.slug}`} target="_blank" rel="noreferrer">Open link</a>}
               <span className="spacer" />

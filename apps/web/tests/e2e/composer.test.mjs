@@ -81,7 +81,7 @@ test("a beat moves as a whole and a station can be removed; undo restores the st
   d = await untilDraft(d => d.stations.length === n - 1, "the removal");
   assert.ok(!d.sections.some(s => s.key === "number1"), "an unused section leaves with its station");
   await frame().waitForSelector('section.beat[data-k="number1"]', { state: "detached", timeout: 15000 });
-  await page.click(".bar .title"); await page.keyboard.press("Meta+z");
+  await page.locator(".stage-fit").click({ position: { x: 4, y: 4 } });   /* focus the parent document, off the frame */ await page.keyboard.press("Meta+z");
   d = await untilDraft(d => d.stations.length === n, "the undo");
   assert.ok(d.sections.some(s => s.key === "number1"));
 }, { timeout: 120000 });

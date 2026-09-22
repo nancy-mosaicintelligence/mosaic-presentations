@@ -49,6 +49,19 @@ test("the library's Present shows the working document with a way back; the edit
   await o.keyboard.press("Escape"); await o.waitForURL(`${BASE}/`, { timeout: 10000 });
 });
 
+test("a presentation is renamed on its card; the API takes owners and editors, refuses viewers and empty titles", async () => {
+  const o = await as("owner");
+  const bad = await json(o, `/api/presentations/e2e-keynote`, { method: "PATCH", data: { title: "   " } }); assert.equal(bad.status, 422);
+  const c = await as("colleague"); assert.equal((await json(c, `/api/presentations/e2e-keynote`, { method: "PATCH", data: { title: "x" } })).status, 403, "no role: no rename");
+  await o.goto(BASE + "/"); await o.waitForSelector(".pcard"); await o.waitForLoadState("networkidle");   /* hydrated: the buttons have their handlers */
+  const card = o.locator('.pcard[data-slug="e2e-keynote"]'); await card.hover();   /* by slug: while the box is open the title text is gone from the card */
+  for (let i = 0; i < 5 && (await card.locator("input.rename").count()) === 0; i++) { await card.locator(".rename-btn").click(); await o.waitForTimeout(300); }
+  await card.locator("input.rename").fill("E2E keynote, renamed"); await o.keyboard.press("Enter");
+  await o.waitForSelector('.pcard h3:has-text("E2E keynote, renamed")');
+  const lib = (await json(o, "/api/presentations")).body; assert.equal(lib.find(p => p.slug === "e2e-keynote").title, "E2E keynote, renamed");
+  assert.equal((await json(o, `/api/presentations/e2e-keynote`, { method: "PATCH", data: { title: "E2E keynote" } })).status, 200);
+});
+
 test("an editable copy of the keynote starts from its document, with its own draft and its creator as owner", async () => {
   const c = await as("colleague");
   const made = await json(c, "/api/presentations", { method: "POST", data: { kind: "deck", title: "Series A narrative", renderer: "itw-keynote" } });

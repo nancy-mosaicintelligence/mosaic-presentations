@@ -86,21 +86,25 @@ test("the editor edits and versions but cannot manage people or publish; the vie
   const ver = await json(e, `/api/presentations/${ID}/versions`, { method: "POST", data: { name: "Editor's cut" } }); assert.equal(ver.status, 201); assert.equal(ver.body.author, USERS.editor);
   for (const [path, init] of [["/members", {}], ["/invitations", {}], ["/members", { method: "PUT", data: { userId: users.guest.id, role: "editor" } }], ["/publication", { method: "POST", data: { versionId: ver.body.id } }]]) assert.equal(await status(e, `/api/presentations/${ID}${path}`, init), 403, path);
   const people = await e.request.get(`${BASE}/presentations/${ID}/people`, { maxRedirects: 0 }); assert.equal(people.status(), 307); assert.ok(people.headers()["location"].startsWith("/no-access"));
-  // the viewer: no editor page, no draft, no history, no player sources but the published one — and nothing is published yet
+  // the viewer: no editor page, no draft API, no history, no player sources but the published one; the shared link shows the current document
   const edit = await v.request.get(`${BASE}/presentations/${ID}/edit`, { maxRedirects: 0 }); assert.equal(edit.status(), 307); assert.equal(edit.headers()["location"], `/p/${ID}`);
   for (const path of ["/draft", "/versions", `/versions/${ver.body.id}`, "/members"]) assert.equal(await status(v, `/api/presentations/${ID}${path}`), 403, path);
   assert.equal(await status(v, `/player/${ID}`), 403); assert.equal(await status(v, `/player/${ID}?source=version:${ver.body.id}`), 403);
-  assert.equal(await status(v, `/p/${ID}`), 404, "nothing published yet");
+  assert.equal(await status(v, `/p/${ID}`), 200, "the shared link shows the current document even before anything is published");
+  assert.equal(await status(v, `/p/${ID}?source=published`), 404, "nothing published yet");
   assert.equal((await json(v, `/api/presentations/${ID}/publication`)).body, null);
   // the owner publishes; the viewer now gets the deck with that version and nothing else
   const pub = await json(o, `/api/presentations/${ID}/publication`, { method: "POST", data: { versionId: ver.body.id } }); assert.equal(pub.status, 201);
-  const page = await v.request.get(`${BASE}/p/${ID}`); assert.equal(page.status(), 200);
+  const page = await v.request.get(`${BASE}/p/${ID}?source=published`); assert.equal(page.status(), 200);
   const html = await page.text(); assert.ok(html.includes("edited by the editor")); assert.ok(html.includes('id="itw-content"'));
   assert.equal(await status(v, `/player/${ID}?source=published`), 200);
   assert.equal((await json(v, `/api/presentations/${ID}/publication`)).body.name, "Editor's cut");
-  // the draft moves on; the published deck does not
+  // the draft moves on: the shared link moves with it, the published deck does not
   doc.stations[0].note = "moved on"; await json(e, `/api/presentations/${ID}/draft`, { method: "PUT", data: { document: doc } });
-  assert.ok(!(await (await v.request.get(`${BASE}/p/${ID}`)).text()).includes("moved on"));
+  assert.ok((await (await v.request.get(`${BASE}/p/${ID}`)).text()).includes("moved on"), "the shared link is the current document");
+  assert.ok(!(await (await v.request.get(`${BASE}/p/${ID}?source=published`)).text()).includes("moved on"), "the published version is frozen");
+  // the viewer still has no draft API, no player draft source, no versions
+  assert.equal(await status(v, `/api/presentations/${ID}/draft`), 403); assert.equal(await status(v, `/player/${ID}?source=draft`), 403);
 });
 
 test("revocation takes effect at once: a removed viewer and a revoked invitation are locked out", async () => {

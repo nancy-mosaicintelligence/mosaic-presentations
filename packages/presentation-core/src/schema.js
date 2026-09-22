@@ -78,6 +78,7 @@ export const FONT_STACK_RE = /^("[A-Za-z0-9 \-]+"|[A-Za-z\-]+)(,("[A-Za-z0-9 \-]
  * Types: "string" | "number" | "boolean" | "runs" | "list" | "object" | {enum:[...]} | {re:RegExp} | {array: spec}
  */
 export const PRESENTATION_FIELDS = Object.freeze({
+  offsets: { type: "object" },   // renderer copy moved in the editor: { "<copy path>": { dx, dy } } in % of the stage (schema 8, optional)
   schemaVersion: { type: "number", req: true },
   id: { type: "string", req: true },
   title: { type: "string", req: true },

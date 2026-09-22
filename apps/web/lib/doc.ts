@@ -10,7 +10,7 @@ export type Section = { key: string; layout?: Layout; elements: Element[] };
 export type Station = { p: number; section: string; camera: string; chapter: string; note: string; dur?: number; black?: boolean; road?: boolean; lite?: boolean; vessel?: boolean; close?: boolean };
 export type Element_in = { in?: string };
 export type Asset = { kind: string; use?: string; viewBox: string; paths: { d: string }[]; sources: { path: string; sha256: string }[] };
-export type Doc = { schemaVersion: number; id: string; title: string; renderer: string; scene?: { kind: "itw" | "plain" }; tokens: any; copy: any; animation?: Record<string, number>; assets?: Record<string, Asset>; sections: Section[]; stations: Station[]; meta?: any };
+export type Doc = { schemaVersion: number; id: string; title: string; renderer: string; scene?: { kind: "itw" | "plain" }; tokens: any; copy: any; animation?: Record<string, number>; assets?: Record<string, Asset>; sections: Section[]; stations: Station[]; meta?: any; offsets?: Record<string, { dx: number; dy: number }> };
 export type Path = (string | number)[];
 export type Command = { path: Path; value: any; label?: string; coalesce?: string };
 

@@ -40,6 +40,12 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
   const [pendingReload, setPendingReload] = useState(false);
   const [inline, setInline] = useState<{ id: string | null; item: number; copy?: string | null; caret: Caret; fontSize: number } | null>(null);
   const [fillTarget, setFillTarget] = useState<string | null>(null);   // an empty image box waiting for a picture
+  const [name, setName] = useState(title); const [renaming, setRenaming] = useState(false);
+  const rename = useCallback(async (v: string) => {
+    setRenaming(false); const t = v.replace(/\s+/g, " ").trim(); if (!t || t === name) return;
+    const r = await fetch(`${api}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: t }) });
+    if (r.ok) { setName(t); document.title = `${t} · Mosaic`; } else setSave({ kind: "error", message: (await r.json()).error });
+  }, [api, name]);
   const [shareOpen, setShareOpen] = useState(false); const [publishedLink, setPublishedLink] = useState<string | null>(null); const [publishing, setPublishing] = useState(false);
   const fileDrop = useRef<HTMLInputElement | null>(null);
   // the side panels fold away: by hand, or on their own when the window is narrow (a split screen, a small laptop)
@@ -61,6 +67,7 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
     else if (m.type === "itw:selected") { setSelected(m.id); if (m.id && m.user) { if (m.empty) { setFillTarget(m.id); setTab("images"); } else setTab("element"); } }
     else if (m.type === "itw:placed") placedRef.current(m);
     else if (m.type === "itw:delete") removeRef.current(m.id);
+    else if (m.type === "itw:copyMoved") copyMovedRef.current(m.path, m.dx, m.dy);
     else if (m.type === "itw:nudgeKey") nudgeRef.current(m.id, m.dx, m.dy);
     else if (m.type === "itw:drop") dropRef.current(m);
     else if (m.type === "itw:editStart") { setInline({ id: m.id, item: m.item, copy: m.copy, caret: m.caret, fontSize: m.fontSize }); setFrameBox(frame.current?.getBoundingClientRect() ?? null); }
@@ -72,6 +79,7 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
   const copyEditRef = useRef<(path: string, runs: any[], text: string, typing: boolean) => void>(() => {});
   const placedRef = useRef<(m: BridgeMessage) => void>(() => {});
   const removeRef = useRef<(id: string) => void>(() => {});
+  const copyMovedRef = useRef<(path: string, dx: number, dy: number) => void>(() => {});
   const nudgeRef = useRef<(id: string, dx: number, dy: number) => void>(() => {});
   const dropRef = useRef<(m: BridgeMessage) => void>(() => {});
   const bridge = useMemo(() => new PlayerBridge(() => frame.current, onMessage), [onMessage]);
@@ -143,6 +151,11 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
     if (JSON.stringify(current) === JSON.stringify(value)) return;
     const next = history.apply({ path: ["copy", ...keys], value, label: `copy ${path}`, coalesce: `copy.${path}` }) as Doc;
     setDoc(next); setHist({ undo: history.canUndo, redo: history.canRedo }); scheduleSave(); setPendingReload(true);
+  };
+  /** The renderer's own copy dragged on the stage: its offset lives in the document under its path (none = back where the renderer put it). */
+  copyMovedRef.current = (path, dx, dy) => {
+    const d = docRef.current; if (!d) return;
+    apply({ path: ["offsets", path], value: Math.abs(dx) < 0.05 && Math.abs(dy) < 0.05 ? undefined : { dx, dy }, label: `move ${path}` });
   };
   /** Remove the selected element (the keynote's own lines are hidden rather than lost; undo brings anything back). */
   removeRef.current = (id) => {
@@ -273,7 +286,9 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
 
   return <div className={"editor" + (inPreview ? " preview" : "") + (!inPreview && !showLeft ? " no-left" : "") + (!inPreview && !showRight ? " no-right" : "")}>
     <header className="bar">
-      <div className="left">{!inPreview && <button type="button" className={"ghost side-toggle" + (showLeft ? " on" : "")} title={narrow ? "the outline is folded away on a narrow window" : sides.left ? "hide the outline" : "show the outline"} onClick={() => setSides(s => ({ ...s, left: !s.left }))} disabled={narrow}>◧</button>}<BrandMark /><span className="title">{title}</span></div>
+      <div className="left">{!inPreview && <button type="button" className={"ghost side-toggle" + (showLeft ? " on" : "")} title={narrow ? "the outline is folded away on a narrow window" : sides.left ? "hide the outline" : "show the outline"} onClick={() => setSides(s => ({ ...s, left: !s.left }))} disabled={narrow}>◧</button>}<BrandMark />{renaming
+        ? <input className="field title-edit" defaultValue={name} autoFocus aria-label="Title" onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); rename((e.target as HTMLInputElement).value); } if (e.key === "Escape") setRenaming(false); }} onBlur={e => rename(e.target.value)} />
+        : <button type="button" className="title" title={role === "viewer" ? name : "Rename"} onClick={() => { if (role !== "viewer") setRenaming(true); }}>{name}</button>}</div>
       <div className="mid">
         {!inPreview && <>
           <button type="button" onClick={() => persist()} disabled={save.kind === "saving"} title="Save now (autosave is on)">Save</button>
@@ -286,8 +301,6 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
         {previewVersion && <span className="save">Previewing “{previewVersion.name}” — read only</span>}
       </div>
       <div className="right">
-        {!inPreview && <form method="post" action="/auth/sign-out" className="inline"><button type="submit" className="ghost" title={email}>Sign out</button></form>}
-        <button type="button" className="ghost" onClick={() => { bridge.send({ type: "itw:notes", on: !notes }); setNotes(n => !n); }}>{notes ? "Hide notes" : "Notes"}</button>
         {previewVersion
           ? <button type="button" onClick={() => previewVersionToggle(null)}>Back to draft</button>
           : preview ? <button type="button" onClick={() => setPreview(false)}>Back to editor</button> : <button type="button" onClick={present} title="The draft, fullscreen, from this station">Present</button>}
@@ -298,7 +311,8 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
       </div>
       {shareOpen && !inPreview && <div className="share" role="dialog" aria-label="Share">
         <header><strong>Share</strong><button type="button" className="ghost" onClick={() => setShareOpen(false)}>×</button></header>
-        {published ? <p>Published: <strong>{published.name}</strong>. Everyone with access sees it at<br /><code>{typeof window !== "undefined" ? window.location.origin : ""}/p/{id}</code> <button type="button" className="ghost" onClick={() => navigator.clipboard?.writeText(`${window.location.origin}/p/${id}`)}>Copy link</button></p> : <p className="muted">Nothing is published yet. Publish makes the current draft the presentation everyone with access sees.</p>}
+        <p>Everyone with access sees the current document — what this editor shows — at<br /><code>{typeof window !== "undefined" ? window.location.origin : ""}/p/{id}</code> <button type="button" className="ghost" onClick={() => navigator.clipboard?.writeText(`${window.location.origin}/p/${id}`)}>Copy link</button></p>
+        {published ? <p className="muted small">Published: <strong>{published.name}</strong>, frozen at <code>/p/{id}?source=published</code> <button type="button" className="ghost" onClick={() => navigator.clipboard?.writeText(`${window.location.origin}/p/${id}?source=published`)}>Copy</button></p> : <p className="muted small">Publish freezes a named version, kept at <code>/p/{id}?source=published</code> while the shared link moves on.</p>}
         {publishedLink && <p className="muted small">Just published.</p>}
         <p className="muted">Who has access — roles and invitations — is on the <a href={`/presentations/${id}/people`}>People</a> page.</p>
       </div>}

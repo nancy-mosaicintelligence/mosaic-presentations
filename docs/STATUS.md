@@ -248,6 +248,7 @@ Sixth pass (D-027, D-028): the room recedes for the whole run of text and never 
 - Refinement (D-042): renderer copy opens on a press (the overlays now take the pointer), a still press on the selection opens text, the side panels fold away by hand and on narrow windows
 - Refinement (D-043): Remove for every element, Delete/Escape/arrow keys on a selection, a draft reset in History; the browser suites use their own copy of the keynote
 - Refinement (D-044): the library's Present shows the working document and the player has a way out; the library redesigned with the Mosaic marks; the brand marks in every image library
+- Refinement (D-045): the shared link is the current document (members read the draft — migration applied locally and hosted); rename in place; a quieter bar; every bound line opens and drags
 - Next: Phase 8 (build, host, deploy) once the host is chosen; then Phase 9 on the deployed system
 
 ## Deployment (2026-09-21)

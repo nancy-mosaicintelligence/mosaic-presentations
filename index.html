@@ -673,7 +673,7 @@ body.safe .beat.onobj .mv{ position:static; transform:none; }
 body.editing figure[data-empty]{cursor:pointer}
 body.editing #lab{pointer-events:auto}
 body.editing #road,body.editing #annot{pointer-events:none}
-body.editing #road [data-copy],body.editing #annot [data-copy],body.editing #tlbox .yr,body.editing #tlbox .tx{pointer-events:auto;cursor:text}
+body.editing [data-copy],body.editing #tlbox .yr,body.editing #tlbox .tx{pointer-events:auto!important;cursor:text}
 body.editing [data-copy]:hover{outline:1px dashed rgba(252,100,82,.55);outline-offset:4px}
 /* layouts the composer's beats use */
 .cols{display:grid;grid-template-columns:1fr 1fr;gap:clamp(24px,4vw,64px);margin-top:clamp(14px,2vh,24px);text-align:left}
@@ -1102,6 +1102,8 @@ body.editing .editsel{cursor:move}
     img.style.filter = "brightness(" + (adj.brightness === undefined ? 1 : adj.brightness) + ") contrast(" + (adj.contrast === undefined ? 1 : adj.contrast) + ") saturate(" + (adj.saturate === undefined ? 1 : adj.saturate) + ")" + (adj.blur ? " blur(" + adj.blur + "px)" : "");
     rot.style.opacity = adj.opacity === undefined ? "" : String(adj.opacity);
   }
+  /* a bound copy node keeps the offset the document gives its path (moved in the editor); none = where the renderer put it */
+  function offsetNode(n) { var o = CONTENT && CONTENT.offsets && CONTENT.offsets[n.getAttribute("data-copy")]; n.style.translate = o ? o.dx + "vw " + o.dy + "vh" : ""; }
   function applyContent(doc) {
     var root = document.documentElement, k;
     for (k in doc.tokens.colors) root.style.setProperty("--" + k, doc.tokens.colors[k]);
@@ -1156,6 +1158,7 @@ body.editing .editsel{cursor:move}
     var cueN = document.getElementById("cue"); if (cueN) cueN.setAttribute("data-copy", "cue");
     var whenN = document.querySelector("#partner .when"); if (whenN) whenN.setAttribute("data-copy", "partnerLine");
     var substN = document.getElementById("subst"); if (substN) substN.setAttribute("data-copy", "substitution");
+    [].slice.call(document.querySelectorAll("[data-copy]")).forEach(offsetNode);
     /* the event mark's geometry; a deck without one shows only its event line */
     var pm = doc.assets["wave-by-vento-w"], psvg = document.querySelector("#partner svg"), pps = psvg.querySelectorAll("path");
     if (pm) { psvg.parentNode.hidden = false; psvg.setAttribute("viewBox", pm.viewBox); pm.paths.forEach(function (p, i) { if (pps[i]) pps[i].setAttribute("d", p.d); }); }
@@ -2267,6 +2270,7 @@ body.editing .editsel{cursor:move}
     var m = MILE[i];
     elTlb.querySelector(".yr").innerHTML = m[0]; elTlb.querySelector(".yr").setAttribute("data-copy", "road." + i + ".year");
     elTlb.querySelector(".tx").innerHTML = m[1]; elTlb.querySelector(".tx").setAttribute("data-copy", "road." + i + ".text");
+    offsetNode(elTlb.querySelector(".yr")); offsetNode(elTlb.querySelector(".tx"));
     elTlb.style.opacity = 1;
     elVig.innerHTML = "";
     var sv = document.createElementNS(NS,"svg");
@@ -3427,6 +3431,7 @@ body.editing .editsel{cursor:move}
     }
     window.addEventListener("pointermove", function (e) {
       if (!drag) return; var dx = e.clientX - drag.sx, dy = e.clientY - drag.sy; if (!drag.moved && Math.abs(dx) < 4 && Math.abs(dy) < 4) return; drag.moved = true;
+      if (drag.copy) { drag.el.style.translate = (drag.dx0 + vwOf(dx)) + "vw " + (drag.dy0 + vhOf(dy)) + "vh"; return; }
       if (drag.handle) {
         var sign = drag.handle.indexOf("e") >= 0 ? 1 : -1, w = Math.max(24, drag.w0 + sign * dx);
         if (drag.placed) { drag.el.style.width = vwOf(w) + "%"; if (sign < 0) drag.el.style.left = (drag.x0 + vwOf(dx)) + "%"; }
@@ -3439,6 +3444,7 @@ body.editing .editsel{cursor:move}
     window.addEventListener("pointerup", function () {
       if (!drag) return; var d = drag; drag = null;
       if (!d.moved) { if (d.pendingEdit) startEdit(d.pendingEdit.hit, d.pendingEdit.x, d.pendingEdit.y); return; }
+      if (d.copy) { var t1 = (d.el.style.translate || "").split(" "); post({ type: "itw:copyMoved", path: d.copy, dx: +(parseFloat(t1[0]) || 0).toFixed(2), dy: +(parseFloat(t1[1]) || 0).toFixed(2) }); return; }
       var msg = { type: "itw:placed", id: d.id };
       if (d.placed) msg.place = { x: +parseFloat(d.el.style.left).toFixed(2), y: +parseFloat(d.el.style.top).toFixed(2), w: +parseFloat(d.el.style.width).toFixed(2) };
       else if (d.handle) { if (d.isImg) msg.width = +parseFloat(d.el.style.width).toFixed(1) + "%"; else msg.maxWidth = d.el.style.maxWidth; }
@@ -3555,7 +3561,10 @@ body.editing .editsel{cursor:move}
     /* in edit mode the pointer selects instead of stepping, and the wheel does nothing */
     /* the elements under a point, without those inside a beat that has faded out (they stay in the stack, transparent) */
     function visibleUnder(x, y) {
-      return document.elementsFromPoint(x, y).filter(function (n) { var b = n.closest && n.closest("section.beat"); return !b || parseFloat(getComputedStyle(b).opacity) > 0.02; });
+      return document.elementsFromPoint(x, y).filter(function (n) {
+        for (var a = n; a && a !== document.body; a = a.parentElement) if (parseFloat(getComputedStyle(a).opacity) < 0.02) return false;
+        return true;
+      });
     }
     window.addEventListener("pointerdown", function (e) {
       if (!editing) return;
@@ -3569,7 +3578,12 @@ body.editing .editsel{cursor:move}
       for (i = 0; i < under.length && !el; i++) el = under[i].closest && under[i].closest("[data-id]");
       for (i = 0; i < under.length && !hit; i++) hit = editableAt(under[i]);
       /* the renderer's own copy has no element: the press opens it straight away */
-      if (!el && hit && hit.copy) { select(null, true); startEdit(hit, e.clientX, e.clientY); return; }
+      if (!el && hit && hit.copy) {
+        select(null, true);
+        var t0 = (hit.el.style.translate || "").split(" ");
+        drag = { copy: hit.copy, el: hit.el, sx: e.clientX, sy: e.clientY, dx0: parseFloat(t0[0]) || 0, dy0: parseFloat(t0[1]) || 0, moved: false, pendingEdit: { hit: hit, x: e.clientX, y: e.clientY } };
+        return;
+      }
       var already = el && el.getAttribute("data-id") === selectedId;
       if (!already) select(el ? el.getAttribute("data-id") : null, true);
       if (el && (already || el.classList.contains("placed"))) {

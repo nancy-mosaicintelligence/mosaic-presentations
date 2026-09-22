@@ -163,7 +163,7 @@ test("Delete removes the selection (a free box, then a keynote line which is hid
   await page.click('.station-tools button:has-text("+ Text box")');
   const d0 = await untilDraft(d => d.sections[0].elements.some(e => !had.has(e.id) && e.place && e.type === "text"), "a fresh text box");
   const box = d0.sections[0].elements.find(e => !had.has(e.id) && e.place && e.type === "text");
-  await page.waitForSelector(`.ph code:has-text("${box.id}")`); await page.click(".bar .title");
+  await page.waitForSelector(`.ph code:has-text("${box.id}")`); await page.locator(".stage-fit").click({ position: { x: 4, y: 4 } });   /* focus the parent document, off the frame */
   await page.keyboard.press("ArrowRight"); await page.keyboard.press("Shift+ArrowDown");
   const nudged = await untilDraft(d => { const e = el(d, box.id); return e && e.place.x === 31 && e.place.y === 45; }, "the arrow nudge");
   assert.ok(nudged);
@@ -176,13 +176,33 @@ test("Delete removes the selection (a free box, then a keynote line which is hid
   await page.click('.ph button:has-text("Remove")');
   await untilDraft(d => !el(d, "open.1"), "the keynote line's removal");
   await frame().waitForFunction(() => document.querySelector('[data-id="open.1"]').style.display === "none", null, { timeout: 15000 });
-  await page.click(".bar .title"); await page.keyboard.press("Meta+z");
+  await page.locator(".stage-fit").click({ position: { x: 4, y: 4 } });   /* focus the parent document, off the frame */ await page.keyboard.press("Meta+z");
   await untilDraft(d => !!el(d, "open.1"), "the undo");
   await frame().waitForFunction(() => document.querySelector('[data-id="open.1"]').style.display !== "none", null, { timeout: 15000 });
   // Escape in the frame lets go of the selection
   const c2 = await centre("open.1"); await page.mouse.click(c2.b.x + 5, c2.y); await page.waitForSelector('.ph code:has-text("open.1")');
   await page.keyboard.press("Escape"); await page.waitForSelector(".ph code", { state: "detached", timeout: 5000 });
 }, { timeout: 120000 });
+
+test("every bound line takes the press: the substitution line under the patient opens for typing and drags to an offset the document keeps; the bar renames", async () => {
+  await goto(14); await stageReady();   /* station 15: the network; the line under the patient fades in as the progress settles */
+  await frame().waitForFunction(() => parseFloat(getComputedStyle(document.getElementById("subst")).opacity) > 0.9, null, { timeout: 20000 });
+  const fb = await page.locator("iframe").boundingBox(); const r = await frame().evaluate(() => { const b = document.getElementById("subst").getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width, h: b.height }; });
+  const x = fb.x + r.x + r.w / 2, y = fb.y + r.y + r.h / 2;   /* the page-relative centre of the line */
+  await page.mouse.click(x, y); await page.waitForSelector(".inline-toolbar", { timeout: 10000 });
+  await page.keyboard.press("End"); await page.keyboard.type(" Truly."); await page.keyboard.press("Enter");
+  await untilDraft(d => d.copy.substitution.some(r => (r.t || "").includes("Truly.")), "the substitution line's edit");
+  // a press that moves drags the line; the offset lands under its path
+  await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.move(x + 60, y - 40, { steps: 8 }); await page.mouse.up();
+  const d = await untilDraft(d => d.offsets && d.offsets.substitution && d.offsets.substitution.dy < -2, "the line's offset");
+  assert.ok(d.offsets.substitution.dx > 2, "moved right"); await page.waitForSelector(".inline-toolbar", { state: "detached", timeout: 5000 });
+  await page.locator(".stage-fit").click({ position: { x: 4, y: 4 } });   /* focus the parent document, off the frame */ await page.keyboard.press("Meta+z"); await untilDraft(d => !d.offsets || !d.offsets.substitution, "undo puts it back");
+  // the title in the bar
+  await page.click(".bar button.title"); await page.fill(".bar .title-edit", "Renamed from the bar"); await page.keyboard.press("Enter");
+  await page.waitForSelector('.bar button.title:has-text("Renamed from the bar")');
+  const lib = await (await page.request.get(`${BASE}/api/presentations`)).json(); assert.equal(lib.find(p => p.slug === ID).title, "Renamed from the bar");
+  await page.request.fetch(`${API}`, { method: "PATCH", data: { title: "E2E keynote" } });
+}, { timeout: 90000 });
 
 test("History offers a reset of the draft to the committed document", async () => {
   await page.click('.bar button:has-text("History")'); await page.waitForSelector('button:has-text("Reset the draft")');

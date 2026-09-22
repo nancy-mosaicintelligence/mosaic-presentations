@@ -47,7 +47,7 @@ test("the filmstrip lists every station by chapter; a card, the arrows and the k
   await page.waitForFunction(() => document.querySelector('.filmstrip .card.current')?.dataset.i === "9", null, { timeout: 15000 });
   assert.ok((await pos()).startsWith("10"));
   await page.click('.preview-nav button[aria-label="next station"]'); await page.waitForFunction(() => document.querySelector('.filmstrip .card.current')?.dataset.i === "10", null, { timeout: 15000 });
-  await page.click(".bar .title"); await page.keyboard.press("ArrowLeft"); await page.waitForFunction(() => document.querySelector('.filmstrip .card.current')?.dataset.i === "9", null, { timeout: 15000 });
+  await page.locator(".stage-fit").click({ position: { x: 4, y: 4 } });   /* focus the parent document, off the frame */ await page.keyboard.press("ArrowLeft"); await page.waitForFunction(() => document.querySelector('.filmstrip .card.current')?.dataset.i === "9", null, { timeout: 15000 });
   await page.keyboard.press("Home"); await page.waitForFunction(() => document.querySelector('.filmstrip .card.current')?.dataset.i === "0", null, { timeout: 15000 });
   assert.ok((await pos()).startsWith("01"));
 }, { timeout: 90000 });
@@ -77,7 +77,7 @@ test("the toolbar: a mark on a selection, size and alignment on the element", as
   assert.equal(await frame().evaluate(() => document.querySelector('[data-id="open.1"]').style.textAlign), "right");
   await page.click(".inline-toolbar .done"); await page.waitForSelector(".inline-toolbar", { state: "detached" });
   // undo walks the alignment back and the stage follows
-  await page.click(".bar .title"); await page.keyboard.press("Meta+z");
+  await page.locator(".stage-fit").click({ position: { x: 4, y: 4 } });   /* focus the parent document, off the frame */ await page.keyboard.press("Meta+z");
   await untilDraft(d => d.sections[0].elements[0].style?.textAlign === undefined, "the undo");
 }, { timeout: 90000 });
 

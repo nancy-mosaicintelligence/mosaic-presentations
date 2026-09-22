@@ -305,3 +305,6 @@ Production cannot be marked complete until the deployed URL has been opened and 
 | The browser suites work on their own copy of the keynote (`e2e-keynote`) and never reset the keynote or its drafts | PASS | `fixtures.mjs`; parity; 54/54 (`verify-keys`) |
 | The library's Present shows the working document; a full-window player has a way back (Escape) and never inside the editor's frame or to another origin | PASS | `library.test.mjs` (D-044) |
 | The Mosaic brand marks are in every image library; a placed mark is an SVG image asset the schema allows only there | PASS | `images.test.mjs`, `core.test.js` (D-044) |
+| The shared link `/p/<slug>` shows the current document to every member; `?source=published` is the frozen version; viewers still have no draft API or player source | PASS | `access.test.mjs` (D-045) |
+| A presentation is renamed on its card and from the bar; owners and editors only; empty titles refused | PASS | `library.test.mjs`, `slides.test.mjs` (D-045) |
+| Every bound renderer line opens on a press and drags to an offset kept in the document; undo restores | PASS | `slides.test.mjs` (D-045); parity; 54/54 |

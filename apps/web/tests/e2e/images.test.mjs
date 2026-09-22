@@ -70,7 +70,7 @@ test("placed from the Images tab, the picture appears on the stage and in the do
 }, { timeout: 120000 });
 
 test("undo walks the adjustments back; remove takes the picture off the stage but keeps the file", async () => {
-  await page.click(".bar .title"); await page.keyboard.press("Meta+z");
+  await page.locator(".stage-fit").click({ position: { x: 4, y: 4 } });   /* focus the parent document, off the frame */ await page.keyboard.press("Meta+z");
   await untilDraft(d => d.sections[0].elements.find(e => e.type === "image")?.place?.w !== 80, "the undo");
   page.once("dialog", d => d.accept());
   await page.click('button:has-text("Remove from the station")');
