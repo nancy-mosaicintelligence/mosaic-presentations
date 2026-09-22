@@ -20,7 +20,7 @@ export const SEEDS: Record<string, { title: string; renderer: string; kind: "dec
 
 export type Kind = "deck" | "html" | "link";
 export interface Presentation { id: string; slug: string; title: string; kind: Kind; renderer: string | null; description: string | null; sourceUrl: string | null; storagePath: string | null; createdBy: string | null; createdAt: string; updatedAt: string; archivedAt: string | null; }
-export interface LibraryEntry extends Presentation { role: "owner" | "editor" | "viewer"; published: boolean; }
+export interface LibraryEntry extends Presentation { role: "owner" | "editor" | "viewer"; published: boolean; builtIn?: boolean; }
 
 const row = (r: any): Presentation => ({ id: r.id, slug: r.slug, title: r.title, kind: r.kind, renderer: r.renderer || null, description: r.description ?? null, sourceUrl: r.source_url ?? null, storagePath: r.storage_path ?? null, createdBy: r.created_by ?? null, createdAt: r.created_at, updatedAt: r.updated_at, archivedAt: r.archived_at ?? null });
 const SELECT = "id, slug, title, kind, renderer, description, source_url, storage_path, created_by, created_at, updated_at, archived_at";
@@ -49,7 +49,7 @@ export async function getPresentation(slug: string, admin?: SupabaseClient): Pro
 export async function listLibrary(sb: SupabaseClient, userId: string): Promise<LibraryEntry[]> {
   const { data, error } = await sb.from("presentation_memberships").select(`role, presentations!inner(${SELECT})`).eq("user_id", userId);
   if (error) throw error;
-  const entries = (data as any[]).filter(m => !m.presentations.archived_at).map(m => ({ ...row(m.presentations), role: m.role as LibraryEntry["role"], published: false }));
+  const entries = (data as any[]).filter(m => !m.presentations.archived_at).map(m => ({ ...row(m.presentations), role: m.role as LibraryEntry["role"], published: false, builtIn: !!SEEDS[m.presentations.slug] }));
   if (entries.length) { const { data: pubs } = await sb.from("publication_records").select("presentation_id").eq("active", true).in("presentation_id", entries.map(e => e.id)); const set = new Set((pubs || []).map(p => p.presentation_id)); for (const e of entries) e.published = e.kind !== "deck" || set.has(e.id); }
   return entries.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
@@ -122,6 +122,17 @@ export async function renamePresentation(sb: SupabaseClient, admin: SupabaseClie
   if (error) throw new StoreError(500, error.message);
   await sb.from("audit_events").insert({ presentation_id: p.id, actor_id: user.id, actor_email: user.email, action: "presentation.renamed", detail: { from: p.title, to: t } });
   return t;
+}
+
+/** Owners delete a presentation for everyone: its rows (draft, versions, people, invitations, publication, audit trail — by cascade)
+ *  and its stored files (images, an imported deck). The built-in decks cannot be deleted, only archived: they would only be seeded again. */
+export async function deletePresentation(admin: SupabaseClient, p: Presentation): Promise<void> {
+  if (SEEDS[p.slug]) throw new StoreError(409, "this presentation is built in; archive it instead");
+  const { data: files } = await admin.storage.from("images").list(p.id, { limit: 1000 });
+  if (files?.length) await admin.storage.from("images").remove(files.map(f => `${p.id}/${f.name}`));
+  if (p.storagePath) await admin.storage.from("decks").remove([p.storagePath]);
+  const { error } = await admin.from("presentations").delete().eq("id", p.id);
+  if (error) throw new StoreError(500, error.message);
 }
 
 /** The static HTML of an `html` presentation, read as the user (storage policies apply). */

@@ -62,6 +62,24 @@ test("a presentation is renamed on its card; the API takes owners and editors, r
   assert.equal((await json(o, `/api/presentations/e2e-keynote`, { method: "PATCH", data: { title: "E2E keynote" } })).status, 200);
 });
 
+test("delete removes a presentation for everyone — rows and files; owners only; the built-in decks refuse and stay archivable", async () => {
+  const c = await as("colleague");
+  const made = await json(c, "/api/presentations", { method: "POST", data: { kind: "deck", title: "Short-lived deck", renderer: "itw-keynote" } }); assert.equal(made.status, 201);
+  const slug = made.body.slug; assert.equal((await json(c, `/api/presentations/${slug}/draft`)).status, 200, "it has a draft");
+  const o = await as("owner"); assert.equal((await json(o, `/api/presentations/${slug}`, { method: "DELETE" })).status, 403, "no role on it: no delete");
+  // from the card, with the warning accepted
+  await c.goto(BASE + "/"); await c.waitForSelector(`.pcard[data-slug="${slug}"]`); await c.waitForLoadState("networkidle");
+  c.once("dialog", d => { assert.match(d.message(), /no undo/); d.accept(); });
+  await c.locator(`.pcard[data-slug="${slug}"] button:has-text("Delete")`).click();
+  await c.waitForSelector(`.pcard[data-slug="${slug}"]`, { state: "detached", timeout: 10000 });
+  assert.equal((await json(c, `/api/presentations/${slug}/draft`)).status, 404, "gone"); assert.equal((await c.request.get(`${BASE}/p/${slug}`)).status(), 404);
+  assert.ok(!(await json(c, "/api/presentations")).body.some(p => p.slug === slug));
+  // the keynote is built in: no Delete on its card, and the API refuses
+  assert.equal((await json(o, `/api/presentations/italian-tech-week`, { method: "DELETE" })).status, 409);
+  await o.goto(BASE + "/"); await o.waitForSelector('.pcard[data-slug="italian-tech-week"]');
+  assert.equal(await o.locator('.pcard[data-slug="italian-tech-week"] button:has-text("Delete")').count(), 0); assert.equal(await o.locator('.pcard[data-slug="italian-tech-week"] button:has-text("Archive")').count(), 1);
+});
+
 test("an editable copy of the keynote starts from its document, with its own draft and its creator as owner", async () => {
   const c = await as("colleague");
   const made = await json(c, "/api/presentations", { method: "POST", data: { kind: "deck", title: "Series A narrative", renderer: "itw-keynote" } });

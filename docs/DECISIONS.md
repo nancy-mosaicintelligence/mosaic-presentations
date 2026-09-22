@@ -444,3 +444,12 @@
   - **The bar** loses Sign out (the library has it) and Notes (the station note sits in the outline panel).
   - **Every bound line takes the press.** The deck's own copy nodes (`#subst`, the cue, the partner line, the annotations, the road milestones, the fluoroscopy labels) had `pointer-events:none` by id; the edit-mode rule now overrides all of them, and the hit test skips anything transparent anywhere up the tree (a faded beat, a line whose fade has not run). A press that stays still opens the line; a press that moves **drags it**, and the offset lands in the document under `offsets[<copy path>]` (schema 8, optional; ±100 % of the stage; applied with the CSS `translate` property so the renderer's own transforms are untouched). Undo puts it back. The rule stands: what is on the page is editable and movable.
 - Proof: access (viewer sees the current document at the link, the frozen one at `?source=published`, still no draft API or player source), library (rename on the card and through the API, refusals), slides (the substitution line typed in place and dragged, undo, rename from the bar); core (offsets validated); keynote parity and 54/54 re-proven after the deck change.
+
+## D-046: Delete, one card shape, plain words (2026-09-21)
+
+- Status: accepted (the user asked for uniform cards, a plainer introduction line, and a real delete beside Archive)
+- What changed:
+  - **Delete** (`DELETE /api/presentations/<id>`, owners): the rows go by cascade (draft, versions, people, invitations, publication, audit trail) and the stored files with them (the presentation's images, an imported deck). A warning names what goes and that there is no undo; Archive stays the reversible choice. The built-in decks answer 409 and show no Delete: they would only be seeded again.
+  - **One card shape**: a 16:9 cover, a two-line title, one line under it (the note, a link's host, or nothing), the meta line, the action row — so every card is the same height whatever it holds. The link card had been getting the invitation box's `.link` padding and border through a class-name collision; the kind classes are now `kind-deck`, `kind-html`, `kind-link`.
+  - The introduction line says what to do: start a deck, copy the keynote, bring in a file or a link, share it.
+- Proof: library test (delete from the card with the warning, refusals for non-owners and built-in decks, rows and page gone); cards measured equal at 1440 px.

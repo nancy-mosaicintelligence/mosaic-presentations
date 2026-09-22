@@ -31,6 +31,10 @@ export function Library({ entries, me, canCreate }: { entries: LibraryEntry[]; m
     const r = await fetch(`/api/presentations/${p.slug}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: t }) });
     if (r.ok) setList(l => l.map(x => (x.id === p.id ? { ...x, title: t } : x))); else setErr((await r.json()).error);
   };
+  const remove = async (p: LibraryEntry) => {
+    if (!window.confirm(`Delete “${p.title}” for everyone?\n\nIts draft, versions, people, invitations and files go with it. There is no undo. (Archive keeps everything and only hides it.)`)) return;
+    const r = await fetch(`/api/presentations/${p.slug}`, { method: "DELETE" }); if (r.ok) setList(list.filter(x => x.id !== p.id)); else setErr((await r.json()).error);
+  };
   const archive = async (p: LibraryEntry) => {
     if (!window.confirm(`Archive “${p.title}”? It leaves the library; nothing is deleted.`)) return;
     const r = await fetch(`/api/presentations/${p.slug}/archive`, { method: "POST" }); if (r.ok) setList(list.filter(x => x.id !== p.id)); else setErr((await r.json()).error);
@@ -49,7 +53,7 @@ export function Library({ entries, me, canCreate }: { entries: LibraryEntry[]; m
     </header>
     <div className="library-body">
       <section className="lib-head">
-        <div><p className="eyebrow">Library</p><h1>Presentations</h1><p className="lede">Decks on the keynote engine, imported files and links — with the people you share them with.</p></div>
+        <div><p className="eyebrow">Library</p><h1>Presentations</h1><p className="lede">Start a new deck, take a copy of the keynote, or bring in a file or a link. Share each one with the people who need it.</p></div>
         {canCreate && <div className="add-buttons">{add("deck", "New presentation")}{add("copy", "Copy of the keynote")}{add("html", "Import HTML")}{add("link", "Add a link")}</div>}
       </section>
       {canCreate && mode && <form className="add-form" onSubmit={submit}>
@@ -70,17 +74,16 @@ export function Library({ entries, me, canCreate }: { entries: LibraryEntry[]; m
       {list.length > 0 && <section className="lib-section">
         <h2>{list.length === 1 ? "One presentation" : `${list.length} presentations`}</h2>
         <div className="grid">
-          {list.map(p => <article key={p.id} className={"pcard " + p.kind} data-slug={p.slug}>
+          {list.map(p => <article key={p.id} className={"pcard kind-" + p.kind} data-slug={p.slug}>
             <a className="cover" href={openHref(p)} target={p.kind === "link" ? "_blank" : undefined} rel={p.kind === "link" ? "noreferrer" : undefined} aria-label={p.title}>
-              {cover(p) ? <img className="shot" src={cover(p)!} alt="" /> : <span className={"cover-gen " + p.kind}><img className="mk" src="/brand/mosaic-icon-orange.svg" alt="" /><span className="cover-title">{p.title}</span></span>}
+              {cover(p) ? <img className="shot" src={cover(p)!} alt="" /> : <span className={"cover-gen kind-" + p.kind}><img className="mk" src="/brand/mosaic-icon-orange.svg" alt="" /><span className="cover-title">{p.title}</span></span>}
               <span className="cover-tags"><span className="tag">{KIND[p.kind]}</span>{p.kind === "deck" && p.published && <span className="tag live">Published</span>}</span>
             </a>
             <div className="pcard-body">
               <h3>{renaming === p.id
                 ? <input className="field rename" defaultValue={p.title} autoFocus aria-label="Title" onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); rename(p, (e.target as HTMLInputElement).value); } if (e.key === "Escape") setRenaming(null); }} onBlur={e => rename(p, e.target.value)} />
                 : <><a href={openHref(p)} target={p.kind === "link" ? "_blank" : undefined} rel={p.kind === "link" ? "noreferrer" : undefined}>{p.title}</a>{p.role !== "viewer" && <button type="button" className="ghost rename-btn" title="Rename" aria-label="Rename" onClick={() => setRenaming(p.id)}>✎</button>}</>}</h3>
-              {p.description && <p className="muted">{p.description}</p>}
-              {p.sourceUrl && <p className="muted small src">{host(p.sourceUrl)}</p>}
+              <p className={"pcard-sub muted" + (p.sourceUrl && !p.description ? " src" : "")}>{p.description || (p.sourceUrl ? host(p.sourceUrl) : "\u00a0")}</p>
               <p className="meta"><b>{p.role}</b>{p.updatedAt ? ` · updated ${when(p.updatedAt)}` : ""}</p>
             </div>
             <div className="pcard-actions">
@@ -92,6 +95,7 @@ export function Library({ entries, me, canCreate }: { entries: LibraryEntry[]; m
               <span className="spacer" />
               {p.role === "owner" && <a className="btn" href={`/presentations/${p.slug}/people`}>People</a>}
               {p.role === "owner" && <button type="button" className="ghost" onClick={() => archive(p)}>Archive</button>}
+              {p.role === "owner" && !p.builtIn && <button type="button" className="ghost danger" onClick={() => remove(p)}>Delete</button>}
             </div>
           </article>)}
         </div>

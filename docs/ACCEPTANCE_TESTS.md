@@ -308,3 +308,4 @@ Production cannot be marked complete until the deployed URL has been opened and 
 | The shared link `/p/<slug>` shows the current document to every member; `?source=published` is the frozen version; viewers still have no draft API or player source | PASS | `access.test.mjs` (D-045) |
 | A presentation is renamed on its card and from the bar; owners and editors only; empty titles refused | PASS | `library.test.mjs`, `slides.test.mjs` (D-045) |
 | Every bound renderer line opens on a press and drags to an offset kept in the document; undo restores | PASS | `slides.test.mjs` (D-045); parity; 54/54 |
+| Delete removes a presentation for everyone (rows and files) after a warning; owners only; built-in decks refuse (409) and stay archivable | PASS | `library.test.mjs` (D-046) |
