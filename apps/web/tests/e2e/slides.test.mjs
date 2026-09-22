@@ -124,3 +124,35 @@ test("the bar: Save, History, Present, Publish and Share", async () => {
   await page.waitForFunction(() => !document.fullscreenElement, null, { timeout: 4000 });
   await page.click('button:has-text("Back to editor")'); await page.waitForSelector(".editor:not(.preview)");
 }, { timeout: 90000 });
+
+test("the road's milestone copy opens on a press and lands in copy.road; a selected line opens on a still press", async () => {
+  await goto(3);
+  try { await frame().waitForFunction(() => parseFloat(getComputedStyle(document.getElementById("tlbox")).opacity) > 0.9 && document.querySelector("#tlbox .tx")?.getAttribute("data-copy"), null, { timeout: 30000 }); }
+  catch (e) { throw new Error("road box not ready: " + JSON.stringify(await frame().evaluate(() => { const tl = document.getElementById("tlbox"), tx = document.querySelector("#tlbox .tx"); return { pos: document.getElementById("pos").textContent, body: document.body.className, road: getComputedStyle(document.getElementById("road")).opacity, tl: tl && getComputedStyle(tl).opacity, txCopy: tx && tx.getAttribute("data-copy"), txText: tx && tx.textContent.slice(0, 30), url: location.href }; })) + " editor: " + JSON.stringify({ preview: !!document.querySelector(".editor.preview"), loading: !!document.querySelector(".loading") })); }
+  const tx = await frame().locator("#tlbox .tx").boundingBox(); await page.mouse.click(tx.x + tx.width / 2, tx.y + tx.height / 2);
+  await page.waitForSelector(".inline-toolbar", { timeout: 5000 });
+  await frame().evaluate(() => { const e = document.querySelector('[contenteditable="true"]'); const r = document.createRange(); r.selectNodeContents(e); r.collapse(false); const s = getSelection(); s.removeAllRanges(); s.addRange(r); });
+  await page.keyboard.type(" Edited."); await page.keyboard.press("Enter");
+  await untilDraft(d => d.copy.road[0].text.map(r => r.t || "").join("").endsWith("Edited."), "the milestone copy");
+  // a line: one press selects, a second still press (any time later) opens it
+  await goto(0); await landed("open.1");
+  // the free boxes from earlier tests sit over the middle of the stage: press the hero near its top edge
+  let c = await centre("open.1"); await page.mouse.click(c.b.x + 5, c.y);
+  try { await page.waitForSelector('.ph code:has-text("open.1")', { timeout: 8000 }); }
+  catch (e) { throw new Error("the press did not select the hero: " + JSON.stringify(await frame().evaluate((pt) => ({ sel: document.querySelector(".editsel")?.getAttribute("data-id"), under: document.elementsFromPoint(pt.x, pt.y).slice(0, 5).map(n => n.tagName + "#" + (n.getAttribute("data-id") || "") + "." + n.className) }), { x: c.b.x + 5 - (await page.locator("iframe").boundingBox()).x, y: c.y - (await page.locator("iframe").boundingBox()).y }))); }
+  await page.waitForTimeout(900);
+  c = await centre("open.1"); await page.mouse.click(c.b.x + 5, c.y); await page.waitForSelector(".inline-toolbar", { timeout: 5000 });
+  assert.equal(await frame().evaluate(() => document.querySelector('[data-id="open.1"]').getAttribute("contenteditable")), "true");
+  await page.keyboard.press("Escape"); await page.waitForSelector(".inline-toolbar", { state: "detached" });
+}, { timeout: 120000 });
+
+test("the side panels fold away by hand and on a narrow window, and the stage takes the room", async () => {
+  assert.equal(await page.locator(".side").count(), 2);
+  const w0 = (await page.locator("iframe").boundingBox()).width;
+  await page.click(".bar .side-toggle >> nth=0"); await page.waitForSelector(".editor.no-left"); assert.equal(await page.locator(".side.left").count(), 0);
+  await page.click(".bar .side-toggle >> nth=1"); await page.waitForSelector(".editor.no-right"); assert.equal(await page.locator(".side").count(), 0);
+  assert.ok((await page.locator("iframe").boundingBox()).width > w0, "the stage grew");
+  await page.click(".bar .side-toggle >> nth=0"); await page.click(".bar .side-toggle >> nth=1"); await page.waitForSelector(".editor:not(.no-left):not(.no-right)"); assert.equal(await page.locator(".side").count(), 2);
+  await page.setViewportSize({ width: 1000, height: 700 }); await page.waitForSelector(".editor.no-left.no-right", { timeout: 5000 }); assert.equal(await page.locator(".side").count(), 0);
+  await page.setViewportSize({ width: 1600, height: 900 }); await page.waitForSelector(".editor:not(.no-left):not(.no-right)", { timeout: 5000 });
+}, { timeout: 60000 });

@@ -41,6 +41,12 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
   const [fillTarget, setFillTarget] = useState<string | null>(null);   // an empty image box waiting for a picture
   const [shareOpen, setShareOpen] = useState(false); const [publishedLink, setPublishedLink] = useState<string | null>(null); const [publishing, setPublishing] = useState(false);
   const fileDrop = useRef<HTMLInputElement | null>(null);
+  // the side panels fold away: by hand, or on their own when the window is narrow (a split screen, a small laptop)
+  const [sides, setSides] = useState<{ left: boolean; right: boolean }>(() => { try { const v = JSON.parse(localStorage.getItem("itw.sides") || "null"); if (v) return v; } catch {} return { left: true, right: true }; });
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => { const on = () => setNarrow(window.innerWidth < 1180); on(); window.addEventListener("resize", on); return () => window.removeEventListener("resize", on); }, []);
+  useEffect(() => { try { localStorage.setItem("itw.sides", JSON.stringify(sides)); } catch {} }, [sides]);
+  const showLeft = sides.left && !narrow, showRight = sides.right && !narrow;
   const inlineRef = useRef(inline); inlineRef.current = inline;
   const [frameBox, setFrameBox] = useState<DOMRect | null>(null);
   const frame = useRef<HTMLIFrameElement | null>(null);
@@ -243,9 +249,9 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
 
   useEffect(() => { const u = new URL(window.location.href); if (preview) u.searchParams.set("preview", "1"); else u.searchParams.delete("preview"); window.history.replaceState(null, "", u.toString()); }, [preview]);
 
-  return <div className={"editor" + (inPreview ? " preview" : "")}>
+  return <div className={"editor" + (inPreview ? " preview" : "") + (!inPreview && !showLeft ? " no-left" : "") + (!inPreview && !showRight ? " no-right" : "")}>
     <header className="bar">
-      <div className="left"><a className="brand" href="/" title="Library">Mosaic</a><span className="title">{title}</span></div>
+      <div className="left">{!inPreview && <button type="button" className={"ghost side-toggle" + (showLeft ? " on" : "")} title={narrow ? "the outline is folded away on a narrow window" : sides.left ? "hide the outline" : "show the outline"} onClick={() => setSides(s => ({ ...s, left: !s.left }))} disabled={narrow}>◧</button>}<a className="brand" href="/" title="Library">Mosaic</a><span className="title">{title}</span></div>
       <div className="mid">
         {!inPreview && <>
           <button type="button" onClick={() => persist()} disabled={save.kind === "saving"} title="Save now (autosave is on)">Save</button>
@@ -264,6 +270,7 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
           ? <button type="button" onClick={() => previewVersionToggle(null)}>Back to draft</button>
           : preview ? <button type="button" onClick={() => setPreview(false)}>Back to editor</button> : <button type="button" onClick={present} title="The draft, fullscreen, from this station">Present</button>}
         {!inPreview && role === "owner" && <button type="button" className="ghost" onClick={() => setShareOpen(s => !s)}>Share</button>}
+        {!inPreview && <button type="button" className={"ghost side-toggle" + (showRight ? " on" : "")} title={narrow ? "the panel is folded away on a narrow window" : sides.right ? "hide the panel" : "show the panel"} onClick={() => setSides(s => ({ ...s, right: !s.right }))} disabled={narrow}>◨</button>}
         {!inPreview && <button type="button" className={role === "owner" ? "" : "primary"} onClick={newVersion} disabled={!doc} title="Name the current state as a version, without publishing">New version</button>}
         {!inPreview && role === "owner" && <button type="button" className="primary" onClick={publishNow} disabled={!doc || publishing}>{publishing ? "Publishing…" : "Publish"}</button>}
       </div>
@@ -275,7 +282,7 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
       </div>}
     </header>
 
-    {!inPreview && doc && <aside className="side left"><Outline doc={doc} station={station} onGoto={i => bridge.send({ type: "itw:goto", index: i })} apply={apply} /></aside>}
+    {!inPreview && showLeft && doc && <aside className="side left"><Outline doc={doc} station={station} onGoto={i => bridge.send({ type: "itw:goto", index: i })} apply={apply} /></aside>}
 
     <main className="stage">
       <div className="stage-fit">
@@ -290,7 +297,7 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
       {inline && frameBox && doc && !inPreview && <InlineToolbar caret={inline.caret} frameBox={frameBox} element={inline.id ? locate(doc, inline.id)?.element ?? null : null} fontSize={inline.fontSize} onMark={m => bridge.send({ type: "itw:format", mark: m })} onStyle={inlineStyle} onDone={() => bridge.send({ type: "itw:endEdit" })} copy={!!inline.copy} />}
     </main>
 
-    {!inPreview && doc && <aside className="side right">
+    {!inPreview && showRight && doc && <aside className="side right">
       <nav className="tabs">{(["element", "images", "motion", "copy", "assets", "versions"] as Tab[]).map(t => <button key={t} type="button" className={tab === t ? "on" : ""} onClick={() => setTab(t)}>{t === "element" ? "Element" : t === "images" ? "Images" : t === "motion" ? "Motion" : t === "copy" ? "Renderer copy" : t === "assets" ? "Marks" : `Versions${versions.length ? ` · ${versions.length}` : ""}`}</button>)}</nav>
       {issues.length > 0 && <div className="issues">{issues.slice(0, 5).map((i, k) => <div key={k}><code>{i.path}</code> {i.message}</div>)}</div>}
       {tab === "element" && <Inspector doc={doc} slug={id} selectedId={selected} apply={apply} onDeselect={() => { setSelected(null); bridge.send({ type: "itw:select", id: null }); }} onFill={eid => { setFillTarget(eid); setTab("images"); }} />}

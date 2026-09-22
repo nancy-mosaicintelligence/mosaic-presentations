@@ -672,6 +672,9 @@ body.safe .beat.onobj .mv{ position:static; transform:none; }
 .pic .ph span{font-family:var(--f-mono);font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3)}
 body.editing figure[data-empty]{cursor:pointer}
 body.editing #lab{pointer-events:auto}
+body.editing #road,body.editing #annot{pointer-events:none}
+body.editing #road [data-copy],body.editing #annot [data-copy],body.editing #tlbox .yr,body.editing #tlbox .tx{pointer-events:auto;cursor:text}
+body.editing [data-copy]:hover{outline:1px dashed rgba(252,100,82,.55);outline-offset:4px}
 /* layouts the composer's beats use */
 .cols{display:grid;grid-template-columns:1fr 1fr;gap:clamp(24px,4vw,64px);margin-top:clamp(14px,2vh,24px);text-align:left}
 .cols .col p{max-width:none}
@@ -3537,7 +3540,6 @@ body.editing .editsel{cursor:move}
       if (hit) startEdit(hit, e.clientX, e.clientY);
     }, true);
     /* in edit mode the pointer selects instead of stepping, and the wheel does nothing */
-    var lastDown = 0, lastDownEl = null;
     /* the elements under a point, without those inside a beat that has faded out (they stay in the stack, transparent) */
     function visibleUnder(x, y) {
       return document.elementsFromPoint(x, y).filter(function (n) { var b = n.closest && n.closest("section.beat"); return !b || parseFloat(getComputedStyle(b).opacity) > 0.02; });
@@ -3552,13 +3554,15 @@ body.editing .editsel{cursor:move}
       if (h) { var selEl = selectedId && document.querySelector('[data-id="' + selectedId + '"]'); if (selEl) startDrag(selEl, e, h.getAttribute("data-h")); return; }
       var under = visibleUnder(e.clientX, e.clientY), el = null, hit = null, i;
       for (i = 0; i < under.length && !el; i++) el = under[i].closest && under[i].closest("[data-id]");
-      var now = performance.now(), twice = el && el === lastDownEl && now - lastDown < 500; lastDown = now; lastDownEl = el;
+      for (i = 0; i < under.length && !hit; i++) hit = editableAt(under[i]);
+      /* the renderer's own copy has no element: the press opens it straight away */
+      if (!el && hit && hit.copy) { select(null, true); startEdit(hit, e.clientX, e.clientY); return; }
       var already = el && el.getAttribute("data-id") === selectedId;
       if (!already) select(el ? el.getAttribute("data-id") : null, true);
       if (el && (already || el.classList.contains("placed"))) {
         startDrag(el, e, null);
-        /* a second press that stays still opens the line for typing on release; one that moves is a drag */
-        if (twice) { for (i = 0; i < under.length && !hit; i++) hit = editableAt(under[i]); if (hit) drag.pendingEdit = { hit: hit, x: e.clientX, y: e.clientY }; }
+        /* a press on the selected element: moved, it drags; held still, it opens the line for typing on release */
+        if (already && hit && !hit.copy) drag.pendingEdit = { hit: hit, x: e.clientX, y: e.clientY };
       }
     }, true);
     window.addEventListener("click", function (e) { if (editing) { e.stopPropagation(); e.preventDefault(); } }, true);

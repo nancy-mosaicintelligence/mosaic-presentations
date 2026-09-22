@@ -404,3 +404,13 @@
   5. **Publish is one press** for owners — a version is still created underneath, so History keeps every published state and restore works as before.
 - Not in this step (said plainly): shapes, lines, tables, charts, diagrams, video, audio and word art from Slides' Insert menu; multi-select and alignment guides; panning a picture inside a frame. Shapes and lines are the natural next element types.
 - Proof: `apps/web/tests/e2e/slides.test.mjs` (7): a text box added, dragged and resized by a handle; a flow line nudged and put back; an image box filled from the library with the picture covering its frame; the keynote's fluoroscopy frame clicked and filled; a picture dropped from the library and a file dropped on the stage; the event line typed in place and shown by the reloaded stage; Save, History, Publish (the publication and the share link), Present. The keynote's parity and behavioural checks re-proven.
+
+## D-042: Editing feel — a press opens copy, a still press opens text, the sides fold away (2026-09-21)
+
+- Status: accepted (the user's third review: renderer copy still not editable; panels should collapse; the whole should feel like Slides or Canva)
+- What changed:
+  - The renderer's overlays (`#road`, `#annot`, the lab) refused the pointer (`pointer-events: none`, `aria-hidden`), so their lines could never be pressed; while editing, their text nodes now take the pointer and show the same dashed hover as any line. The road's milestone copy, the annotations, the fluoroscopy labels, the cue and the event line open on a single press.
+  - The "second press within half a second" rule is gone. A press selects; a press on the *selected* line opens it for typing on release, unless the pointer moves, in which case it drags — Slides' own grammar, with no timing to learn.
+  - The outline and the inspector fold away with ◧ ◨ in the bar (remembered per browser) and fold on their own below 1180 px, so a split screen gives the stage the width; the stage keeps 16:9 and takes the room.
+- Proof: two more browser tests in `slides.test.mjs` (milestone copy typed on a press; a selected line opened by a still press; panels folded by hand and by width, the stage growing); the inline and editor suites unchanged; keynote parity and behavioural checks re-proven.
+- Still open on feel: transitions between stations while editing are the deck's own (cinematic), which reads as slow in an editor; a faster "edit" stepping speed is the next refinement. Keyboard: Delete removes the selection, arrows nudge it — to add.
