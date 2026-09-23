@@ -314,3 +314,4 @@ Production cannot be marked complete until the deployed URL has been opened and 
 | A framed picture is cropped on the stage: double-click, wheel zooms, drag pans, Escape closes; the crop is in the document and one undo takes the session back | PASS | `slides.test.mjs` (D-049); parity; 54/54 |
 | Leaving the editor with unsaved changes asks; Save and leave writes the draft first | PASS | `slides.test.mjs` (D-049) |
 | The stage, Present and the shared link show the same 1920×1080 canvas scaled to fit; the viewer page is a shell around the deck (`raw=1`), deep links and Escape work through it | PASS | `access.test.mjs`, `slides.test.mjs` (D-050); parity; 54/54 |
+| Several elements: shift-click builds the selection, the right-click menu aligns, distributes and matches sizes, one undo step each; a group drag moves them together | PASS | `slides.test.mjs` (D-051); parity; 54/54 |

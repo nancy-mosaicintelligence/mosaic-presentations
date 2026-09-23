@@ -268,6 +268,43 @@ test("leaving with unsaved changes asks; Save and leave writes the draft first",
   await page.goto(`${BASE}/presentations/${ID}/edit`); await stageReady();
 }, { timeout: 60000 });
 
+test("several elements: shift-click adds to the selection; right-click opens the menu; Align top, Match width and Distribute change all of them, one undo step each; a group drag moves them together", async () => {
+  await goto(0); await stageReady();
+  // three free boxes of different widths, well apart, through the document
+  const d0 = await draft(); const sec = d0.sections[0]; const next = JSON.parse(JSON.stringify(d0)); const ids = [];
+  [[10, 20, 14], [40, 30, 20], [70, 26, 10]].forEach(([x, y, w], i) => { let n = next.sections[0].elements.length + 1; while (next.sections[0].elements.some(e => e.id === `${sec.key}.${n}`)) n++; const id = `${sec.key}.${n}`; ids.push(id); next.sections[0].elements.push({ id, type: "text", role: ["lede"], runs: [{ t: "Box " + (i + 1) }], place: { x, y, w }, reveal: { p: d0.stations[0].p } }); });
+  assert.equal((await page.request.put(`${API}/draft`, { data: { document: next } })).status(), 200);
+  await page.reload(); await stageReady(); await goto(0); for (const id of ids) await frame().waitForSelector(`[data-id="${id}"].placed`, { timeout: 15000 });
+  const c0 = await centre(ids[0]); await page.mouse.click(c0.x, c0.y); await page.waitForSelector(`.ph code:has-text("${ids[0]}")`);
+  const shiftClick = async (x, y) => { await page.keyboard.down("Shift"); await page.mouse.click(x, y); await page.keyboard.up("Shift"); };   /* a raw mouse click takes no modifiers option */
+  const c1 = await centre(ids[1]); await shiftClick(c1.x, c1.y);
+  const c2 = await centre(ids[2]); await shiftClick(c2.x, c2.y);
+  await page.waitForSelector('.panel.multi .kind:has-text("3 elements")', { timeout: 10000 });
+  assert.equal(await frame().locator(".editsel").count(), 3, "three selected on the stage");
+  // the menu on a right click, on one of them
+  await page.mouse.click(c1.x, c1.y, { button: "right" }); await page.waitForSelector(".ctx-menu", { timeout: 5000 });
+  await page.click('.ctx-menu button:has-text("Top")');
+  const dTop = await untilDraft(d => { const ys = ids.map(i => el(d, i).place.y); return ys.every(y => Math.abs(y - ys[0]) < 0.05); }, "aligned to the top");
+  assert.ok(Math.abs(el(dTop, ids[0]).place.y - 20) < 0.6, "the top is the topmost box's top");
+  await page.waitForSelector('.panel.multi .kind:has-text("3 elements")', { timeout: 10000 }); await frame().waitForFunction(() => document.querySelectorAll(".editsel").length === 3, null, { timeout: 10000 });   /* the selection survives the change */
+  await page.click('.panel.multi button:has-text("Width")');
+  const dW = await untilDraft(d => ids.every(i => Math.abs(el(d, i).place.w - 14) < 0.3), "the same width as the first");
+  const threeAgain = async () => { await page.waitForSelector('.panel.multi .kind:has-text("3 elements")', { timeout: 10000 }); await frame().waitForFunction(() => document.querySelectorAll(".editsel").length === 3, null, { timeout: 10000 }); };
+  await threeAgain();   /* the stage re-announces the selection after every change */
+  await page.mouse.click(c2.x, c2.y, { button: "right" }); await page.waitForSelector(".ctx-menu"); await page.click('.ctx-group:has(.ctx-title:has-text("Distribute")) button:has-text("Horizontally")');
+  await untilDraft(d => { const xs = ids.map(i => el(d, i).place.x).sort((a, b) => a - b); const g1 = xs[1] - (xs[0] + 14), g2 = xs[2] - (xs[1] + 14); return Math.abs(g1 - g2) < 0.3 && g1 > 1; }, "equal gaps");
+  // one undo step per operation
+  await page.locator(".stage-fit").click({ position: { x: 4, y: 4 } }); await page.keyboard.press("Meta+z");
+  await untilDraft(d => ids.every(i => Math.abs(el(d, i).place.w - 14) < 0.3) && Math.abs(el(d, ids[1]).place.x - 40) < 0.05, "undo takes back the distribute only");
+  await frame().waitForFunction((id) => Math.abs(parseFloat(document.querySelector(`[data-id="${id}"]`)?.style.left) - 40) < 0.05, ids[1], { timeout: 15000 }); await page.waitForTimeout(400);   /* the stage has taken the undone document */
+  // a group drag
+  const cA = await centre(ids[0]); await page.mouse.click(cA.x, cA.y); const cB = await centre(ids[1]); await shiftClick(cB.x, cB.y);
+  await frame().waitForFunction(() => document.querySelectorAll(".editsel").length === 2);
+  await page.mouse.move(cB.x, cB.y); await page.mouse.down(); await page.mouse.move(cB.x + 60, cB.y + 40, { steps: 8 }); await page.mouse.up();
+  await untilDraft(d => el(d, ids[0]).place.x > 12 && el(d, ids[1]).place.x > 42 && Math.abs((el(d, ids[0]).place.x - 10) - (el(d, ids[1]).place.x - 40)) < 0.3, "both moved by the same amount");
+  await page.keyboard.press("Escape");
+}, { timeout: 120000 });
+
 test("History offers a reset of the draft to the committed document", async () => {
   await page.click('.bar button:has-text("History")'); await page.waitForSelector('button:has-text("Reset the draft")');
   await page.click('button:has-text("Reset the draft")');

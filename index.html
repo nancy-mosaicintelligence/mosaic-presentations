@@ -3382,7 +3382,7 @@ figure.pic.cropping{outline:2px solid rgba(252,100,82,.9);outline-offset:2px;cur
      the deck is opened on its own. */
   (function () {
     if (window.parent === window) return;
-    var BV = 1, editing = false, selectedId = null, lastStep = -1;
+    var BV = 1, editing = false, selectedId = null, selectedIds = [], lastStep = -1;
     function post(m) { m.v = BV; window.parent.postMessage(m, location.origin); }
     function rebuildReveals() {
       REVEALS = [].slice.call(document.querySelectorAll("[data-p]")).map(function (el) {
@@ -3421,21 +3421,32 @@ figure.pic.cropping{outline:2px solid rgba(252,100,82,.9);outline-offset:2px;cur
     }
     function rectOf(el) { var r = el.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; }
     /* `user` marks a selection made with the pointer, as opposed to one re-announced after a load or a step */
-    function select(id, user) {
+    function pctOf(el) { var r = el.getBoundingClientRect(); return { x: +vwOf(r.left).toFixed(2), y: +vhOf(r.top).toFixed(2), w: +vwOf(r.width).toFixed(2), h: +vhOf(r.height).toFixed(2) }; }
+    function rectsOf(ids) { var out = {}; ids.forEach(function (i) { var n = document.querySelector('[data-id="' + i + '"]'); if (n) out[i] = pctOf(n); }); return out; }
+    function nodeOf(id) { return id ? document.querySelector('[data-id="' + id + '"]') : null; }
+    /* `add` (a shift or ⌘ press) toggles the element in the selection; otherwise the selection is that one element, or nothing */
+    function select(id, user, add) {
       if (cropping && cropping.getAttribute("data-id") !== id) exitCrop();
-      var prev = document.querySelector(".editsel"); if (prev) prev.classList.remove("editsel");
-      var el = id ? document.querySelector('[data-id="' + id + '"]') : null;
-      selectedId = el ? id : null;
-      if (el) { el.classList.add("editsel"); var sec = el.closest("section.beat"), rr = rectOf(el); post({ type: "itw:selected", id: id, user: !!user, rect: rr, pct: { x: +vwOf(rr.x).toFixed(2), y: +vhOf(rr.y).toFixed(2), w: +vwOf(rr.w).toFixed(2) }, section: sec ? sec.getAttribute("data-k") : null, empty: el.hasAttribute("data-empty"), placed: el.classList.contains("placed") }); }
-      else post({ type: "itw:selected", id: null, user: !!user });
+      if (add && id && nodeOf(id)) { var at = selectedIds.indexOf(id); if (at >= 0) selectedIds.splice(at, 1); else selectedIds.push(id); }
+      else selectedIds = id && nodeOf(id) ? [id] : [];
+      selectedId = selectedIds.length ? selectedIds[selectedIds.length - 1] : null;
+      [].slice.call(document.querySelectorAll(".editsel")).forEach(function (n) { n.classList.remove("editsel"); });
+      selectedIds.forEach(function (i) { var n = nodeOf(i); if (n) n.classList.add("editsel"); });
+      announce(user);
       paintHandles();
+    }
+    function selectMany(ids) { selectedIds = (ids || []).filter(function (i) { return !!nodeOf(i); }); selectedId = selectedIds.length ? selectedIds[selectedIds.length - 1] : null; [].slice.call(document.querySelectorAll(".editsel")).forEach(function (n) { n.classList.remove("editsel"); }); selectedIds.forEach(function (i) { nodeOf(i).classList.add("editsel"); }); announce(false); paintHandles(); }
+    function announce(user) {
+      var el = nodeOf(selectedId);
+      if (el) { var sec = el.closest("section.beat"), rr = rectOf(el); post({ type: "itw:selected", id: selectedId, ids: selectedIds.slice(), rects: rectsOf(selectedIds), user: !!user, rect: rr, pct: pctOf(el), section: sec ? sec.getAttribute("data-k") : null, empty: el.hasAttribute("data-empty"), placed: el.classList.contains("placed") }); }
+      else post({ type: "itw:selected", id: null, ids: [], rects: {}, user: !!user });
     }
     /* ---- moving and resizing: a press on the selected element drags it; the corner handles resize it ---- */
     var handles = null, drag = null;
     function paintHandles() {
       var el = selectedId && document.querySelector('[data-id="' + selectedId + '"]');
       if (!handles) { handles = document.createElement("div"); handles.id = "editHandles"; handles.innerHTML = '<i data-h="nw"></i><i data-h="ne"></i><i data-h="sw"></i><i data-h="se"></i>'; document.body.appendChild(handles); }
-      if (!el || !editing || editingEl) { handles.style.display = "none"; return; }
+      if (!el || !editing || editingEl || selectedIds.length !== 1) { handles.style.display = "none"; return; }
       var r = el.getBoundingClientRect(); handles.style.display = "block"; handles.style.left = r.left + "px"; handles.style.top = r.top + "px"; handles.style.width = r.width + "px"; handles.style.height = r.height + "px";
     }
     function vwOf(px) { return px / window.innerWidth * 100; } function vhOf(px) { return px / window.innerHeight * 100; }
@@ -3443,6 +3454,8 @@ figure.pic.cropping{outline:2px solid rgba(252,100,82,.9);outline-offset:2px;cur
     function startDrag(el, e, handle) {
       var r = el.getBoundingClientRect(), tr = TR_RE.exec(el.style.transform || "");
       drag = { el: el, id: el.getAttribute("data-id"), handle: handle, sx: e.clientX, sy: e.clientY, placed: el.classList.contains("placed"), w0: r.width, x0: parseFloat(el.style.left) || 0, y0: parseFloat(el.style.top) || 0, dx0: tr ? parseFloat(tr[1]) : 0, dy0: tr ? parseFloat(tr[2]) : 0, moved: false, isImg: el.tagName === "FIGURE" };
+      /* the others in a multi-selection move with it */
+      if (!handle && selectedIds.length > 1 && selectedIds.indexOf(drag.id) >= 0) drag.group = selectedIds.filter(function (i) { return i !== drag.id; }).map(function (i) { var n = nodeOf(i), t = TR_RE.exec(n.style.transform || ""); return { el: n, id: i, placed: n.classList.contains("placed"), x0: parseFloat(n.style.left) || 0, y0: parseFloat(n.style.top) || 0, dx0: t ? parseFloat(t[1]) : 0, dy0: t ? parseFloat(t[2]) : 0 }; });
     }
     window.addEventListener("pointermove", function (e) {
       if (!drag) return; var dx = e.clientX - drag.sx, dy = e.clientY - drag.sy; if (!drag.moved && Math.abs(dx) < 4 && Math.abs(dy) < 4) return; drag.moved = true;
@@ -3455,6 +3468,7 @@ figure.pic.cropping{outline:2px solid rgba(252,100,82,.9);outline-offset:2px;cur
         else drag.el.style.maxWidth = vwOf(w) + "vw";
       } else if (drag.placed) { drag.el.style.left = (drag.x0 + vwOf(dx)) + "%"; drag.el.style.top = (drag.y0 + vhOf(dy)) + "%"; }
       else drag.el.style.transform = "translate(" + (drag.dx0 + vwOf(dx)) + "vw," + (drag.dy0 + vhOf(dy)) + "vh)";
+      if (drag.group) drag.group.forEach(function (g) { if (g.placed) { g.el.style.left = (g.x0 + vwOf(dx)) + "%"; g.el.style.top = (g.y0 + vhOf(dy)) + "%"; } else g.el.style.transform = "translate(" + (g.dx0 + vwOf(dx)) + "vw," + (g.dy0 + vhOf(dy)) + "vh)"; });
       paintHandles();
     }, true);
     window.addEventListener("pointerup", function () {
@@ -3462,6 +3476,8 @@ figure.pic.cropping{outline:2px solid rgba(252,100,82,.9);outline-offset:2px;cur
       if (d.cropPan) return;   /* the crop is written to the document once, when the session closes */
       if (!d.moved) { if (d.pendingEdit) startEdit(d.pendingEdit.hit, d.pendingEdit.x, d.pendingEdit.y); return; }
       if (d.copy) { var t1 = (d.el.style.translate || "").split(" "); post({ type: "itw:copyMoved", path: d.copy, dx: +(parseFloat(t1[0]) || 0).toFixed(2), dy: +(parseFloat(t1[1]) || 0).toFixed(2) }); return; }
+      var moveOf = function (n) { if (n.classList.contains("placed")) return { place: { x: +parseFloat(n.style.left).toFixed(2), y: +parseFloat(n.style.top).toFixed(2), w: +parseFloat(n.style.width).toFixed(2) } }; var t = TR_RE.exec(n.style.transform || ""); return { nudge: { dx: +(t ? parseFloat(t[1]) : 0).toFixed(2), dy: +(t ? parseFloat(t[2]) : 0).toFixed(2) } }; };
+      if (d.group) { var moves = [{ id: d.id, move: moveOf(d.el) }]; d.group.forEach(function (g) { moves.push({ id: g.id, move: moveOf(g.el) }); }); post({ type: "itw:movedGroup", moves: moves }); paintHandles(); return; }
       var msg = { type: "itw:placed", id: d.id };
       if (d.placed) msg.place = { x: +parseFloat(d.el.style.left).toFixed(2), y: +parseFloat(d.el.style.top).toFixed(2), w: +parseFloat(d.el.style.width).toFixed(2) };
       else if (d.handle) { if (d.isImg) msg.width = +parseFloat(d.el.style.width).toFixed(1) + "%"; else msg.maxWidth = d.el.style.maxWidth; }
@@ -3563,15 +3579,16 @@ figure.pic.cropping{outline:2px solid rgba(252,100,82,.9);outline-offset:2px;cur
       if (cropping && e.key === "Escape") { e.preventDefault(); e.stopPropagation(); exitCrop(); return; }
       var mod = e.metaKey || e.ctrlKey, key = e.key.toLowerCase();
       if (mod && key === "v") { e.preventDefault(); e.stopPropagation(); post({ type: "itw:paste" }); return; }
-      if (mod && selectedId && (key === "c" || key === "d")) { e.preventDefault(); e.stopPropagation(); post({ type: key === "c" ? "itw:copy" : "itw:duplicate", id: selectedId }); return; }
+      if (mod && selectedId && (key === "c" || key === "d")) { e.preventDefault(); e.stopPropagation(); post({ type: key === "c" ? "itw:copy" : "itw:duplicate", id: selectedId, ids: selectedIds.slice() }); return; }
+      if (mod && selectedId && key === "a") { e.preventDefault(); e.stopPropagation(); var all = [].slice.call(document.querySelectorAll(".placed[data-id]")).filter(function (n) { return visibleUnder(0, 0).length >= 0 && parseFloat(getComputedStyle(n.closest("section.beat") || n).opacity) > 0.02; }).map(function (n) { return n.getAttribute("data-id"); }); if (all.length) selectMany(all); return; }
       /* with a selection and nothing open: Delete removes it, Escape lets go, the arrows nudge it (Shift: by more) */
       if (!selectedId) return;
       var step = e.shiftKey ? 5 : 1;
-      if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); e.stopPropagation(); post({ type: "itw:delete", id: selectedId }); }
+      if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); e.stopPropagation(); post({ type: "itw:delete", id: selectedId, ids: selectedIds.slice() }); }
       else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); select(null, true); }
       else if (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "ArrowUp" || e.key === "ArrowDown") {
         e.preventDefault(); e.stopPropagation();
-        post({ type: "itw:nudgeKey", id: selectedId, dx: e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0, dy: e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0 });
+        post({ type: "itw:nudgeKey", id: selectedId, ids: selectedIds.slice(), dx: e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0, dy: e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0 });
       }
     }, true);
     /* ---- cropping a framed picture: a double click opens it; drag pans, the wheel zooms, Escape or a press elsewhere closes it ---- */
@@ -3614,6 +3631,7 @@ figure.pic.cropping{outline:2px solid rgba(252,100,82,.9);outline-offset:2px;cur
     }
     window.addEventListener("pointerdown", function (e) {
       if (!editing) return;
+      if (e.button !== 0) { e.stopPropagation(); e.preventDefault(); return; }   /* a right press is the menu's; it never selects or lets go */
       if (editingEl && editingEl.contains(e.target)) { e.stopPropagation(); return; }
       e.stopPropagation(); e.preventDefault();
       if (editingEl) endEdit();
@@ -3634,9 +3652,11 @@ figure.pic.cropping{outline:2px solid rgba(252,100,82,.9);outline-offset:2px;cur
         drag = { copy: hit.copy, el: hit.el, sx: e.clientX, sy: e.clientY, dx0: parseFloat(t0[0]) || 0, dy0: parseFloat(t0[1]) || 0, moved: false, pendingEdit: { hit: hit, x: e.clientX, y: e.clientY } };
         return;
       }
-      var already = el && el.getAttribute("data-id") === selectedId;
-      if (!already) select(el ? el.getAttribute("data-id") : null, true);
-      if (el && (already || el.classList.contains("placed"))) {
+      var add = e.shiftKey || e.metaKey || e.ctrlKey;
+      if (el && add) { select(el.getAttribute("data-id"), true, true); return; }
+      var inSet = el && selectedIds.indexOf(el.getAttribute("data-id")) >= 0, already = el && el.getAttribute("data-id") === selectedId && selectedIds.length === 1;
+      if (!inSet) select(el ? el.getAttribute("data-id") : null, true);
+      if (el && (inSet || el.classList.contains("placed"))) {
         startDrag(el, e, null);
         /* a press on the selected element: moved, it drags; held still, it opens the line for typing on release */
         if (already && hit && !hit.copy) drag.pendingEdit = { hit: hit, x: e.clientX, y: e.clientY };
@@ -3651,7 +3671,13 @@ figure.pic.cropping{outline:2px solid rgba(252,100,82,.9);outline-offset:2px;cur
         setCrop(cropping, { x: c.x + (c.w - w) / 2, y: c.y + (c.h - h) / 2, w: w, h: h });
       }
     }, { capture: true, passive: false });
-    window.addEventListener("contextmenu", function (e) { if (editing) e.preventDefault(); }, true);
+    window.addEventListener("contextmenu", function (e) {
+      if (!editing) return; e.preventDefault(); e.stopPropagation();
+      var under = visibleUnder(e.clientX, e.clientY), el = null, i;
+      for (i = 0; i < under.length && !el; i++) el = under[i].closest && under[i].closest("[data-id]");
+      if (el && selectedIds.indexOf(el.getAttribute("data-id")) < 0) select(el.getAttribute("data-id"), true);
+      post({ type: "itw:context", x: e.clientX, y: e.clientY, ids: selectedIds.slice(), rects: rectsOf(selectedIds) });
+    }, true);
     window.addEventListener("dragover", function (e) { if (editing) { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; } }, true);
     window.addEventListener("drop", function (e) {
       if (!editing) return; e.preventDefault(); e.stopPropagation();
@@ -3672,6 +3698,7 @@ figure.pic.cropping{outline:2px solid rgba(252,100,82,.9);outline-offset:2px;cur
         case "itw:goto": if (typeof m.index === "number") { if (!present) setMode(true); goto(m.index); } break;
         case "itw:edit": editing = !!m.on; document.body.classList.toggle("editing", editing); if (!editing) { endEdit(); select(null); } break;
         case "itw:select": select(typeof m.id === "string" ? m.id : null); break;
+        case "itw:selectMany": selectMany(Array.isArray(m.ids) ? m.ids : []); break;
         case "itw:endEdit": endEdit(); break;
         case "itw:format": if (typeof m.mark === "string") format(m.mark); break;
         case "itw:style": { var sel = document.querySelector('[data-id="' + m.id + '"]'); if (sel && m.style && typeof m.style === "object") { STYLE_KEYS_B.forEach(function (k) { sel.style[k] = ""; }); for (var sk in m.style) if (STYLE_KEYS_B.indexOf(sk) >= 0) sel.style[sk] = m.style[sk]; } break; }

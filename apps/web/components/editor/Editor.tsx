@@ -5,6 +5,7 @@ import { createHistory, contentHash, validate, ABSENT } from "@mosaic/presentati
 import type { Doc, Command } from "@/lib/doc";
 import { needsReload } from "@/lib/doc";
 import { CANVAS } from "@/lib/player-chrome";
+import { ContextMenu, ArrangeButtons, arrange, type ArrangeOp, type Rect } from "./Arrange";
 import { PlayerBridge, type BridgeMessage } from "./bridge";
 import { Inspector } from "./Inspector";
 import { Filmstrip } from "./Filmstrip";
@@ -59,7 +60,7 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
   const [frameBox, setFrameBox] = useState<DOMRect | null>(null);
   const frame = useRef<HTMLIFrameElement | null>(null);
   // the deck is designed on a 1920×1080 canvas; the stage shows that exact frame scaled to fit, so what is designed is what is presented
-  const stageFit = useRef<HTMLDivElement | null>(null); const canvas = useRef<HTMLDivElement | null>(null); const [scale, setScale] = useState(0.5);
+  const stageFit = useRef<HTMLDivElement | null>(null); const canvas = useRef<HTMLDivElement | null>(null); const [scale, setScale] = useState(0.5); const scaleRef = useRef(0.5); scaleRef.current = scale;
   useEffect(() => {
     const fit = () => { const host = stageFit.current; if (!host) return; const full = !!document.fullscreenElement && document.fullscreenElement === canvas.current; const W = full ? window.innerWidth : host.clientWidth - 32, H = full ? window.innerHeight : host.clientHeight - 24; setScale(Math.max(0.05, Math.min(W / CANVAS.w, H / CANVAS.h))); };
     fit(); const ro = new ResizeObserver(fit); if (stageFit.current) ro.observe(stageFit.current); window.addEventListener("resize", fit); document.addEventListener("fullscreenchange", fit);
@@ -72,17 +73,19 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
   const onMessage = useCallback((m: BridgeMessage) => {
     if (m.type === "itw:ready" || m.type === "itw:state") { setReady(true); if (m.type === "itw:state") { setStation(m.step); setNotes(!!m.notes); } }
     else if (m.type === "itw:station") setStation(m.index);
-    else if (m.type === "itw:selected") { setSelected(m.id); if (m.id && m.pct) selPctRef.current = { id: m.id, ...m.pct }; if (m.id && m.user) { if (m.empty) { setFillTarget(m.id); setTab("images"); } else setTab("element"); } }
-    else if (m.type === "itw:copy") copyRef.current(m.id);
+    else if (m.type === "itw:selected") { setSelected(m.id); setSelectedIds(m.ids || (m.id ? [m.id] : [])); if (m.rects) rectsRef.current = m.rects; if (m.id && m.pct) selPctRef.current = { id: m.id, ...m.pct }; if (m.id && m.user) { if (m.empty) { setFillTarget(m.id); setTab("images"); } else setTab("element"); } }
+    else if (m.type === "itw:context") { if (m.rects) rectsRef.current = m.rects; const fb = frame.current?.getBoundingClientRect(); if (fb) setMenu({ x: fb.left + m.x * scaleRef.current, y: fb.top + m.y * scaleRef.current, ids: m.ids || [] }); }
+    else if (m.type === "itw:movedGroup") movedGroupRef.current(m.moves || []);
+    else if (m.type === "itw:copy") copyRef.current(m.ids || [m.id]);
     else if (m.type === "itw:paste") pasteRef.current();
-    else if (m.type === "itw:duplicate") { copyRef.current(m.id); pasteRef.current(); }
+    else if (m.type === "itw:duplicate") { copyRef.current(m.ids || [m.id]); pasteRef.current(); }
     else if (m.type === "itw:crop") cropRef.current(m.id, m.crop, !!m.done);
     else if (m.type === "itw:cropStart") setCropping(m.id);
     else if (m.type === "itw:cropEnd") setCropping(null);
     else if (m.type === "itw:placed") placedRef.current(m);
-    else if (m.type === "itw:delete") removeRef.current(m.id);
+    else if (m.type === "itw:delete") removeManyRef.current(m.ids && m.ids.length ? m.ids : [m.id]);
     else if (m.type === "itw:copyMoved") copyMovedRef.current(m.path, m.dx, m.dy);
-    else if (m.type === "itw:nudgeKey") nudgeRef.current(m.id, m.dx, m.dy);
+    else if (m.type === "itw:nudgeKey") nudgeManyRef.current(m.ids && m.ids.length ? m.ids : [m.id], m.dx, m.dy);
     else if (m.type === "itw:drop") dropRef.current(m);
     else if (m.type === "itw:editStart") { setInline({ id: m.id, item: m.item, copy: m.copy, caret: m.caret, fontSize: m.fontSize }); setFrameBox(frame.current?.getBoundingClientRect() ?? null); }
     else if (m.type === "itw:caret") { if (m.caret) setInline(s => (s ? { ...s, caret: m.caret } : s)); }
@@ -93,9 +96,13 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
   const copyEditRef = useRef<(path: string, runs: any[], text: string, typing: boolean) => void>(() => {});
   const placedRef = useRef<(m: BridgeMessage) => void>(() => {});
   const removeRef = useRef<(id: string) => void>(() => {});
-  const copyRef = useRef<(id: string) => void>(() => {}); const pasteRef = useRef<() => void>(() => {}); const cropRef = useRef<(id: string, crop: any, done: boolean) => void>(() => {});
+  const copyRef = useRef<(ids: string[]) => void>(() => {}); const pasteRef = useRef<() => void>(() => {}); const cropRef = useRef<(id: string, crop: any, done: boolean) => void>(() => {});
   const selPctRef = useRef<{ id: string; x: number; y: number; w: number } | null>(null);
-  const clipRef = useRef<{ element: any; pct: { x: number; y: number; w: number } | null } | null>(null);
+  const clipRef = useRef<{ element: any; pct: { x: number; y: number; w: number } | null }[] | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]); const selectedIdsRef = useRef(selectedIds); selectedIdsRef.current = selectedIds;
+  const rectsRef = useRef<Record<string, Rect>>({}); const [menu, setMenu] = useState<{ x: number; y: number; ids: string[] } | null>(null);
+  const removeManyRef = useRef<(ids: string[]) => void>(() => {}); const nudgeManyRef = useRef<(ids: string[], dx: number, dy: number) => void>(() => {});
+  const movedGroupRef = useRef<(moves: { id: string; move: any }[]) => void>(() => {}); const arrangeRef = useRef<(op: ArrangeOp) => void>(() => {});
   const [cropping, setCropping] = useState<string | null>(null);
   const copyMovedRef = useRef<(path: string, dx: number, dy: number) => void>(() => {});
   const nudgeRef = useRef<(id: string, dx: number, dy: number) => void>(() => {});
@@ -176,21 +183,60 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
     apply({ path: ["offsets", path], value: Math.abs(dx) < 0.05 && Math.abs(dy) < 0.05 ? undefined : { dx, dy }, label: `move ${path}` });
   };
   /** Copy: the element as it is, with where it sits on the stage; paste: a free copy of it on the current station, a step to the side. */
-  copyRef.current = (id) => {
-    const d = docRef.current; if (!d) return; const hit = locate(d, id); if (!hit) return;
-    const pct = selPctRef.current && selPctRef.current.id === id ? { x: selPctRef.current.x, y: selPctRef.current.y, w: selPctRef.current.w } : null;
-    clipRef.current = { element: JSON.parse(JSON.stringify(hit.element)), pct };
+  /** A whole-document change as one undo step (several elements moved, aligned, removed or pasted together). */
+  const applyDoc = useCallback((next: Doc, label: string) => { const d = history.apply({ path: [], value: next, label }) as Doc; afterChange(d); }, [history, afterChange]);
+  const clone = (v: any) => JSON.parse(JSON.stringify(v));
+  copyRef.current = (ids) => {
+    const d = docRef.current; if (!d) return;
+    const items = ids.map(id => { const hit = locate(d, id); if (!hit) return null; const r = rectsRef.current[id]; return { element: clone(hit.element), pct: r ? { x: r.x, y: r.y, w: r.w } : null }; }).filter(Boolean) as { element: any; pct: any }[];
+    if (items.length) clipRef.current = items;
   };
   pasteRef.current = () => {
-    const d = docRef.current, clip = clipRef.current; if (!d || !clip) return;
+    const d = docRef.current, clip = clipRef.current; if (!d || !clip || !clip.length) return;
     const st = d.stations[stationRef.current]; const si = d.sections.findIndex(s => s.key === st.section); if (si < 0) { setSave({ kind: "error", message: "this station has no section to hold a box" }); return; }
-    const sec = d.sections[si]; let n = sec.elements.length + 1; while (sec.elements.some(e => e.id === `${sec.key}.${n}`)) n++;
-    const src = clip.element; const { id: _id, in: _in, nudge: _n, hidden: _h, ...rest } = src;
-    const at = src.place ? { x: src.place.x + 2, y: src.place.y + 2, w: src.place.w } : clip.pct ? { x: clip.pct.x + 2, y: clip.pct.y + 2, w: Math.max(4, clip.pct.w) } : { x: 32, y: 32, w: 36 };
-    const el = { ...rest, id: `${sec.key}.${n}`, place: { x: +Math.min(96, at.x).toFixed(2), y: +Math.min(96, at.y).toFixed(2), w: +at.w.toFixed(2) }, reveal: { p: st.p } };
-    apply({ path: ["sections", si, "elements", sec.elements.length], value: el, label: `paste ${src.id}` });
-    clipRef.current = { element: JSON.parse(JSON.stringify(el)), pct: null };   /* another paste lands a step further */
-    setSelected(el.id); setTimeout(() => bridge.send({ type: "itw:select", id: el.id }), 120); setTab("element");
+    const next = clone(d) as Doc; const sec = next.sections[si]; const made: string[] = []; const again: { element: any; pct: any }[] = [];
+    for (const c of clip) {
+      let n = sec.elements.length + 1; while (sec.elements.some(e => e.id === `${sec.key}.${n}`)) n++;
+      const src = c.element; const { id: _id, in: _in, nudge: _n, hidden: _h, ...rest } = src;
+      const at = src.place ? { x: src.place.x + 2, y: src.place.y + 2, w: src.place.w } : c.pct ? { x: c.pct.x + 2, y: c.pct.y + 2, w: Math.max(4, c.pct.w) } : { x: 32, y: 32, w: 36 };
+      const el = { ...rest, id: `${sec.key}.${n}`, place: { x: +Math.min(96, at.x).toFixed(2), y: +Math.min(96, at.y).toFixed(2), w: +at.w.toFixed(2) }, reveal: { p: st.p } };
+      sec.elements.push(el); made.push(el.id); again.push({ element: clone(el), pct: null });
+    }
+    applyDoc(next, made.length === 1 ? `paste ${clip[0].element.id}` : `paste ${made.length} elements`);
+    clipRef.current = again;   /* another paste lands a step further */
+    setSelected(made[made.length - 1]); setSelectedIds(made); setTimeout(() => bridge.send(made.length === 1 ? { type: "itw:select", id: made[0] } : { type: "itw:selectMany", ids: made }), 150); setTab("element");
+  };
+  /** Several elements dragged together: their new places in one step. */
+  movedGroupRef.current = (moves) => {
+    const d = docRef.current; if (!d) return; const next = clone(d) as Doc;
+    for (const m of moves) { const hit = locate(next, m.id); if (!hit) continue; const e = hit.element as any; if (m.move.place) e.place = m.move.place; else if (m.move.nudge) { if (m.move.nudge.dx === 0 && m.move.nudge.dy === 0) delete e.nudge; else e.nudge = m.move.nudge; } }
+    applyDoc(next, `move ${moves.length} elements`); setTimeout(() => bridge.send({ type: "itw:selectMany", ids: moves.map(m => m.id) }), 150);
+  };
+  removeManyRef.current = (ids) => {
+    const d = docRef.current; if (!d) return; const next = clone(d) as Doc; let n = 0;
+    for (const id of ids) { const hit = locate(next, id); if (!hit) continue; next.sections[hit.si].elements.splice(hit.ei, 1); n++; }
+    if (!n) return; applyDoc(next, n === 1 ? `remove ${ids[0]}` : `remove ${n} elements`); setSelected(null); setSelectedIds([]); bridge.send({ type: "itw:select", id: null });
+  };
+  nudgeManyRef.current = (ids, dx, dy) => {
+    const d = docRef.current; if (!d) return; const next = clone(d) as Doc;
+    for (const id of ids) { const hit = locate(next, id); if (!hit) continue; const e = hit.element as any; if (e.place) { e.place.x = +(e.place.x + dx).toFixed(2); e.place.y = +(e.place.y + dy).toFixed(2); } else { const nd = { dx: +((e.nudge?.dx || 0) + dx).toFixed(2), dy: +((e.nudge?.dy || 0) + dy).toFixed(2) }; if (nd.dx === 0 && nd.dy === 0) delete e.nudge; else e.nudge = nd; } }
+    applyDoc(next, `nudge ${ids.length === 1 ? ids[0] : ids.length + " elements"}`); setTimeout(() => bridge.send(ids.length === 1 ? { type: "itw:select", id: ids[0] } : { type: "itw:selectMany", ids }), 150);
+  };
+  /** Align, distribute, centre on the page, match sizes — on the selection's rectangles as the stage reports them; one step. */
+  arrangeRef.current = (op) => {
+    const d = docRef.current; const ids = selectedIdsRef.current; if (!d || !ids.length) return;
+    const targets = arrange(op, ids, rectsRef.current); const next = clone(d) as Doc; const ref = locate(next, ids[0])?.element as any; let n = 0;
+    for (const id of Object.keys(targets)) {
+      const hit = locate(next, id); if (!hit) continue; const e = hit.element as any, r = rectsRef.current[id], t = targets[id]; if (!r) continue;
+      const dx = t.x !== undefined ? t.x - r.x : 0, dy = t.y !== undefined ? t.y - r.y : 0;
+      if (e.place) {
+        if (dx || dy) { e.place.x = +(e.place.x + dx).toFixed(2); e.place.y = +(e.place.y + dy).toFixed(2); }
+        if (t.w !== undefined && r.w) e.place.w = +(e.place.w * (t.w / r.w)).toFixed(2);
+        if (t.h !== undefined && r.h) { if (e.frame && ref?.frame && op === "same-both") e.frame = { ...ref.frame }; else if (t.w === undefined) e.place.w = +(e.place.w * (t.h / r.h)).toFixed(2); }
+      } else if (dx || dy) { const nd = { dx: +((e.nudge?.dx || 0) + dx).toFixed(2), dy: +((e.nudge?.dy || 0) + dy).toFixed(2) }; if (nd.dx === 0 && nd.dy === 0) delete e.nudge; else e.nudge = nd; }
+      n++;
+    }
+    if (!n) return; applyDoc(next, `${op} ${ids.length} elements`); setTimeout(() => bridge.send({ type: "itw:selectMany", ids }), 150);
   };
   /** The crop a framed picture was given on the stage (drag to pan, wheel to zoom). The stage paints the session live; the
    *  document takes the result once, when the session closes — one undo step for the whole crop. */
@@ -283,16 +329,16 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key.toLowerCase() === "z") { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
       if (mod && !inField && !inlineRef.current) {
-        const k = e.key.toLowerCase();
+        const k = e.key.toLowerCase(); const ids = selectedIdsRef.current.length ? selectedIdsRef.current : selectedRef.current ? [selectedRef.current] : [];
         if (k === "v" && clipRef.current) { e.preventDefault(); pasteRef.current(); return; }
-        if (selectedRef.current && (k === "c" || k === "d")) { e.preventDefault(); copyRef.current(selectedRef.current); if (k === "d") pasteRef.current(); return; }
+        if (ids.length && (k === "c" || k === "d")) { e.preventDefault(); copyRef.current(ids); if (k === "d") pasteRef.current(); return; }
       }
       if (inField || mod) return;
       if (selectedRef.current && !inlineRef.current) {
-        const step = e.shiftKey ? 5 : 1;
-        if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); removeRef.current(selectedRef.current); return; }
-        if (e.key === "Escape") { e.preventDefault(); setSelected(null); bridge.send({ type: "itw:select", id: null }); return; }
-        if (e.key.startsWith("Arrow")) { e.preventDefault(); nudgeRef.current(selectedRef.current, e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0, e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0); return; }
+        const step = e.shiftKey ? 5 : 1; const ids = selectedIdsRef.current.length ? selectedIdsRef.current : [selectedRef.current];
+        if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); removeManyRef.current(ids); return; }
+        if (e.key === "Escape") { e.preventDefault(); setSelected(null); setSelectedIds([]); bridge.send({ type: "itw:select", id: null }); return; }
+        if (e.key.startsWith("Arrow")) { e.preventDefault(); nudgeManyRef.current(ids, e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0, e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0); return; }
       }
       if (e.key === "ArrowRight" || e.key === "PageDown") { e.preventDefault(); bridge.send({ type: "itw:goto", index: stationRef.current + 1 }); }
       else if (e.key === "ArrowLeft" || e.key === "PageUp") { e.preventDefault(); bridge.send({ type: "itw:goto", index: stationRef.current - 1 }); }
@@ -337,6 +383,7 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
   const onLeaveClick = (e: React.MouseEvent) => { const a = (e.target as HTMLElement).closest("a[href]") as HTMLAnchorElement | null; if (!a || a.target === "_blank" || !dirtyRef.current) return; e.preventDefault(); setLeaving(a.getAttribute("href")); };
 
   return <div className={"editor" + (inPreview ? " preview" : "") + (!inPreview && !showLeft ? " no-left" : "") + (!inPreview && !showRight ? " no-right" : "")} onClickCapture={onLeaveClick}>
+    {menu && !inPreview && <ContextMenu at={menu} count={menu.ids.length} canPaste={!!clipRef.current} onClose={() => setMenu(null)} onArrange={op => arrangeRef.current(op)} onAction={a => { if (a === "copy") copyRef.current(menu.ids); else if (a === "paste") pasteRef.current(); else if (a === "duplicate") { copyRef.current(menu.ids); pasteRef.current(); } else if (a === "delete") removeManyRef.current(menu.ids); }} />}
     {leaving && <div className="modal-back" role="dialog" aria-label="Unsaved changes"><div className="modal">
       <h3>Unsaved changes</h3><p className="muted">Save them before leaving, or discard them and go back to what was last saved.</p>
       <div className="actions"><button type="button" className="primary" onClick={async () => { await persist(); dirtyRef.current = false; window.location.href = leaving; }}>Save and leave</button><button type="button" className="ghost danger" onClick={() => { dirtyRef.current = false; window.location.href = leaving; }}>Discard and leave</button><button type="button" className="ghost" onClick={() => setLeaving(null)}>Stay</button></div>
@@ -395,7 +442,8 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
     {!inPreview && showRight && doc && <aside className="side right">
       <nav className="tabs">{(["element", "images", "motion", "versions"] as Tab[]).map(t => <button key={t} type="button" className={tab === t ? "on" : ""} onClick={() => setTab(t)}>{t === "element" ? "Element" : t === "images" ? "Images" : t === "motion" ? "Motion" : t === "copy" ? "Renderer copy" : t === "assets" ? "Marks" : `Versions${versions.length ? ` · ${versions.length}` : ""}`}</button>)}</nav>
       {issues.length > 0 && <div className="issues">{issues.slice(0, 5).map((i, k) => <div key={k}><code>{i.path}</code> {i.message}</div>)}</div>}
-      {tab === "element" && <Inspector doc={doc} slug={id} selectedId={selected} apply={apply} onDeselect={() => { setSelected(null); bridge.send({ type: "itw:select", id: null }); }} onFill={eid => { setFillTarget(eid); setTab("images"); }} onRemove={eid => removeRef.current(eid)} />}
+      {tab === "element" && selectedIds.length > 1 && <div className="panel multi"><header className="ph"><span className="kind">{selectedIds.length} elements</span><button type="button" className="ghost danger" onClick={() => removeManyRef.current(selectedIds)}>Remove</button><button type="button" className="ghost" onClick={() => { setSelected(null); setSelectedIds([]); bridge.send({ type: "itw:select", id: null }); }}>Deselect</button></header><p className="muted small">Shift-click adds to the selection; drag moves them together; right-click for the same menu.</p><ArrangeButtons count={selectedIds.length} onArrange={op => arrangeRef.current(op)} /></div>}
+      {tab === "element" && selectedIds.length <= 1 && <Inspector doc={doc} slug={id} selectedId={selected} apply={apply} onDeselect={() => { setSelected(null); bridge.send({ type: "itw:select", id: null }); }} onFill={eid => { setFillTarget(eid); setTab("images"); }} onRemove={eid => removeRef.current(eid)} />}
       {tab === "images" && <ImagesPanel doc={doc} slug={id} station={station} apply={apply} fillTarget={fillTarget} onPick={a => placeImage(a, undefined, fillTarget)} onPlaced={pid => { setSelected(pid); setTab("element"); setTimeout(() => bridge.send({ type: "itw:select", id: pid }), 150); }} />}
       <input type="file" accept="image/*" multiple hidden ref={fileDrop} onChange={async e => { const files = Array.from(e.target.files || []); e.target.value = ""; const made = await uploadFiles(files); made.forEach((a, i) => placeImage(a, { x: 34 + i * 3, y: 30 + i * 3 }, i === 0 ? fillTarget : null)); }} />
       {tab === "motion" && <AnimationPanel doc={doc} apply={apply} />}

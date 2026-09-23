@@ -195,3 +195,15 @@ button.danger { color: var(--signal); }
 .modal { width: min(440px, 92vw); background: var(--panel-2); border: 1px solid var(--hair-2); border-radius: 12px; padding: 20px 22px; box-shadow: 0 30px 80px rgba(0,0,0,.6); }
 .modal h3 { margin: 0 0 6px; font-size: 16px; } .modal .actions { display: flex; gap: 6px; margin-top: 16px; flex-wrap: wrap; }
 .bar .cropping-hint { color: var(--signal); }
+
+/* the right-click menu over the stage */
+.ctx-menu { position: fixed; z-index: 60; width: 250px; background: rgba(22,22,22,.98); border: 1px solid var(--hair-2); border-radius: 10px; box-shadow: 0 16px 50px rgba(0,0,0,.6); padding: 6px; font-size: 13px; }
+.ctx-head { margin: 4px 8px 6px; font-weight: 500; } .ctx-head .muted { font-weight: 400; font-size: 11px; }
+.ctx-group { padding: 4px 4px 6px; border-top: 1px solid var(--hair); } .ctx-group:first-of-type { border-top: 0; }
+.ctx-title { display: block; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); margin: 2px 4px 4px; }
+.ctx-items { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
+.ctx-menu button { background: transparent; border: 1px solid transparent; color: var(--ink-2); padding: 5px 8px; border-radius: 6px; text-align: left; font-size: 12.5px; }
+.ctx-menu button:hover:not(:disabled) { background: var(--panel-2); color: var(--ink); border-color: transparent; } .ctx-menu button:disabled { opacity: .35; }
+.ctx-actions { display: grid; gap: 2px; } .ctx-actions button { display: flex; justify-content: space-between; } .ctx-actions kbd { font: 11px ui-monospace, monospace; color: var(--ink-3); }
+.ctx-menu button.danger { color: var(--signal); }
+.multi { padding: 12px 16px; } .multi .arr { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin: 6px 0 10px; }
