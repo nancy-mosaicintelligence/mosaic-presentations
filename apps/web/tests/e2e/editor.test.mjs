@@ -10,7 +10,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
-import { startApp, ensureUsers, resetPresentation, signIn, USERS, TEST_SLUG } from "./fixtures.mjs";
+import { startApp, ensureUsers, resetPresentation, signIn, USERS, TEST_SLUG, frameBox } from "./fixtures.mjs";
 const { chromium } = createRequire((process.env.PW_MODULES || process.env.NODE_PATH || "") + "/")("playwright");
 
 const here = dirname(fileURLToPath(import.meta.url)), APP = join(here, "..", "..");
@@ -26,7 +26,7 @@ const savedSoon = async () => { await page.waitForFunction(() => /^Saved /.test(
 const selectOnStage = async (id) => {
   const el = frame().locator(`[data-id="${id}"]`);
   await el.waitFor({ state: "visible" });
-  const box = await el.boundingBox();   // already relative to the page's viewport, frame offset included
+  const box = await frameBox(page, frame(), `[data-id="${id}"]`);   // page coordinates, through the canvas scale
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   try { await page.waitForSelector(`.ph code:has-text("${id}")`, { timeout: 5000 }); }
   catch (e) { const diag = await frame().evaluate(() => ({ body: document.body.className, editsel: document.querySelector(".editsel")?.getAttribute("data-id") })); throw new Error(`selection of ${id} did not reach the inspector: ${JSON.stringify(diag)}`); }

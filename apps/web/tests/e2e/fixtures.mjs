@@ -61,3 +61,12 @@ export async function startApp(spawn, appDir, port, extraEnv = {}) {
   while (true) { try { const r = await fetch(`http://localhost:${port}/sign-in`); if (r.ok) break; } catch {} if (Date.now() - t0 > 90000) throw new Error("dev server did not start"); await new Promise(r => setTimeout(r, 500)); }
   return server;
 }
+
+/** A rectangle inside the stage's frame, in page coordinates: the frame is the 1920×1080 canvas scaled to fit (D-050),
+ *  so a frame rectangle maps through the canvas scale and the frame's own place on the page. */
+export async function frameBox(page, frame, selector) {
+  const k = await page.evaluate(() => parseFloat(document.querySelector(".canvas")?.dataset.scale || "1"));
+  const ib = await page.evaluate(() => { const r = document.querySelector(".stage iframe").getBoundingClientRect(); return { x: r.x, y: r.y }; });
+  const r = await frame.locator(selector).first().evaluate(n => { const b = n.getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width, h: b.height }; });
+  return { x: ib.x + r.x * k, y: ib.y + r.y * k, width: r.w * k, height: r.h * k, k };
+}

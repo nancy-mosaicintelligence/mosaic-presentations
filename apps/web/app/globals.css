@@ -24,9 +24,11 @@ code { font: 12px/1.4 "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, mono
 .side { overflow: auto; background: var(--panel); border-right: 1px solid var(--hair); } .side.right { border-right: 0; border-left: 1px solid var(--hair); }
 .stage { position: relative; background: #000; display: grid; grid-template-rows: 1fr auto; overflow: hidden; --strip: 148px; }
 .stage-fit { width: 100%; min-height: 0; display: grid; place-items: center; padding: 16px 16px 8px; }
-.stage iframe { width: min(100%, calc((100vh - var(--bar) - var(--strip) - 24px) * 16 / 9)); aspect-ratio: 16 / 9; height: auto; border: 0; background: #000; border-radius: 4px; box-shadow: 0 0 0 1px var(--hair); }
+.canvas { position: relative; overflow: hidden; background: #000; border-radius: 4px; box-shadow: 0 0 0 1px var(--hair); }
+.canvas iframe { position: absolute; left: 50%; top: 50%; margin: -540px 0 0 -960px; border: 0; background: #000; transform-origin: 50% 50%; }
+.canvas:fullscreen { width: 100vw !important; height: 100vh !important; border-radius: 0; box-shadow: none; }
 .editor.preview .stage { grid-template-rows: 1fr; }
-.editor.preview .stage-fit { padding: 0; } .editor.preview .stage iframe { width: min(100%, calc((100vh - var(--bar)) * 16 / 9)); border-radius: 0; box-shadow: none; }
+.editor.preview .stage-fit { padding: 0; } .editor.preview .canvas { border-radius: 0; box-shadow: none; }
 .loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--ink-3); pointer-events: none; }
 .preview-nav.always { bottom: calc(var(--strip) + 14px); opacity: .55; }
 .preview-nav { position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); display: flex; gap: 12px; align-items: center; padding: 6px 10px; background: rgba(20,20,20,.85); border: 1px solid var(--hair-2); border-radius: 999px; font-variant-numeric: tabular-nums; opacity: .25; transition: opacity .2s; }

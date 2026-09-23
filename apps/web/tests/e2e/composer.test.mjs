@@ -89,5 +89,6 @@ test("a beat moves as a whole and a station can be removed; undo restores the st
 test("the composed deck versions, publishes and presents like any other", async () => {
   const v = await api(`/api/presentations/${slug}/versions`, { method: "POST", data: { name: "First cut", document: await draft() } }); assert.equal(v.status, 201);
   assert.equal((await api(`/api/presentations/${slug}/publication`, { method: "POST", data: { versionId: v.body.id } })).status, 201);
-  const pub = await page.request.get(`${BASE}/p/${slug}`); assert.equal(pub.status(), 200); const html = await pub.text(); assert.ok(html.includes('"kind":"plain"')); assert.ok(html.includes("Series B story"));
+  const shell = await page.request.get(`${BASE}/p/${slug}`); assert.equal(shell.status(), 200); assert.ok((await shell.text()).includes(`/p/${slug}?raw=1`), "the canvas shell");
+  const pub = await page.request.get(`${BASE}/p/${slug}?raw=1`); assert.equal(pub.status(), 200); const html = await pub.text(); assert.ok(html.includes('"kind":"plain"')); assert.ok(html.includes("Series B story"));
 });

@@ -104,14 +104,15 @@ test("the editor edits and versions but cannot manage people or publish; the vie
   assert.equal((await json(v, `/api/presentations/${ID}/publication`)).body, null);
   // the owner publishes; the viewer now gets the deck with that version and nothing else
   const pub = await json(o, `/api/presentations/${ID}/publication`, { method: "POST", data: { versionId: ver.body.id } }); assert.equal(pub.status, 201);
-  const page = await v.request.get(`${BASE}/p/${ID}?source=published`); assert.equal(page.status(), 200);
+  const shell = await v.request.get(`${BASE}/p/${ID}?source=published`); assert.equal(shell.status(), 200); assert.ok((await shell.text()).includes(`/p/${ID}?raw=1&amp;source=published`), "the page is the canvas shell around the deck");
+  const page = await v.request.get(`${BASE}/p/${ID}?raw=1&source=published`); assert.equal(page.status(), 200);
   const html = await page.text(); assert.ok(html.includes("edited by the editor")); assert.ok(html.includes('id="itw-content"'));
   assert.equal(await status(v, `/player/${ID}?source=published`), 200);
   assert.equal((await json(v, `/api/presentations/${ID}/publication`)).body.name, "Editor's cut");
   // the draft moves on: the shared link moves with it, the published deck does not
   doc.stations[0].note = "moved on"; await json(e, `/api/presentations/${ID}/draft`, { method: "PUT", data: { document: doc } });
-  assert.ok((await (await v.request.get(`${BASE}/p/${ID}`)).text()).includes("moved on"), "the shared link is the current document");
-  assert.ok(!(await (await v.request.get(`${BASE}/p/${ID}?source=published`)).text()).includes("moved on"), "the published version is frozen");
+  assert.ok((await (await v.request.get(`${BASE}/p/${ID}?raw=1`)).text()).includes("moved on"), "the shared link is the current document");
+  assert.ok(!(await (await v.request.get(`${BASE}/p/${ID}?raw=1&source=published`)).text()).includes("moved on"), "the published version is frozen");
   // the viewer still has no draft API, no player draft source, no versions
   assert.equal(await status(v, `/api/presentations/${ID}/draft`), 403); assert.equal(await status(v, `/player/${ID}?source=draft`), 403);
 });
@@ -136,6 +137,7 @@ test("the deck honours a station deep link and clamps it", async () => {
   // a fragment-only change is a same-document navigation, so each link is opened from a blank page
   for (const [hash, expect] of [["#s=7", "07"], ["#s=999", "55"], ["#s=0", "01"], ["", "01"]]) {
     await o.goto("about:blank"); await o.goto(`${BASE}/p/${ID}${hash}`);
-    await o.waitForFunction((e) => document.getElementById("pos")?.textContent.startsWith(e), expect, { timeout: 30000 });
+    await o.waitForSelector("#deck");   /* the page is the canvas shell; the deck runs in its frame and takes the fragment from it */
+    await o.waitForFunction((e) => { const f = document.getElementById("deck"); const pos = f && f.contentDocument && f.contentDocument.getElementById("pos"); return !!pos && pos.textContent.startsWith(e); }, expect, { timeout: 30000 });
   }
 }, { timeout: 120000 });

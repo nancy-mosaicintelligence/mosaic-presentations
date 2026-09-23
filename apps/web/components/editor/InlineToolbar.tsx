@@ -6,9 +6,10 @@ export type Caret = { x: number; y: number; w: number; h: number; ex: number; ey
 const MARK_LABEL: Record<string, string> = { em: "em", strong: "B", i: "I", hl: "hl", lead: "lead", x2: "×2" };
 
 /** Floats above the line being edited: marks for the selection, size, alignment and colour for the element. */
-export function InlineToolbar({ caret, frameBox, element, fontSize, onMark, onStyle, onDone, copy }: { caret: Caret; frameBox: DOMRect; element: Element | null; fontSize: number; onMark: (m: string) => void; onStyle: (patch: Record<string, string | undefined>) => void; onDone: () => void; copy?: boolean }) {
-  const left = Math.max(8, Math.min(frameBox.width - 420, caret.ex + caret.ew / 2 - 210)) + frameBox.left;
-  const top = frameBox.top + caret.ey - 52;
+export function InlineToolbar({ caret, frameBox, scale = 1, element, fontSize, onMark, onStyle, onDone, copy }: { caret: Caret; frameBox: DOMRect; scale?: number; element: Element | null; fontSize: number; onMark: (m: string) => void; onStyle: (patch: Record<string, string | undefined>) => void; onDone: () => void; copy?: boolean }) {
+  /* the caret comes in canvas pixels; the frame is scaled on the page */
+  const left = Math.max(8, Math.min(frameBox.width - 420, (caret.ex + caret.ew / 2) * scale - 210)) + frameBox.left;
+  const top = frameBox.top + caret.ey * scale - 52;
   const style = element?.style || {};
   const size = style.fontSize && /^\d+(\.\d+)?px$/.test(style.fontSize) ? parseFloat(style.fontSize) : fontSize;
   const setSize = (px: number) => onStyle({ fontSize: Math.max(10, Math.min(200, Math.round(px))) + "px" });

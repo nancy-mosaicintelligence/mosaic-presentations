@@ -482,3 +482,11 @@
   - **An error screen** for the editor with the message and a way back, instead of a blank page.
   - Sharing with anyone: any Google account can be shared with; an outside address is admitted at its first sign-in by the share (D-048) — no change was needed, the People copy says so.
 - Proof: slides tests (the tunnel station's box on the stage, ⌘C/⌘V/⌘D from both frames, the crop session and its undo, the leave guard); keynote parity and 54/54 re-proven after the deck change.
+
+## D-050: One canvas everywhere — what is designed is what is presented (2026-09-23)
+
+- Status: accepted (the owner: pictures looked two small and one big on the stage and all alike in Present; "if I can't tell how the image sizing is going to be in actuality, it's hard to design")
+- Cause: the deck is fluid, and some of it is fixed in pixels (the fluoroscopy layer is inset from the window edges by pixel amounts; type clamps; paddings). On the editor's small stage those pixels take a large share; at full screen a small one. Free boxes, sized in percent of the stage, scale evenly. So the proportions between the two changed with the window.
+- Decision: **the deck is designed and shown on a 1920×1080 canvas, everywhere.** The editor's stage is that canvas scaled to fit the room it has (a `ResizeObserver`, the frame at 1920×1080 with a CSS transform; the inline toolbar maps the caret through the scale). Present fills the screen with the same canvas scaled to fit. The viewer page `/p/<slug>` and the library's Present are a shell page holding the deck at the canvas size, scaled and letterboxed, with the exit pill; `?raw=1` is the deck itself for the shell's frame. The deck relays Escape to the shell (keys live inside the frame). Pixel-based layout now behaves identically on the stage, in Present and at the shared link; the frozen decks are untouched.
+- Tests read frame geometry through `frameBox()` (fixtures): a frame rectangle mapped through the canvas scale and the frame's place on the page — Playwright's own `boundingBox()` does not account for a transformed frame.
+- Proof: the seven suites (with the access tests reading the deck through `raw=1`), keynote parity and 54/54 re-proven after the deck change (the Escape relay).

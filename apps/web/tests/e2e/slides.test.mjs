@@ -7,7 +7,7 @@ import { spawn } from "node:child_process";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
-import { startApp, ensureUsers, resetPresentation, signIn, USERS, TEST_SLUG } from "./fixtures.mjs";
+import { startApp, ensureUsers, resetPresentation, signIn, USERS, TEST_SLUG, frameBox } from "./fixtures.mjs";
 const { chromium } = createRequire((process.env.PW_MODULES || process.env.NODE_PATH || "") + "/")("playwright");
 
 const APP = join(dirname(fileURLToPath(import.meta.url)), "..", ".."), PORT = 3130, BASE = `http://localhost:${PORT}`, ID = TEST_SLUG, API = `${BASE}/api/presentations/${ID}`;
@@ -20,7 +20,7 @@ const untilDraft = async (pred, what) => { const t0 = Date.now(); while (Date.no
 const stageReady = async () => { await page.waitForSelector(".loading", { state: "detached", timeout: 60000 }); await page.waitForSelector(".filmstrip .card", { timeout: 30000 }); await page.waitForTimeout(400); };
 const landed = async (id) => frame().waitForFunction((i) => { const e = document.querySelector(`[data-id="${i}"]`); const b = e && e.closest("section.beat"); return e && parseFloat(getComputedStyle(b || e).opacity) > 0.95; }, id, { timeout: 20000 });
 const goto = async (i) => { await page.locator(`.filmstrip .card[data-i="${i}"]`).click(); await page.waitForFunction((k) => document.querySelector(".filmstrip .card.current")?.dataset.i === String(k), i, { timeout: 15000 }); };
-const centre = async (id) => { const b = await frame().locator(`[data-id="${id}"]`).boundingBox(); return { x: b.x + b.width / 2, y: b.y + b.height / 2, b }; };
+const centre = async (id) => { const b = await frameBox(page, frame(), `[data-id="${id}"]`); return { x: b.x + b.width / 2, y: b.y + b.height / 2, b }; };
 const dragBy = async (x, y, dx, dy) => { await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.move(x + dx / 2, y + dy / 2, { steps: 4 }); await page.mouse.move(x + dx, y + dy, { steps: 4 }); await page.mouse.up(); };
 const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAQAAAADCAIAAAA7ljmRAAAAFklEQVR4nGP4z8DwHwyBFBhCWFAlYAAAtQ8Xg2gTMh0AAAAASUVORK5CYII=", "base64");
 
@@ -46,8 +46,8 @@ test("a text box is added, dragged to a new place and resized by a corner handle
   await page.waitForSelector(`.ph code:has-text("${box.id}")`);
   const c = await centre(box.id); await dragBy(c.x, c.y, 120, 60);
   const moved = await untilDraft(d => { const e = el(d, box.id); return e.place.x > 31 && e.place.y > 41; }, "the move"); const p1 = el(moved, box.id).place;
-  const h = await page.locator("iframe").boundingBox(); const hb = await frame().locator("#editHandles i[data-h=se]").boundingBox();
-  await dragBy(hb.x + 6, hb.y + 6, 80, 0);
+  const h = await page.locator(".canvas").boundingBox(); const hb = await frameBox(page, frame(), "#editHandles i[data-h=se]");
+  await dragBy(hb.x + hb.width / 2, hb.y + hb.height / 2, 80, 0);
   const sized = await untilDraft(d => el(d, box.id).place.w > p1.w + 1, "the resize");
   assert.ok(el(sized, box.id).place.w > 40 && h, "wider than before");
   assert.equal(await frame().evaluate((id) => document.querySelector(`[data-id="${id}"]`).style.position, box.id), "absolute");
@@ -80,7 +80,9 @@ test("the keynote's fluoroscopy frame is an empty box: a click on it opens the l
   await goto(labIdx);
   await frame().waitForFunction(() => { const f = document.querySelector('[data-id="lab.1"]'); return f && parseFloat(getComputedStyle(f).opacity) > 0.9; }, null, { timeout: 30000 });
   const c = await centre("lab.1"); await page.mouse.click(c.x, c.y);
-  await page.waitForSelector('.panel .fill:has-text("lab.1")', { timeout: 10000 }); await page.click(".imggrid:not(.brand) .imgcell");   /* the upload, not a brand mark */
+  try { await page.waitForSelector('.panel .fill:has-text("lab.1")', { timeout: 10000 }); }
+  catch (e) { throw new Error("the press did not open the fill: " + JSON.stringify(await frame().evaluate((k) => { const f = document.querySelector('[data-id="lab.1"]'), b = f.getBoundingClientRect(); return { sel: document.querySelector(".editsel")?.getAttribute("data-id") || null, under: document.elementsFromPoint(b.x + b.width / 2, b.y + b.height / 2).slice(0, 5).map(n => n.tagName + "." + String(n.className).slice(0, 24) + "[" + (n.getAttribute("data-id") || "") + "]"), editing: document.body.classList.contains("editing"), k }; }, c.b.k)) + " — inspector: " + (await page.locator(".side.right").innerText().catch(() => "?")).slice(0, 80).replace(/\n/g, " | ")); }
+  await page.click(".imggrid:not(.brand) .imgcell");   /* the upload, not a brand mark */
   await untilDraft(d => el(d, "lab.1").asset === globalThis.__img.id, "the frame's picture");
   await frame().waitForSelector('figure[data-id="lab.1"] img', { timeout: 15000 });
   assert.equal(await frame().evaluate(() => document.querySelector('figure[data-id="lab.1"] .ph')), null, "the placeholder is gone");
@@ -98,7 +100,7 @@ test("a picture dragged from the library lands where it is dropped; a file dropp
 }, { timeout: 120000 });
 
 test("the renderer's own copy is typed in place: the event line", async () => {
-  const when = frame().locator("#partner .when"); const b = await when.boundingBox();
+  const b = await frameBox(page, frame(), "#partner .when");
   await page.mouse.dblclick(b.x + b.width / 2, b.y + b.height / 2); await page.waitForSelector(".inline-toolbar", { timeout: 5000 });
   await frame().evaluate(() => { const e = document.querySelector('[contenteditable="true"]'); const r = document.createRange(); r.selectNodeContents(e); r.collapse(false); const s = getSelection(); s.removeAllRanges(); s.addRange(r); });
   await page.keyboard.type(" · Hall B"); await page.keyboard.press("Enter");
@@ -129,7 +131,7 @@ test("the road's milestone copy opens on a press and lands in copy.road; a selec
   await goto(3);
   try { await frame().waitForFunction(() => parseFloat(getComputedStyle(document.getElementById("tlbox")).opacity) > 0.9 && document.querySelector("#tlbox .tx")?.getAttribute("data-copy"), null, { timeout: 30000 }); }
   catch (e) { throw new Error("road box not ready: " + JSON.stringify(await frame().evaluate(() => { const tl = document.getElementById("tlbox"), tx = document.querySelector("#tlbox .tx"); return { pos: document.getElementById("pos").textContent, body: document.body.className, road: getComputedStyle(document.getElementById("road")).opacity, tl: tl && getComputedStyle(tl).opacity, txCopy: tx && tx.getAttribute("data-copy"), txText: tx && tx.textContent.slice(0, 30), url: location.href }; })) + " editor: " + JSON.stringify({ preview: !!document.querySelector(".editor.preview"), loading: !!document.querySelector(".loading") })); }
-  const tx = await frame().locator("#tlbox .tx").boundingBox(); await page.mouse.click(tx.x + tx.width / 2, tx.y + tx.height / 2);
+  const tx = await frameBox(page, frame(), "#tlbox .tx"); await page.mouse.click(tx.x + tx.width / 2, tx.y + tx.height / 2);
   await page.waitForSelector(".inline-toolbar", { timeout: 5000 });
   await frame().evaluate(() => { const e = document.querySelector('[contenteditable="true"]'); const r = document.createRange(); r.selectNodeContents(e); r.collapse(false); const s = getSelection(); s.removeAllRanges(); s.addRange(r); });
   await page.keyboard.type(" Edited."); await page.keyboard.press("Enter");
@@ -148,10 +150,10 @@ test("the road's milestone copy opens on a press and lands in copy.road; a selec
 
 test("the side panels fold away by hand and on a narrow window, and the stage takes the room", async () => {
   assert.equal(await page.locator(".side").count(), 2);
-  const w0 = (await page.locator("iframe").boundingBox()).width;
+  const w0 = (await page.locator(".canvas").boundingBox()).width;
   await page.click(".bar .side-toggle >> nth=0"); await page.waitForSelector(".editor.no-left"); assert.equal(await page.locator(".side.left").count(), 0);
   await page.click(".bar .side-toggle >> nth=1"); await page.waitForSelector(".editor.no-right"); assert.equal(await page.locator(".side").count(), 0);
-  assert.ok((await page.locator("iframe").boundingBox()).width > w0, "the stage grew");
+  assert.ok((await page.locator(".canvas").boundingBox()).width > w0, "the stage grew");
   await page.click(".bar .side-toggle >> nth=0"); await page.click(".bar .side-toggle >> nth=1"); await page.waitForSelector(".editor:not(.no-left):not(.no-right)"); assert.equal(await page.locator(".side").count(), 2);
   await page.setViewportSize({ width: 1000, height: 700 }); await page.waitForSelector(".editor.no-left.no-right", { timeout: 5000 }); assert.equal(await page.locator(".side").count(), 0);
   await page.setViewportSize({ width: 1600, height: 900 }); await page.waitForSelector(".editor:not(.no-left):not(.no-right)", { timeout: 5000 });
@@ -187,9 +189,9 @@ test("Delete removes the selection (a free box, then a keynote line which is hid
 test("every bound line takes the press: the substitution line under the patient opens for typing and drags to an offset the document keeps; the bar renames", async () => {
   await goto(14); await stageReady();   /* station 15: the network; the line under the patient fades in as the progress settles */
   await frame().waitForFunction(() => parseFloat(getComputedStyle(document.getElementById("subst")).opacity) > 0.9, null, { timeout: 20000 });
-  const fb = await page.locator("iframe").boundingBox(); const r = await frame().evaluate(() => { const b = document.getElementById("subst").getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width, h: b.height }; });
-  const x = fb.x + r.x + r.w / 2, y = fb.y + r.y + r.h / 2;   /* the page-relative centre of the line */
-  await page.mouse.click(x, y); await page.waitForSelector(".inline-toolbar", { timeout: 10000 });
+  const sb = await frameBox(page, frame(), "#subst"); const x = sb.x + sb.width / 2, y = sb.y + sb.height / 2;   /* the page-relative centre of the line */
+  for (let i = 0; i < 3 && (await page.locator(".inline-toolbar").count()) === 0; i++) { await page.mouse.click(x, y); await page.waitForSelector(".inline-toolbar", { timeout: 4000 }).catch(() => {}); }   /* a press right after a step can land while the line is still settling */
+  await page.waitForSelector(".inline-toolbar", { timeout: 5000 });
   await page.keyboard.press("End"); await page.keyboard.type(" Truly."); await page.keyboard.press("Enter");
   await untilDraft(d => d.copy.substitution.some(r => (r.t || "").includes("Truly.")), "the substitution line's edit");
   // a press that moves drags the line; the offset lands under its path
@@ -234,11 +236,10 @@ test("a framed picture is cropped on the stage: double-click, scroll to zoom, dr
   assert.ok(d0.sections.find(s => s.key === "lab").elements[0].asset, "lab.1 holds a picture from the fill test");
   await goto(li); await stageReady();
   await frame().waitForFunction(() => { const f = document.querySelector('[data-id="lab.1"]'); return f && parseFloat(getComputedStyle(f).opacity) > 0.9 && !!f.__cropState; }, null, { timeout: 30000 });
-  const fb = await page.locator("iframe").boundingBox(); const r = await frame().evaluate(() => { const b = document.querySelector('figure[data-id="lab.1"]').getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width, h: b.height }; });
-  const x = fb.x + r.x + 12, y = fb.y + r.y + 12;   /* a corner of the frame: boxes from the earlier tests sit over its middle */
-  const under = await frame().evaluate(([px, py]) => ({ under: document.elementsFromPoint(px, py).slice(0, 5).map(n => n.tagName + "#" + (n.id || "") + "." + n.className + "[" + (n.getAttribute("data-id") || "") + "]"), crop: !!document.querySelector('figure[data-id="lab.1"]').__cropState, opacity: getComputedStyle(document.querySelector('figure[data-id="lab.1"]')).opacity }), [r.x + 12, r.y + 12]);
-  await page.mouse.dblclick(x, y);
-  try { await frame().waitForSelector('figure[data-id="lab.1"].cropping', { timeout: 10000 }); } catch (e) { throw new Error("no crop mode — under the point: " + JSON.stringify(under)); }
+  const lb = await frameBox(page, frame(), 'figure[data-id="lab.1"]'); const x = lb.x + 12, y = lb.y + 12;   /* a corner of the frame: boxes from the earlier tests sit over its middle */
+  const under = await frame().evaluate((k) => { const f = document.querySelector('figure[data-id="lab.1"]'), b = f.getBoundingClientRect(); return { under: document.elementsFromPoint(b.x + 12 / k, b.y + 12 / k).slice(0, 5).map(n => n.tagName + "#" + (n.id || "") + "." + n.className + "[" + (n.getAttribute("data-id") || "") + "]"), crop: !!f.__cropState, opacity: getComputedStyle(f).opacity }; }, lb.k);
+  for (let i = 0; i < 3 && (await frame().locator('figure[data-id="lab.1"].cropping').count()) === 0; i++) { await page.mouse.dblclick(x, y); await frame().waitForSelector('figure[data-id="lab.1"].cropping', { timeout: 4000 }).catch(() => {}); }
+  try { await frame().waitForSelector('figure[data-id="lab.1"].cropping', { timeout: 5000 }); } catch (e) { throw new Error("no crop mode — under the point: " + JSON.stringify(under)); }
   await page.waitForSelector(".cropping-hint");
   const stageCrop = () => frame().evaluate(() => document.querySelector('figure[data-id="lab.1"]').__cropState.c);
   await page.mouse.move(x, y); await page.mouse.wheel(0, -240);

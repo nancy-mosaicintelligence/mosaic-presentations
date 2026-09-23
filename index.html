@@ -3558,7 +3558,8 @@ figure.pic.cropping{outline:2px solid rgba(252,100,82,.9);outline-offset:2px;cur
         else if (e.key === "Escape") { e.preventDefault(); endEdit(); }
         return;
       }
-      if (!editing) return;
+      /* in a player shell, Escape is the way back (the shell cannot see keys while the deck has the focus) */
+      if (!editing) { if (e.key === "Escape" && window.parent !== window && !document.fullscreenElement) post({ type: "itw:escape" }); return; }
       if (cropping && e.key === "Escape") { e.preventDefault(); e.stopPropagation(); exitCrop(); return; }
       var mod = e.metaKey || e.ctrlKey, key = e.key.toLowerCase();
       if (mod && key === "v") { e.preventDefault(); e.stopPropagation(); post({ type: "itw:paste" }); return; }

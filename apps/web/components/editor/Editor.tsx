@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createHistory, contentHash, validate, ABSENT } from "@mosaic/presentation-core";
 import type { Doc, Command } from "@/lib/doc";
 import { needsReload } from "@/lib/doc";
+import { CANVAS } from "@/lib/player-chrome";
 import { PlayerBridge, type BridgeMessage } from "./bridge";
 import { Inspector } from "./Inspector";
 import { Filmstrip } from "./Filmstrip";
@@ -57,6 +58,13 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
   const inlineRef = useRef(inline); inlineRef.current = inline;
   const [frameBox, setFrameBox] = useState<DOMRect | null>(null);
   const frame = useRef<HTMLIFrameElement | null>(null);
+  // the deck is designed on a 1920×1080 canvas; the stage shows that exact frame scaled to fit, so what is designed is what is presented
+  const stageFit = useRef<HTMLDivElement | null>(null); const canvas = useRef<HTMLDivElement | null>(null); const [scale, setScale] = useState(0.5);
+  useEffect(() => {
+    const fit = () => { const host = stageFit.current; if (!host) return; const full = !!document.fullscreenElement && document.fullscreenElement === canvas.current; const W = full ? window.innerWidth : host.clientWidth - 32, H = full ? window.innerHeight : host.clientHeight - 24; setScale(Math.max(0.05, Math.min(W / CANVAS.w, H / CANVAS.h))); };
+    fit(); const ro = new ResizeObserver(fit); if (stageFit.current) ro.observe(stageFit.current); window.addEventListener("resize", fit); document.addEventListener("fullscreenchange", fit);
+    return () => { ro.disconnect(); window.removeEventListener("resize", fit); document.removeEventListener("fullscreenchange", fit); };
+  }, []);
   const saveTimer = useRef<number | null>(null);
   const docRef = useRef<Doc | null>(null); docRef.current = doc;
 
@@ -243,7 +251,7 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
     setSelected(id); setTimeout(() => bridge.send({ type: "itw:select", id }), 120); if (kind === "imagebox") { setFillTarget(id); setTab("images"); } else setTab("element");
   }, [apply, bridge]);
   /** Present: the draft, fullscreen, from the current station. */
-  const present = useCallback(() => { setPreview(true); const f = frame.current; if (f && f.requestFullscreen) f.requestFullscreen().catch(() => {}); }, []);
+  const present = useCallback(() => { setPreview(true); const c = canvas.current; if (c && c.requestFullscreen) c.requestFullscreen().catch(() => {}); }, []);
   /** Publish in one step: a version named by the moment, published; the link to share. */
   const publishNow = useCallback(async () => {
     const d = docRef.current; if (!d || publishing) return; setPublishing(true);
@@ -370,8 +378,10 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
     {!inPreview && showLeft && doc && <aside className="side left"><Outline doc={doc} station={station} onGoto={i => bridge.send({ type: "itw:goto", index: i })} apply={apply} /></aside>}
 
     <main className="stage">
-      <div className="stage-fit">
-        <iframe key={playerKey} ref={frame} src={playerSrc} title="The presentation" allow="fullscreen" allowFullScreen onLoad={() => bridge.send({ type: "itw:state" })} />
+      <div className="stage-fit" ref={stageFit}>
+        <div className="canvas" ref={canvas} data-scale={scale.toFixed(4)} style={{ width: CANVAS.w * scale, height: CANVAS.h * scale }}>
+          <iframe key={playerKey} ref={frame} src={playerSrc} title="The presentation" allow="fullscreen" allowFullScreen style={{ width: CANVAS.w, height: CANVAS.h, transform: `scale(${scale})` }} onLoad={() => { bridge.send({ type: "itw:state" }); setFrameBox(frame.current?.getBoundingClientRect() ?? null); }} />
+        </div>
       </div>
       {!ready && <div className="loading">Loading the stage…</div>}
       <div className={"preview-nav" + (inPreview ? "" : " always")}><button type="button" aria-label="previous station" onClick={() => bridge.send({ type: "itw:goto", index: station - 1 })}>‹</button><span>{String(station + 1).padStart(2, "0")} / {doc?.stations.length ?? "—"}</span><button type="button" aria-label="next station" onClick={() => bridge.send({ type: "itw:goto", index: station + 1 })}>›</button></div>
@@ -379,7 +389,7 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
         onAdd={t => { const r = addBeat(doc, t, station); restructure(r.doc, `add ${t}`, r.station); }}
         onRemove={() => restructure(removeStation(doc, station), `remove station ${station + 1}`, Math.max(0, station - 1))}
         onMove={dir => { const r = moveStation(doc, station, dir); if (r) restructure(r.doc, "move station", r.station); }} />} />}
-      {inline && frameBox && doc && !inPreview && <InlineToolbar caret={inline.caret} frameBox={frameBox} element={inline.id ? locate(doc, inline.id)?.element ?? null : null} fontSize={inline.fontSize} onMark={m => bridge.send({ type: "itw:format", mark: m })} onStyle={inlineStyle} onDone={() => bridge.send({ type: "itw:endEdit" })} copy={!!inline.copy} />}
+      {inline && frameBox && doc && !inPreview && <InlineToolbar caret={inline.caret} frameBox={frameBox} scale={scale} element={inline.id ? locate(doc, inline.id)?.element ?? null : null} fontSize={inline.fontSize} onMark={m => bridge.send({ type: "itw:format", mark: m })} onStyle={inlineStyle} onDone={() => bridge.send({ type: "itw:endEdit" })} copy={!!inline.copy} />}
     </main>
 
     {!inPreview && showRight && doc && <aside className="side right">

@@ -18,3 +18,17 @@ export function withExit(html: string, back: string, label = "Back"): string {
   const i = html.lastIndexOf("</body>");
   return i < 0 ? html + chrome : html.slice(0, i) + chrome + html.slice(i);
 }
+
+/** The canvas the deck is designed on: every player, and the editor's stage, shows this exact frame scaled to fit. */
+export const CANVAS = { w: 1920, h: 1080 };
+
+/** A full-window page holding the deck at its canvas size, scaled to fit and centred (letterboxed), with the exit pill.
+ *  Keys go to the deck; it relays Escape back so the pill's way out works with the focus inside. */
+export function shellPage(o: { title: string; src: string; back: string; label?: string }): string {
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${esc(o.title)}</title><meta name="robots" content="noindex"><meta name="viewport" content="width=device-width, initial-scale=1">
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}#canvas{position:fixed;inset:0;display:block}#canvas iframe{position:absolute;left:50%;top:50%;width:${CANVAS.w}px;height:${CANVAS.h}px;margin:-${CANVAS.h / 2}px 0 0 -${CANVAS.w / 2}px;border:0;background:#000;transform-origin:50% 50%}</style></head>
+<body><div id="canvas"><iframe id="deck" src="${esc(o.src)}" title="${esc(o.title)}" allow="fullscreen" allowfullscreen></iframe></div>
+<script>(function(){var f=document.getElementById("deck");function fit(){var k=Math.min(window.innerWidth/${CANVAS.w},window.innerHeight/${CANVAS.h});f.style.transform="scale("+k+")"}fit();window.addEventListener("resize",fit);if(location.hash)f.src=f.getAttribute("src")+location.hash;f.addEventListener("load",function(){try{f.contentWindow.focus()}catch(e){}});window.addEventListener("message",function(e){if(e.origin!==location.origin||!e.data)return;if(e.data.type==="itw:escape"&&!document.fullscreenElement){var b=document.getElementById("itwBack");if(b)location.href=b.getAttribute("href")}});document.addEventListener("click",function(){try{f.contentWindow.focus()}catch(e){}})})();</script>
+</body></html>`;
+  return withExit(html, o.back, o.label || "Back");
+}

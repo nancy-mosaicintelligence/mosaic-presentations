@@ -1,7 +1,7 @@
 import { getPresentation, deckWithDocument } from "@/lib/presentations";
 import { storeFor } from "@/lib/store-for";
 import { StoreError } from "@/lib/store";
-import { withExit, safeBack } from "@/lib/player-chrome";
+import { shellPage, safeBack } from "@/lib/player-chrome";
 
 // The player the editor frames: the deck with the requested document embedded — `source=draft` (default),
 // `version:<id>` or `committed` need the editor role; `published` needs any membership. Never cached.
@@ -22,8 +22,9 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
       else if (source.startsWith("version:")) document = (await store.getVersion(id, source.slice(8))).document;
       else if (source !== "committed") return new Response("unknown source", { status: 400 });
     }
-    let html = await deckWithDocument(p, document);
-    if (back) html = withExit(html, back, back === "/" ? "Library" : "Back");
+    // a top-level page gets the shell (the deck at its canvas size, scaled to fit, with the way back); the editor's frame gets the deck
+    if (back) return new Response(shellPage({ title: p.title, src: `/player/${p.slug}?source=${encodeURIComponent(source)}`, back, label: back === "/" ? "Library" : "Back" }), { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "private, no-store" } });
+    const html = await deckWithDocument(p, document);
     return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "private, no-store", "X-Frame-Options": "SAMEORIGIN", "Content-Security-Policy": "frame-ancestors 'self'" } });
   } catch (e) { if (e instanceof StoreError) return new Response(e.message, { status: e.status }); throw e; }
 }

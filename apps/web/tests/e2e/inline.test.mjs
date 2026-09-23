@@ -6,7 +6,7 @@ import { spawn } from "node:child_process";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
-import { startApp, ensureUsers, resetPresentation, signIn, USERS, TEST_SLUG } from "./fixtures.mjs";
+import { startApp, ensureUsers, resetPresentation, signIn, USERS, TEST_SLUG, frameBox } from "./fixtures.mjs";
 const { chromium } = createRequire((process.env.PW_MODULES || process.env.NODE_PATH || "") + "/")("playwright");
 
 const APP = join(dirname(fileURLToPath(import.meta.url)), "..", ".."), PORT = 3125, BASE = `http://localhost:${PORT}`, ID = TEST_SLUG;
@@ -22,7 +22,7 @@ const caretEnd = () => frame().evaluate(() => { const el = document.querySelecto
 const dblclickOn = async (id) => {
   const el = frame().locator(`[data-id="${id}"]`); await el.waitFor({ state: "visible" });
   await frame().waitForFunction((i) => { const e = document.querySelector('[data-id="' + i + '"]'); const b = e.closest("section.beat"); return parseFloat(getComputedStyle(b || e).opacity) > 0.95; }, id, { timeout: 15000 });   // the beat has landed
-  const b = await el.boundingBox();
+  const b = await frameBox(page, frame(), `[data-id="${id}"]`);
   await page.evaluate(() => { window.__msgs = []; window.addEventListener("message", e => window.__msgs.push(e.data && e.data.type)); });
   await page.mouse.dblclick(b.x + b.width / 2, b.y + b.height / 2);
   try { await page.waitForSelector(".inline-toolbar", { timeout: 5000 }); }
@@ -86,7 +86,7 @@ test("a list item edits on its own; a second station's line too", async () => {
   const key = (await draft()).stations[10].section, sel = `section.beat[data-k="${key}"] ul.pts li`;
   const li = frame().locator(sel).first(); await li.waitFor({ state: "visible" });
   await frame().waitForFunction((q) => { const li = document.querySelector(q); return parseFloat(getComputedStyle(li.closest("section.beat")).opacity) > 0.95 && parseFloat(getComputedStyle(li).opacity) > 0.95; }, sel, { timeout: 15000 });
-  const b = await li.boundingBox(); await page.mouse.dblclick(b.x + 20, b.y + b.height / 2); await page.waitForSelector(".inline-toolbar", { timeout: 5000 });
+  const b = await frameBox(page, frame(), sel); await page.mouse.dblclick(b.x + 20, b.y + b.height / 2); await page.waitForSelector(".inline-toolbar", { timeout: 5000 });
   await caretEnd(); await page.keyboard.type(" (edited)"); await page.keyboard.press("Enter");
   await untilDraft(d => { const sec = d.sections.find(s => s.key === d.stations[10].section); const list = sec.elements.find(e => e.type === "list"); return list.items[0].runs.map(r => r.t || "").join("").endsWith("(edited)"); }, "the list item");
 }, { timeout: 90000 });
