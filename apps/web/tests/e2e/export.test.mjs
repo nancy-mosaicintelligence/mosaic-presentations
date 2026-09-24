@@ -71,6 +71,14 @@ test("each slide has the scene as its background, the words as text boxes in the
   const s1 = await zip.file(slides[0]).async("string");
   assert.ok(s1.includes("Surgery is the closest") && s1.includes("modern medicine") && s1.includes('typeface="Fraunces"'), "the opening line, in runs, in the serif");
   assert.ok(/<a:solidFill><a:srgbClr val="FC6452"/.test(s1), "the accent colour on its run");
+  // the words line for line, as the deck breaks them; the header marks as pictures of their own
+  const hero = /<p:sp>(?:(?!<\/p:sp>).)*Surgery is the closest(?:(?!<\/p:sp>).)*<\/p:sp>/s.exec(s1); assert.ok(hero && hero[0].includes("<a:br/>"), "the opening line breaks where the deck breaks it");
+  assert.equal((hero[0].match(/<a:p>/g) || []).length, 1, "one paragraph"); assert.equal((hero[0].match(/<a:pPr/g) || []).length, 1, "its properties once");
+  assert.ok(hero[0].includes('<a:spcPts val='), "an exact line pitch");
+  assert.ok((s1.match(/<p:pic>/g) || []).length >= 2, "the Mosaic logo and the event mark are pictures");
+  const rels1 = await zip.file("ppt/slides/_rels/slide1.xml.rels").async("string"); const pngs = [...rels1.matchAll(/Target="\.\.\/media\/([^"]+\.png)"/g)].map(m => m[1]);
+  assert.ok(pngs.length >= 3, "the background and two transparent pictures");
+  writeFileSync(join(APP, "test-results", "export-mark.png"), await zip.file(`ppt/media/${pngs[pngs.length - 1]}`).async("nodebuffer"));
   const s3 = await zip.file(slides[2]).async("string");
   assert.ok(s3.includes("150 years"), "the third station's line");
 });
@@ -94,6 +102,12 @@ test("a station on the rendered scene and one on white export too", async () => 
   assert.equal(await frame().evaluate(() => document.body.classList.contains("safe")), true, "safe mode is back");
   await page.evaluate(() => document.querySelector("iframe").contentWindow.postMessage({ v: 1, type: "itw:safe", on: false }, location.origin));
   const white = await one(24); assert.ok(white.includes('typeface="'), "station 24 has words");
+  // the pills (chips) are filled, rounded text boxes with their icons as pictures; the staggered reveals have all landed
+  const chips = await one(18);
+  const pill = /<p:sp>(?:(?!<\/p:sp>).)*<a:t>drugs<\/a:t>(?:(?!<\/p:sp>).)*<\/p:sp>/s.exec(chips); assert.ok(pill, "the drugs pill");
+  assert.ok(pill[0].includes('prst="roundRect"') && /<p:spPr>(?:(?!<\/p:spPr>).)*<a:ln/s.test(pill[0]), "a rounded box with an edge");
+  assert.ok(["radiation", "energy"].every(t => chips.includes(`<a:t>${t}</a:t>`)), "every chip, however late it reveals");
+  assert.ok((chips.match(/<p:pic>/g) || []).length >= 5, "the marks and the chip icons are pictures");
   await dlg.getByRole("button", { name: "×" }).click();
 }, { timeout: 240000 });
 
@@ -105,6 +119,7 @@ test("a text box sits where the words sit on the stage", async () => {
   await page.locator(".filmstrip .card[data-i='0']").click(); await page.waitForTimeout(1500);
   // the words themselves (a centred line is narrower than its element)
   const on = await frame().evaluate(() => { const e = document.querySelector('[data-id="open.1"]'); const rg = document.createRange(); rg.selectNodeContents(e); const r = rg.getBoundingClientRect(); return { x: r.left / innerWidth, y: r.top / innerHeight, w: r.width / innerWidth, h: r.height / innerHeight }; });
-  assert.ok(Math.abs(box.x - on.x) < 0.03 && Math.abs(box.y - on.y) < 0.04, `left/top: pptx ${JSON.stringify(box)} stage ${JSON.stringify(on)}`);
-  assert.ok(box.w > on.w * 0.9 && box.w < on.w * 1.2 && box.h > on.h * 0.8 && box.h < on.h * 1.4, `size: pptx ${JSON.stringify(box)} stage ${JSON.stringify(on)}`);
+  // a centred box is wider than its words (room for a wider face) and shares their centre and top
+  assert.ok(Math.abs((box.x + box.w / 2) - (on.x + on.w / 2)) < 0.02 && Math.abs(box.y - on.y) < 0.04, `centre/top: pptx ${JSON.stringify(box)} stage ${JSON.stringify(on)}`);
+  assert.ok(box.w > on.w && box.w < on.w * 1.5 && box.h > on.h * 0.8 && box.h < on.h * 1.4, `size: pptx ${JSON.stringify(box)} stage ${JSON.stringify(on)}`);
 });

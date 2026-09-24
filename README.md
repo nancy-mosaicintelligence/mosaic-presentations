@@ -65,7 +65,7 @@ pnpm dev
 
 Then open http://localhost:3000. The deck at the root of the repository is unchanged for an audience: the bridge the editor uses is inert unless the deck is framed by the editor on the same origin.
 
-**Export to Google Slides** (the bar → Export) writes a `.pptx` that Slides imports (File → Import slides): one slide per station, the frame as the deck draws it behind editable text boxes in the deck's fonts, the speaker note, and a fade between slides. What the engine animates — the camera, the reveals, the figures — has no equivalent in Slides and stays with the live link (D-055).
+**Export to Google Slides** (the bar → Export) writes a `.pptx` that Slides imports (File → Import slides): one slide per station: the frame as the deck draws it behind movable images (logos, pictures, charts, icons) and editable text boxes line for line in the deck's fonts, the speaker note, and a fade between slides. What the engine animates — the camera, the reveals, the figures — has no equivalent in Slides and stays with the live link (D-055).
 
 ### Sign-in and roles
 

@@ -260,7 +260,7 @@ Sixth pass (D-027, D-028): the room recedes for the whole run of text and never 
 - Refinement (D-052): Make a copy of a deck (current document and pictures); a Setup tab with the event mark (Vento Wave, Fundomo, or an SVG) and header sizes
 - Refinement (D-053): published decks are public at their link; owners set the address (slug)
 - Refinement (D-054): the header logos select, drag, resize and nudge like any element; the header pads itself when they are enlarged
-- Refinement (D-055): Export to Google Slides — a .pptx per station range: the frame as a picture, the words as editable text boxes in the deck's fonts, the note, a fade; what Slides cannot play stays with the live link
+- Refinement (D-055): Export to Google Slides — a .pptx per station range: the frame as a picture, the logos, pictures, charts and icons as movable images, the words as editable text boxes line for line in the deck's fonts, pills as filled boxes, the note, a fade; what Slides cannot play stays with the live link
 - Next: a custom domain when wanted
 
 ## Deployment (2026-09-21)

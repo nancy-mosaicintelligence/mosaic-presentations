@@ -6,8 +6,10 @@ import { useEffect, useRef, useState } from "react";
 import type { PlayerBridge } from "./bridge";
 
 export type ExportRun = { br: true } | { t: string; font: string; size: number; bold: boolean; italic: boolean; color: string; opacity: number; spacing: number };
-export type ExportText = { id: string; x: number; y: number; w: number; h: number; line: number; lineHeight: number; fontSize: number; align: string; opacity: number; runs: ExportRun[] };
-export type ExportReady = { index: number; w: number; h: number; texts: ExportText[]; note: string; chapter: string };
+export type ExportPill = { x: number; y: number; w: number; h: number; fill: string; stroke: string; strokeW: number; radius: number; inset: { l: number; t: number; r: number; b: number } };
+export type ExportText = { id: string; x: number; y: number; w: number; h: number; lines: number; maxLine: number; line: number; lineHeight: number; fontSize: number; align: string; opacity: number; runs: ExportRun[]; pill: ExportPill | null };
+export type ExportObject = { n: number; x: number; y: number; w: number; h: number; svg: boolean };
+export type ExportReady = { index: number; w: number; h: number; texts: ExportText[]; objects: ExportObject[]; note: string; chapter: string };
 
 const SLIDE = { w: 10, h: 5.625 };   // inches: the 16:9 layout
 
@@ -19,6 +21,25 @@ const colour = (c: string) => {
   return { hex: [m[1], m[2], m[3]].map(v => (+v).toString(16).padStart(2, "0")).join("").toUpperCase(), a };
 };
 
+/** An inline SVG as a PNG: a clone with its computed paint inlined (currentColor and the stylesheet resolved), drawn at `scale`. */
+async function rasterSvg(svg: SVGElement, scale: number): Promise<string> {
+  const win = svg.ownerDocument.defaultView!;
+  const r = svg.getBoundingClientRect();
+  const clone = svg.cloneNode(true) as SVGElement;
+  const src = [svg, ...Array.from(svg.querySelectorAll("*"))], dst = [clone, ...Array.from(clone.querySelectorAll("*"))];
+  const PROPS = ["fill", "fill-opacity", "fill-rule", "stroke", "stroke-width", "stroke-opacity", "stroke-linecap", "stroke-linejoin", "stroke-dasharray", "opacity", "font-family", "font-size", "font-weight", "letter-spacing", "text-anchor"];
+  src.forEach((e, i) => { const cs = win.getComputedStyle(e); dst[i].setAttribute("style", PROPS.map(k => `${k}:${cs.getPropertyValue(k)}`).join(";")); });
+  clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  clone.setAttribute("width", String(r.width)); clone.setAttribute("height", String(r.height));
+  const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(clone)], { type: "image/svg+xml;charset=utf-8" }));
+  try {
+    const img = await new Promise<HTMLImageElement>((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => rej(new Error("svg")); im.src = url; });
+    const cv = document.createElement("canvas"); cv.width = Math.max(1, Math.round(r.width * scale)); cv.height = Math.max(1, Math.round(r.height * scale));
+    cv.getContext("2d")!.drawImage(img, 0, 0, cv.width, cv.height);
+    return cv.toDataURL("image/png");
+  } finally { URL.revokeObjectURL(url); }
+}
+
 export async function exportToSlides(o: { frame: HTMLIFrameElement; bridge: PlayerBridge; ask: (index: number) => Promise<ExportReady>; from: number; to: number; title: string; onProgress: (done: number, total: number) => void }): Promise<Blob> {
   const [{ default: html2canvas }, { default: PptxGenJS }, { default: JSZip }] = await Promise.all([import("html2canvas"), import("pptxgenjs"), import("jszip")]);
   const pptx = new PptxGenJS();
@@ -27,30 +48,63 @@ export async function exportToSlides(o: { frame: HTMLIFrameElement; bridge: Play
   for (let i = o.from; i <= o.to; i++) {
     const r = await o.ask(i);
     const doc = o.frame.contentDocument; if (!doc) throw new Error("the stage is gone");
+    const kx = SLIDE.w / r.w, ky = SLIDE.h / r.h, pt = 720 / r.w;   // 10 in = 720 pt across the deck's width
     let picture: string;
+    const pictures: { data: string; x: number; y: number; w: number; h: number }[] = [];
+    const hidden: { el: HTMLElement; was: string }[] = [];
     try {
+      // the objects first, each from the live stage; then they and the pills leave the picture of everything else
+      for (const ob of r.objects) {
+        const el = doc.querySelector(`[data-export="${ob.n}"]`) as HTMLElement | null; if (!el) continue;
+        const inner = el.tagName.toLowerCase() === "svg" ? el : (el.children.length === 1 && el.firstElementChild!.tagName.toLowerCase() === "svg" && !el.textContent!.trim() ? el.firstElementChild as HTMLElement : null);
+        const scale = Math.max(2, Math.min(4, Math.ceil(600 / Math.max(ob.w, ob.h))));
+        try {
+          let data: string, box = { x: ob.x, y: ob.y, w: ob.w, h: ob.h };
+          if (inner) { const ir = inner.getBoundingClientRect(); box = { x: ir.left, y: ir.top, w: ir.width, h: ir.height }; data = await rasterSvg(inner as unknown as SVGElement, scale); }
+          else data = (await html2canvas(el, { scale, backgroundColor: null, logging: false, useCORS: true, imageTimeout: 0 })).toDataURL("image/png");
+          pictures.push({ data, ...box });
+          hidden.push({ el, was: el.style.visibility }); el.style.visibility = "hidden";
+        } catch { /* it stays in the picture */ }
+      }
+      for (const el of Array.from(doc.querySelectorAll("[data-export-hide]")) as HTMLElement[]) { hidden.push({ el, was: el.style.visibility }); el.style.visibility = "hidden"; }
       const cv = await html2canvas(doc.body, { scale: 1, width: r.w, height: r.h, windowWidth: r.w, windowHeight: r.h, x: 0, y: 0, scrollX: 0, scrollY: 0,
         backgroundColor: getComputedStyle(doc.body).backgroundColor || "#000000", logging: false, useCORS: true, imageTimeout: 0 });
       picture = cv.toDataURL("image/jpeg", 0.9);
-    } finally { o.bridge.send({ type: "itw:exportDone" }); }
+    } finally {
+      for (const h of hidden) h.el.style.visibility = h.was;
+      o.bridge.send({ type: "itw:exportDone" });
+    }
     const slide = pptx.addSlide();
     slide.background = { data: picture.replace(/^data:/, "") };
-    const kx = SLIDE.w / r.w, ky = SLIDE.h / r.h, pt = 720 / r.w;   // 10 in = 720 pt across the deck's width
+    for (const p of pictures) slide.addImage({ data: p.data, x: p.x * kx, y: p.y * ky, w: p.w * kx, h: p.h * ky });
     for (const t of r.texts) {
-      const half = Math.max(0, (t.lineHeight - t.line) / 2);   // CSS centres a line in its line box; the box starts at the line box
-      const slack = t.w * 0.04 + 6;                             // room for slightly different font metrics, so no word wraps early
-      const align = t.align === "center" ? "center" : t.align === "right" || t.align === "end" ? "right" : t.align === "justify" ? "justify" : "left";
-      const x = t.x - (align === "center" ? slack / 2 : align === "right" ? slack : 0);
-      const runs: { text: string; options: Record<string, unknown> }[] = [];
+      // one paragraph; a soft break (shift-enter) where the deck starts a new line
+      const runs: { text: string; options: Record<string, unknown> }[] = []; let br = false;
       for (const u of t.runs) {
-        if ("br" in u) { const last = runs[runs.length - 1]; if (last && !last.options.breakLine) last.options.breakLine = true; else runs.push({ text: "", options: { breakLine: true } }); continue; }
+        if ("br" in u) { br = true; continue; }
         const c = colour(u.color), op = c.a * u.opacity;
-        runs.push({ text: u.t, options: { fontFace: u.font, fontSize: +(u.size * pt).toFixed(1), bold: u.bold, italic: u.italic, color: c.hex,
+        runs.push({ text: u.t, options: { fontFace: u.font, fontSize: +(u.size * pt).toFixed(1), bold: u.bold, italic: u.italic, color: c.hex, ...(br ? { softBreakBefore: true } : {}),
           ...(op < 0.995 ? { transparency: Math.round((1 - op) * 100) } : {}), ...(u.spacing ? { charSpacing: +(u.spacing * pt).toFixed(2) } : {}) } });
+        br = false;
       }
       if (!runs.length) continue;
-      slide.addText(runs as never, { x: x * kx, y: (t.y - half) * ky, w: (t.w + slack) * kx, h: (t.h + half * 2 + 2) * ky, margin: 0, valign: "top", align, wrap: true, autoFit: false,
-        lineSpacingMultiple: +(t.lineHeight / t.fontSize).toFixed(3), ...(t.opacity < 0.995 ? { transparency: Math.round((1 - t.opacity) * 100) } : {}) });
+      const align = t.align === "center" ? "center" : t.align === "right" || t.align === "end" ? "right" : t.align === "justify" ? "justify" : "left";
+      const half = Math.max(0, (t.lineHeight - t.line) / 2);   // CSS centres a line in its line box; the box starts at the line box
+      const common = { valign: "top" as const, align: align as "left" | "center" | "right" | "justify", wrap: true, autoFit: false, lineSpacing: +(t.lineHeight * pt).toFixed(2),
+        ...(t.opacity < 0.995 ? { transparency: Math.round((1 - t.opacity) * 100) } : {}) };
+      if (t.pill) {
+        // a pill: the element's own box, its fill and edge, the words at their inset (room on the right for a wider face)
+        const f = colour(t.pill.fill), e = colour(t.pill.stroke), extra = Math.max(0, t.maxLine * 0.25);
+        const w = t.pill.w + extra, ml = t.pill.inset.l, mr = Math.max(0, t.pill.inset.r), mt = Math.max(0, t.pill.inset.t - half), mb = Math.max(0, t.pill.inset.b);
+        slide.addText(runs as never, { ...common, x: t.pill.x * kx, y: t.pill.y * ky, w: w * kx, h: t.pill.h * ky, margin: [ml * pt, mr * pt, mb * pt, mt * pt],
+          shape: pptx.ShapeType.roundRect, rectRadius: Math.min(t.pill.radius, t.pill.h / 2) * kx,
+          ...(f.a > 0 ? { fill: { color: f.hex, transparency: Math.round((1 - f.a) * 100) } } : {}),
+          ...(t.pill.strokeW > 0 && e.a > 0 ? { line: { color: e.hex, width: +(t.pill.strokeW * pt).toFixed(2), transparency: Math.round((1 - e.a) * 100) } } : {}) });
+        continue;
+      }
+      // the lines break where the deck breaks them; the box is wide enough that a wider face cannot wrap a line early
+      const w = t.maxLine * 1.3 + 12, x = t.x - (align === "center" ? (w - t.w) / 2 : align === "right" ? w - t.w : 0);
+      slide.addText(runs as never, { ...common, x: x * kx, y: (t.y - half) * ky, w: w * kx, h: (t.lines * t.lineHeight + 4) * ky, margin: 0 });
     }
     if (r.note) slide.addNotes(r.note);
     o.onProgress(i - o.from + 1, total);
@@ -61,7 +115,11 @@ export async function exportToSlides(o: { frame: HTMLIFrameElement; bridge: Play
   for (const name of Object.keys(zip.files)) {
     if (!/^ppt\/slides\/slide\d+\.xml$/.test(name)) continue;
     const xml = await zip.file(name)!.async("string");
-    if (!/<p:transition/.test(xml)) zip.file(name, xml.replace("</p:clrMapOvr>", '</p:clrMapOvr><p:transition spd="med"><p:fade/></p:transition>'));
+    let out = xml;
+    if (!/<p:transition/.test(out)) out = out.replace("</p:clrMapOvr>", '</p:clrMapOvr><p:transition spd="med"><p:fade/></p:transition>');
+    // pptxgenjs repeats the paragraph properties before later runs of a paragraph; only the first is valid
+    out = out.replace(/<a:p>(<a:pPr\b[^>]*>(?:(?!<\/a:pPr>).)*<\/a:pPr>|<a:pPr\b[^>]*\/>)?((?:(?!<\/a:p>).)*)<\/a:p>/gs, (_m, first: string | undefined, rest: string) => "<a:p>" + (first || "") + rest.replace(/<a:pPr\b[^>]*>(?:(?!<\/a:pPr>).)*<\/a:pPr>|<a:pPr\b[^>]*\/>/gs, "") + "</a:p>");
+    if (out !== xml) zip.file(name, out);
   }
   return zip.generateAsync({ type: "blob", mimeType: "application/vnd.openxmlformats-officedocument.presentationml.presentation" });
 }
@@ -85,7 +143,7 @@ export function ExportDialog({ total, title, onClose, run }: { total: number; ti
   };
   return <div className="share export" role="dialog" aria-label="Export to Google Slides">
     <header><strong>Export to Google Slides</strong><button type="button" className="ghost" onClick={onClose} disabled={busy}>×</button></header>
-    <p className="muted small">Makes a PowerPoint file (.pptx) that Google Slides opens: in Slides, File → Import slides. Every station becomes one slide: the scene as a picture behind it, the words on top as text boxes you can edit, the speaker note with it, and a fade from slide to slide.</p>
+    <p className="muted small">Makes a PowerPoint file (.pptx) that Google Slides opens: in Slides, File → Import slides. Every station becomes one slide: the scene as a picture behind it; the logos, pictures, charts and icons as images you can move and resize; the words as text boxes you can edit, line for line; the speaker note with it; and a fade from slide to slide.</p>
     <p className="muted small">Movement inside a station — the camera, the reveals, the animated figures — does not carry over. Slides has nothing to play it with; the live link keeps it.</p>
     <div className="range"><span className="lab">Stations</span>
       <input className="field" type="number" min={1} max={total} value={from} disabled={busy} onChange={e => setFrom(+e.target.value)} aria-label="from station" />

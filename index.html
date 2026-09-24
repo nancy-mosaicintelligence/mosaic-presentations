@@ -698,7 +698,7 @@ body.editing .editline::selection,body.editing .editline *::selection{background
 body.editing .editsel{cursor:move}
 section.beat.placed-host{pointer-events:none!important;background:none!important} section.beat.placed-host .placed{pointer-events:auto!important}
 figure.pic.cropping{outline:2px solid rgba(252,100,82,.9);outline-offset:2px;cursor:grab} figure.pic.cropping .rot{overflow:visible} figure.pic.cropping .ghost{position:absolute;opacity:.35;pointer-events:none;max-width:none}
-body.exporting #hud,body.exporting #notes,body.exporting .cue,body.exporting #editHandles{visibility:hidden!important} body.exporting [data-id]:hover,body.exporting [data-chrome]:hover,body.exporting [data-copy]:hover{outline:none!important}
+body.exporting #hud,body.exporting #notes,body.exporting .cue,body.exporting #editHandles{visibility:hidden!important} body.exportfast *,body.exportfast *::before,body.exportfast *::after{transition:none!important;animation-duration:0s!important;animation-delay:0s!important} body.exportfast #partner svg{animation:none!important;transform:none!important} body.exporting [data-id]:hover,body.exporting [data-chrome]:hover,body.exporting [data-copy]:hover{outline:none!important}
 </style>
 </head>
 <body>
@@ -3274,7 +3274,7 @@ body.exporting #hud,body.exporting #notes,body.exporting .cue,body.exporting #ed
     }
     if (!present) paintHudFromP();
     paintRail(P);
-    if (EXP.pending !== null) exportSnap();
+    exportTick(); if (EXP.pending !== null) exportSnap();
     watchdog(now);
   }
 
@@ -3284,16 +3284,23 @@ body.exporting #hud,body.exporting #notes,body.exporting .cue,body.exporting #ed
      copy of the rendered scene in for the WebGL canvas (whose buffer cannot be read once the frame is over) and
      blanks the words, so the parent can rasterise everything else. itw:exportDone puts it all back.
      ================================================================ */
-  var EXP = { pending: null, reply: null, undo: [], safeWas: false };
+  var EXP = { pending: null, reply: null, undo: [], safeWas: false, frames: -1, index: 0 };
   function exportStation(i, reply) {
     if (EXP.reply) exportRestore();
     /* the picture is the full scene: safe mode steps aside for the export (and the watchdog holds still — a slow
        or hidden tab must not switch the scene off halfway through), then comes back as it was */
     EXP.safeWas = safe; if (safe) setSafe(false, false);
+    document.body.classList.add("exportfast");
     goto(i); P = PT; TW.from = PT; TW.to = PT; TW.dur = 0;
-    EXP.reply = reply;
-    /* the time-driven entrances (labels, crowd, staggered reveals) need a moment to land */
-    setTimeout(function () { EXP.pending = i; }, REDUCED ? 200 : 1500);
+    EXP.reply = reply; EXP.index = i; EXP.frames = 0;
+  }
+  /* at the end of every frame while an export is pending: the first frame lets the timed entrances start
+     (they note the clock), then the clock jumps a minute so they have all landed, and the third frame is the picture */
+  function exportTick() {
+    if (!EXP.reply || EXP.frames < 0) return;
+    EXP.frames++;
+    if (EXP.frames === 1) t0clock -= 60000;
+    else if (EXP.frames >= 3) { EXP.frames = -1; EXP.pending = EXP.index; }
   }
   function exportSnap() {
     var i = EXP.pending; EXP.pending = null; if (!EXP.reply) return;
@@ -3302,78 +3309,113 @@ body.exporting #hud,body.exporting #notes,body.exporting .cue,body.exporting #ed
     still.id = "glstill"; still.style.cssText = "display:block;width:100%;height:100%";
     canvas.parentNode.insertBefore(still, canvas); canvas.style.display = "none";
     EXP.undo.push(function () { still.remove(); canvas.style.display = ""; });
-    var texts = exportTexts();
+    var got = exportTexts();
     document.body.classList.add("exporting");
-    EXP.reply({ type: "itw:exportReady", index: i, w: window.innerWidth, h: window.innerHeight, texts: texts,
+    EXP.reply({ type: "itw:exportReady", index: i, w: window.innerWidth, h: window.innerHeight, texts: got.texts, objects: got.objects,
       note: STATIONS[i].n || "", chapter: STATIONS[i].c || "" });
   }
   function exportRestore() {
     while (EXP.undo.length) EXP.undo.pop()();
-    document.body.classList.remove("exporting"); EXP.reply = null; EXP.pending = null;
+    document.body.classList.remove("exporting"); document.body.classList.remove("exportfast");
+    EXP.reply = null; EXP.pending = null; EXP.frames = -1;
     if (EXP.safeWas && !safe) setSafe(true, false); EXP.safeWas = false;
   }
-  /* every run of visible text, grouped by its box: the nearest ancestor that is not laid out inline */
+  /* the inventory. Objects — the header marks, figures and pictures, drawn charts and icons — become pictures of
+     their own on the slide. Every visible run of text becomes part of a text box: the nearest ancestor that is not
+     laid out inline, its words listed line by line exactly as the deck breaks them. A box with a background or a
+     border of its own (a pill) carries that too. */
   function exportTexts() {
-    var out = [], boxes = [], byBox = new Map();
+    var texts = [], objects = [], boxes = [], byBox = new Map();
     function opacityUpTo(el, stop) { var o = 1; for (var e = el; e && e !== stop; e = e.parentElement) o *= parseFloat(getComputedStyle(e).opacity) || 0; return o; }
+    function alpha(c) { var m = /rgba?\([^)]*?(?:,|\/)\s*([\d.]+%?)\s*\)$/.exec(c || ""); if (!m) return /^rgb\(/.test(c || "") ? 1 : 0; return m[1].slice(-1) === "%" ? parseFloat(m[1]) / 100 : parseFloat(m[1]); }
+    function onStage(r) { return r.width >= 1 && r.height >= 1 && r.right > 0 && r.bottom > 0 && r.left < window.innerWidth && r.top < window.innerHeight; }
+    function shown(el) { for (var e = el; e && e !== document.body; e = e.parentElement) { var cs = getComputedStyle(e); if (cs.display === "none" || cs.visibility === "hidden") return false; } return opacityUpTo(el, document.body.parentElement) >= .05 && onStage(el.getBoundingClientRect()); }
+    /* --- the objects --- */
+    var cand = document.querySelectorAll("[data-chrome], figure, img, svg[data-id], [data-id].icons, [data-id].impchart, [data-id].marrow, .chips span > svg");
+    for (var ci = 0; ci < cand.length; ci++) {
+      var o = cand[ci];
+      if (o.closest("#hud, #notes, .cue, #editHandles, [data-export]")) continue;
+      if (!shown(o)) continue;
+      var orc = o.getBoundingClientRect();
+      o.setAttribute("data-export", String(objects.length));
+      (function (el) { EXP.undo.push(function () { el.removeAttribute("data-export"); }); })(o);
+      objects.push({ n: objects.length, x: orc.left, y: orc.top, w: orc.width, h: orc.height, svg: o.tagName.toLowerCase() === "svg" });
+    }
+    /* --- the boxes --- */
     var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT), n;
     while ((n = walker.nextNode())) {
       if (!/\S/.test(n.nodeValue)) continue;
-      var pe = n.parentElement; if (!pe || pe.closest("#hud, #notes, .cue, script, style, svg, #editHandles")) continue;
+      var pe = n.parentElement; if (!pe || pe.closest("#hud, #notes, .cue, script, style, svg, #editHandles, [data-export]")) continue;
       var box = pe; while (box !== document.body && getComputedStyle(box).display === "inline") box = box.parentElement;
       if (box === document.body || byBox.has(box)) continue;
-      var cs = getComputedStyle(box); if (cs.visibility === "hidden") continue;
-      var op = opacityUpTo(box, document.body.parentElement); if (op < .05) continue;
-      var r = box.getBoundingClientRect(); if (r.width < 1 || r.height < 1 || r.right < 0 || r.bottom < 0 || r.left > window.innerWidth || r.top > window.innerHeight) continue;
-      byBox.set(box, true); boxes.push({ el: box, cs: cs, opacity: op });
+      if (!shown(box)) continue;
+      byBox.set(box, true); boxes.push({ el: box, cs: getComputedStyle(box), opacity: opacityUpTo(box, document.body.parentElement) });
     }
     boxes.forEach(function (b) {
-      var runs = [], rects = [], first = 0, box = b.el;
+      var segs = [], box = b.el;
       (function walk(el) {
         for (var c = el.firstChild; c; c = c.nextSibling) {
           if (c.nodeType === 3) {
-            var t = c.nodeValue; if (!/\S/.test(t) && !runs.length) continue;
-            var ps = getComputedStyle(c.parentElement), ws = ps.whiteSpace, pre = /^pre/.test(ws);
+            var txt = c.nodeValue; if (!/\S/.test(txt)) continue;
+            var ps = getComputedStyle(c.parentElement);
             var ro = opacityUpTo(c.parentElement, box); if (ro < .05) continue;
             var fam = (ps.fontFamily.split(",")[0] || "").replace(/["']/g, "").trim();
             var st = { font: fam, size: parseFloat(ps.fontSize), bold: parseInt(ps.fontWeight, 10) >= 600, italic: ps.fontStyle === "italic",
-              color: ps.color, opacity: ro, spacing: parseFloat(ps.letterSpacing) || 0, upper: ps.textTransform === "uppercase" };
-            var rg = document.createRange(); rg.selectNodeContents(c);
-            var cr = rg.getClientRects(); for (var k = 0; k < cr.length; k++) if (cr[k].width > 0 && cr[k].height > 0) { rects.push(cr[k]); if (!first) first = cr[k].height; }
-            var parts = pre ? t.split("\n") : [t.replace(/\s+/g, " ")];
-            parts.forEach(function (part, pi) {
-              if (pi > 0) runs.push({ br: true });
-              if (part) runs.push(Object.assign({ t: st.upper ? part.toUpperCase() : part }, st));
-            });
+              color: ps.color, opacity: ro, spacing: parseFloat(ps.letterSpacing) || 0 }, upper = ps.textTransform === "uppercase";
+            /* character by character: a new line where the glyphs move down; collapsed and hanging spaces skipped */
+            var rg = document.createRange(), cur = null;
+            for (var k = 0; k < txt.length; k++) {
+              rg.setStart(c, k); rg.setEnd(c, k + 1);
+              var rr = rg.getClientRects(), r0 = rr.length ? rr[0] : null, ch = txt[k];
+              if (!r0 || r0.height === 0 || (r0.width === 0 && /\s/.test(ch))) continue;
+              if (!cur || Math.abs(r0.top - cur.top) > r0.height * .5) { cur = { t: "", top: r0.top, l: r0.left, r: r0.right, b: r0.bottom, st: st }; segs.push(cur); }
+              cur.t += upper ? ch.toUpperCase() : ch; cur.l = Math.min(cur.l, r0.left); cur.r = Math.max(cur.r, r0.right); cur.b = Math.max(cur.b, r0.bottom); cur.top = Math.min(cur.top, r0.top);
+            }
           } else if (c.nodeType === 1) {
-            if (c.tagName === "BR") { runs.push({ br: true }); continue; }
-            if (c.tagName === "svg" || c.tagName === "SVG") continue;
+            if (c.tagName === "BR" || c.tagName === "svg" || c.tagName === "SVG" || c.hasAttribute("data-export")) continue;
             var ds = getComputedStyle(c); if (ds.display === "none" || ds.visibility === "hidden") continue;
             if (ds.display !== "inline") continue;   /* its own box, or a container of boxes */
             walk(c);
           }
         }
       })(box);
-      /* trim: no leading space on a line, no trailing space at the end */
-      var lineStart = true;
-      runs.forEach(function (r) { if (r.br) { lineStart = true; return; } if (lineStart) r.t = r.t.replace(/^\s+/, ""); if (r.t) lineStart = false; });
-      for (var q = runs.length - 1; q >= 0; q--) { if (runs[q].br) { runs.pop(); continue; } runs[q].t = runs[q].t.replace(/\s+$/, ""); if (runs[q].t) break; runs.pop(); }
+      segs.forEach(function (sg) { sg.t = sg.t.replace(/\s+/g, " "); });
+      segs = segs.filter(function (sg) { return /\S/.test(sg.t); });
+      if (!segs.length) return;
+      /* lines: consecutive segments at the same height; a break between lines */
+      var lines = [], runs = [], line = null;
+      segs.forEach(function (sg) {
+        if (!line || Math.abs(sg.top - line.top) > (sg.b - sg.top) * .5) {
+          if (line) { runs.push({ br: true }); }
+          line = { top: sg.top, l: sg.l, r: sg.r, b: sg.b }; lines.push(line);
+          sg.t = sg.t.replace(/^\s+/, "");
+        }
+        line.l = Math.min(line.l, sg.l); line.r = Math.max(line.r, sg.r); line.b = Math.max(line.b, sg.b); line.top = Math.min(line.top, sg.top);
+        if (sg.t) runs.push(Object.assign({ t: sg.t }, sg.st));
+      });
+      for (var q = runs.length - 1; q >= 0 && !runs[q].br; q--) { runs[q].t = runs[q].t.replace(/\s+$/, ""); if (runs[q].t) break; }
       runs = runs.filter(function (r) { return r.br || r.t; });
-      if (!runs.length || !rects.length) return;
-      var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-      rects.forEach(function (r) { x0 = Math.min(x0, r.left); y0 = Math.min(y0, r.top); x1 = Math.max(x1, r.right); y1 = Math.max(y1, r.bottom); });
-      var lh = parseFloat(b.cs.lineHeight), fs = parseFloat(b.cs.fontSize);
-      out.push({ id: box.getAttribute("data-id") || box.getAttribute("data-copy") || "", x: x0, y: y0, w: x1 - x0, h: y1 - y0, line: first,
-        lineHeight: isNaN(lh) ? fs * 1.2 : lh, fontSize: fs, align: b.cs.textAlign, opacity: b.opacity, runs: runs });
+      if (!runs.length) return;
+      var x0 = Infinity, x1 = -Infinity, maxLine = 0;
+      lines.forEach(function (L) { x0 = Math.min(x0, L.l); x1 = Math.max(x1, L.r); maxLine = Math.max(maxLine, L.r - L.l); });
+      var lh = parseFloat(b.cs.lineHeight), fs = parseFloat(b.cs.fontSize), rect = box.getBoundingClientRect();
+      var pill = null;
+      if (alpha(b.cs.backgroundColor) > 0 || (parseFloat(b.cs.borderTopWidth) > 0 && alpha(b.cs.borderTopColor) > 0)) {
+        pill = { x: rect.left, y: rect.top, w: rect.width, h: rect.height, fill: b.cs.backgroundColor, stroke: b.cs.borderTopColor, strokeW: parseFloat(b.cs.borderTopWidth) || 0,
+          radius: Math.min(parseFloat(b.cs.borderTopLeftRadius) || 0, rect.height / 2), inset: { l: x0 - rect.left, t: lines[0].top - rect.top, r: rect.right - x1, b: rect.bottom - lines[lines.length - 1].b } };
+        box.setAttribute("data-export-hide", "1"); EXP.undo.push(function () { box.removeAttribute("data-export-hide"); });
+      }
+      texts.push({ id: box.getAttribute("data-id") || box.getAttribute("data-copy") || "", x: x0, y: lines[0].top, w: x1 - x0, h: lines[lines.length - 1].b - lines[0].top,
+        lines: lines.length, maxLine: maxLine, line: lines[0].b - lines[0].top, lineHeight: isNaN(lh) ? fs * 1.2 : lh, fontSize: fs, align: b.cs.textAlign, opacity: b.opacity, runs: runs, pill: pill });
       /* blank the words (not the icons that borrow their colour) for the picture */
       [box].concat([].slice.call(box.querySelectorAll("*"))).forEach(function (el) {
-        if (el.closest("svg")) { if (el.tagName === "svg") { var was = el.style.color; el.style.color = getComputedStyle(el).color; EXP.undo.push(function () { el.style.color = was; }); } return; }
+        if (el.closest("svg") || el.closest("[data-export]")) { if (el.tagName === "svg") { var was = el.style.color; el.style.color = getComputedStyle(el).color; EXP.undo.push(function () { el.style.color = was; }); } return; }
         var old = el.style.getPropertyValue("color"), pri = el.style.getPropertyPriority("color");
         el.style.setProperty("color", "transparent", "important");
         EXP.undo.push(function () { if (old) el.style.setProperty("color", old, pri); else el.style.removeProperty("color"); });
       });
     });
-    return out;
+    return { texts: texts, objects: objects };
   }
 
   var wStart = 0, wFrames = 0, wDone = false;
