@@ -321,6 +321,32 @@ test("Setup: the event mark is picked from the built-in marks (Fundomo) and the 
   await setRange(brandSel, 1); await setRange(markSel, 1); await untilDraft(d => !d.tokens.scale, "the usual sizes again");
 }, { timeout: 90000 });
 
+test("the header logos are elements too: the Mosaic logo selects, drags, resizes by a corner, nudges by keys, and Put back returns it; enlarged logos sit off the edge", async () => {
+  await goto(0); await stageReady();
+  const b0 = await frameBox(page, frame(), "#brand"); await page.mouse.click(b0.x + b0.width / 2, b0.y + b0.height / 2);
+  await page.waitForSelector('.chrome-panel .kind:has-text("Mosaic logo")', { timeout: 10000 });
+  await frame().waitForFunction(() => document.querySelector("#brand").classList.contains("editsel") && document.getElementById("editHandles").style.display === "block");
+  // a drag moves it; the offset lands in the document
+  await page.mouse.move(b0.x + b0.width / 2, b0.y + b0.height / 2); await page.mouse.down(); await page.mouse.move(b0.x + b0.width / 2 + 40, b0.y + b0.height / 2 + 30, { steps: 6 }); await page.mouse.up();
+  const d1 = await untilDraft(d => d.offsets && d.offsets["chrome.brand"] && d.offsets["chrome.brand"].dx > 1 && d.offsets["chrome.brand"].dy > 1, "the logo's offset");
+  const off1 = d1.offsets["chrome.brand"];
+  // the arrow keys nudge it (from the parent)
+  await page.locator(".stage-fit").click({ position: { x: 4, y: 4 } }); await page.keyboard.press("ArrowRight");
+  await untilDraft(d => Math.abs(d.offsets["chrome.brand"].dx - (off1.dx + 1)) < 0.05, "a nudge by one");
+  // the south-east handle resizes it
+  await frame().waitForFunction(() => document.querySelector("#brand").classList.contains("editsel"));
+  const hb = await frameBox(page, frame(), "#editHandles i[data-h=se]");
+  await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height / 2); await page.mouse.down(); await page.mouse.move(hb.x + hb.width / 2 + 60, hb.y + hb.height / 2, { steps: 6 }); await page.mouse.up();
+  await untilDraft(d => d.tokens.scale && d.tokens.scale.brand > 1.2, "a bigger logo in the document");
+  await frame().waitForFunction(() => document.querySelector("#brand svg").getBoundingClientRect().height > 36, null, { timeout: 15000 });
+  // enlarged, it still sits off the top edge (the header pads itself)
+  assert.ok((await frame().evaluate(() => document.querySelector("#brand svg").getBoundingClientRect().top)) >= 8, "off the edge");
+  // Put back
+  await page.click('.chrome-panel button:has-text("Put back")');
+  await untilDraft(d => !(d.offsets && d.offsets["chrome.brand"]) && !(d.tokens.scale && d.tokens.scale.brand), "back where and how the renderer puts it");
+  await page.keyboard.press("Escape"); await frame().waitForFunction(() => !document.querySelector("#brand").classList.contains("editsel"));
+}, { timeout: 90000 });
+
 test("History offers a reset of the draft to the committed document", async () => {
   await page.click('.bar button:has-text("History")'); await page.waitForSelector('button:has-text("Reset the draft")');
   await page.click('button:has-text("Reset the draft")');

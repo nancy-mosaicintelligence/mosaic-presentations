@@ -6,7 +6,7 @@ import type { Doc, Command } from "@/lib/doc";
 import { needsReload } from "@/lib/doc";
 import { CANVAS } from "@/lib/player-chrome";
 import { ContextMenu, ArrangeButtons, arrange, type ArrangeOp, type Rect } from "./Arrange";
-import { SetupPanel } from "./Setup";
+import { SetupPanel, ChromePanel } from "./Setup";
 import { PlayerBridge, type BridgeMessage } from "./bridge";
 import { Inspector } from "./Inspector";
 import { Filmstrip } from "./Filmstrip";
@@ -86,6 +86,9 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
     else if (m.type === "itw:placed") placedRef.current(m);
     else if (m.type === "itw:delete") removeManyRef.current(m.ids && m.ids.length ? m.ids : [m.id]);
     else if (m.type === "itw:copyMoved") copyMovedRef.current(m.path, m.dx, m.dy);
+    else if (m.type === "itw:chromeMoved") chromeRef.current.move(m.name, m.dx, m.dy, false);
+    else if (m.type === "itw:chromeNudge") chromeRef.current.move(m.name, m.dx, m.dy, true);
+    else if (m.type === "itw:chromeScaled") chromeRef.current.scale(m.name, m.scale);
     else if (m.type === "itw:nudgeKey") nudgeManyRef.current(m.ids && m.ids.length ? m.ids : [m.id], m.dx, m.dy);
     else if (m.type === "itw:drop") dropRef.current(m);
     else if (m.type === "itw:editStart") { setInline({ id: m.id, item: m.item, copy: m.copy, caret: m.caret, fontSize: m.fontSize }); setFrameBox(frame.current?.getBoundingClientRect() ?? null); }
@@ -106,6 +109,7 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
   const movedGroupRef = useRef<(moves: { id: string; move: any }[]) => void>(() => {}); const arrangeRef = useRef<(op: ArrangeOp) => void>(() => {});
   const [cropping, setCropping] = useState<string | null>(null);
   const copyMovedRef = useRef<(path: string, dx: number, dy: number) => void>(() => {});
+  const chromeRef = useRef<{ move: (name: string, dx: number, dy: number, delta: boolean) => void; scale: (name: string, v: number) => void }>({ move: () => {}, scale: () => {} });
   const nudgeRef = useRef<(id: string, dx: number, dy: number) => void>(() => {});
   const dropRef = useRef<(m: BridgeMessage) => void>(() => {});
   const bridge = useMemo(() => new PlayerBridge(() => frame.current, onMessage), [onMessage]);
@@ -246,6 +250,18 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
     const d = docRef.current; if (!d) return; const hit = locate(d, id); if (!hit) return; const e = hit.element;
     apply({ path: ["sections", hit.si, "elements", hit.ei, "adjust"], value: { ...(e.adjust || {}), crop }, label: `crop ${id}` });
   };
+  /** A header logo moved or resized on the stage: its offset under offsets["chrome.<name>"], its size under tokens.scale. */
+  chromeRef.current = {
+    move: (name, dx, dy, delta) => {
+      const d = docRef.current; if (!d) return; const cur = (d as any).offsets?.[`chrome.${name}`] || { dx: 0, dy: 0 };
+      const n = delta ? { dx: +(cur.dx + dx).toFixed(2), dy: +(cur.dy + dy).toFixed(2) } : { dx, dy };
+      apply({ path: ["offsets", `chrome.${name}`], value: Math.abs(n.dx) < 0.05 && Math.abs(n.dy) < 0.05 ? undefined : n, label: `move ${name === "brand" ? "the Mosaic logo" : "the event mark"}`, coalesce: delta ? `chrome.${name}.key` : undefined });
+    },
+    scale: (name, v) => {
+      const d = docRef.current; if (!d) return; const sc = { ...((d.tokens as any)?.scale || {}), [name]: v }; if (v === 1) delete sc[name];
+      apply({ path: ["tokens", "scale"], value: Object.keys(sc).length ? sc : undefined, label: `${name === "brand" ? "Mosaic logo" : "event mark"} size` });
+    }
+  };
   /** Remove the selected element (the keynote's own lines are hidden rather than lost; undo brings anything back). */
   removeRef.current = (id) => {
     const d = docRef.current; if (!d) return; const hit = locate(d, id); if (!hit) return;
@@ -335,6 +351,12 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
         if (ids.length && (k === "c" || k === "d")) { e.preventDefault(); copyRef.current(ids); if (k === "d") pasteRef.current(); return; }
       }
       if (inField || mod) return;
+      if (selectedRef.current && selectedRef.current.startsWith("chrome.") && !inlineRef.current) {
+        const step = e.shiftKey ? 5 : 1; const name = selectedRef.current.slice(7);
+        if (e.key === "Escape") { e.preventDefault(); setSelected(null); bridge.send({ type: "itw:select", id: null }); return; }
+        if (e.key.startsWith("Arrow")) { e.preventDefault(); chromeRef.current.move(name, e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0, e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0, true); return; }
+        if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); return; }   /* a logo is never removed; Put back returns it */
+      }
       if (selectedRef.current && !inlineRef.current) {
         const step = e.shiftKey ? 5 : 1; const ids = selectedIdsRef.current.length ? selectedIdsRef.current : [selectedRef.current];
         if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); removeManyRef.current(ids); return; }
@@ -449,7 +471,8 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
       <nav className="tabs">{(["element", "images", "motion", "setup", "versions"] as Tab[]).map(t => <button key={t} type="button" className={tab === t ? "on" : ""} onClick={() => setTab(t)}>{t === "element" ? "Element" : t === "images" ? "Images" : t === "motion" ? "Motion" : t === "setup" ? "Setup" : t === "copy" ? "Renderer copy" : t === "assets" ? "Marks" : `Versions${versions.length ? ` · ${versions.length}` : ""}`}</button>)}</nav>
       {issues.length > 0 && <div className="issues">{issues.slice(0, 5).map((i, k) => <div key={k}><code>{i.path}</code> {i.message}</div>)}</div>}
       {tab === "element" && selectedIds.length > 1 && <div className="panel multi"><header className="ph"><span className="kind">{selectedIds.length} elements</span><button type="button" className="ghost danger" onClick={() => removeManyRef.current(selectedIds)}>Remove</button><button type="button" className="ghost" onClick={() => { setSelected(null); setSelectedIds([]); bridge.send({ type: "itw:select", id: null }); }}>Deselect</button></header><p className="muted small">Shift-click adds to the selection; drag moves them together; right-click for the same menu.</p><ArrangeButtons count={selectedIds.length} onArrange={op => arrangeRef.current(op)} /></div>}
-      {tab === "element" && selectedIds.length <= 1 && <Inspector doc={doc} slug={id} selectedId={selected} apply={apply} onDeselect={() => { setSelected(null); bridge.send({ type: "itw:select", id: null }); }} onFill={eid => { setFillTarget(eid); setTab("images"); }} onRemove={eid => removeRef.current(eid)} />}
+      {tab === "element" && selected && selected.startsWith("chrome.") && <ChromePanel name={selected.slice(7) as "brand" | "partner"} doc={doc} apply={apply} onDeselect={() => { setSelected(null); bridge.send({ type: "itw:select", id: null }); }} />}
+      {tab === "element" && selectedIds.length <= 1 && !(selected && selected.startsWith("chrome.")) && <Inspector doc={doc} slug={id} selectedId={selected} apply={apply} onDeselect={() => { setSelected(null); bridge.send({ type: "itw:select", id: null }); }} onFill={eid => { setFillTarget(eid); setTab("images"); }} onRemove={eid => removeRef.current(eid)} />}
       {tab === "images" && <ImagesPanel doc={doc} slug={id} station={station} apply={apply} fillTarget={fillTarget} onPick={a => placeImage(a, undefined, fillTarget)} onPlaced={pid => { setSelected(pid); setTab("element"); setTimeout(() => bridge.send({ type: "itw:select", id: pid }), 150); }} />}
       <input type="file" accept="image/*" multiple hidden ref={fileDrop} onChange={async e => { const files = Array.from(e.target.files || []); e.target.value = ""; const made = await uploadFiles(files); made.forEach((a, i) => placeImage(a, { x: 34 + i * 3, y: 30 + i * 3 }, i === 0 ? fillTarget : null)); }} />
       {tab === "motion" && <AnimationPanel doc={doc} apply={apply} />}

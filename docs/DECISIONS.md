@@ -516,3 +516,9 @@
   - **`/p/<slug>` is for anyone once published.** People with access see the current document there (or the frozen version with `?source=published`); everyone else — signed in with no role, or not signed in at all — sees the published version, no sign-in. Nothing published: a stranger is sent to sign in, an outsider refused. The pictures of a published deck are served to anyone likewise. The editor, the player sources, the draft API and versions stay with members. Publishing is therefore the deliberate act that makes a deck public; the share dialog says so.
   - **The address** (`PATCH { slug }`, owners): 2–80 characters of lowercase letters, digits and hyphens; built-in decks' and taken addresses refused. In the share dialog: a field, "Use the name", Change — with a warning that links already handed out stop working. A rename never moves the address by itself.
 - Proof: access tests (a stranger before and after a publication, an outsider, a removed member still sees the public version but nothing else, the raw deck behind the shell), library test (the address: refusals, the move, the old address gone, editors refused).
+
+## D-054: The header logos are elements too (2026-09-24)
+
+- Status: accepted (the owner: enlarged logos touched the edge; "it should just be treated as a picture or any other element")
+- What changed: the Mosaic logo and the event mark select on a press, drag to move, resize by their corner handles, nudge by the arrow keys, and have a panel of their own (size, position, Put back). The offset lives in `offsets["chrome.brand" | "chrome.partner"]`, the size in `tokens.scale` as before; both are one undo step each. The header pads itself when a logo is enlarged (24 px per unit above 1×) so nothing touches the edge; at the usual size nothing changes. A logo is never removed — Put back returns it.
+- Proof: a slides test (select, drag, nudge, resize, the edge, Put back); parity and 54/54 after the deck change.

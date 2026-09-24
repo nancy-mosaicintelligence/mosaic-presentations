@@ -259,6 +259,7 @@ Sixth pass (D-027, D-028): the room recedes for the whole run of text and never 
 - Refinement (D-051): several elements at once — shift-click, group drag, a right-click menu with align, distribute, centre on page and match size
 - Refinement (D-052): Make a copy of a deck (current document and pictures); a Setup tab with the event mark (Vento Wave, Fundomo, or an SVG) and header sizes
 - Refinement (D-053): published decks are public at their link; owners set the address (slug)
+- Refinement (D-054): the header logos select, drag, resize and nudge like any element; the header pads itself when they are enlarged
 - Next: a custom domain when wanted
 
 ## Deployment (2026-09-21)

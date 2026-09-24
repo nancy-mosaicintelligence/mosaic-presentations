@@ -35,3 +35,17 @@ export function SetupPanel({ doc, slug, apply }: { doc: Doc; slug: string; apply
     </section>
   </div>;
 }
+
+/** A selected header logo: its size and offset, like any element's inspector; Put back returns it to the renderer's place and size. */
+export function ChromePanel({ name, doc, apply, onDeselect }: { name: "brand" | "partner"; doc: Doc; apply: (c: Command) => void; onDeselect: () => void }) {
+  const sc = (doc.tokens as any)?.scale || {}; const off = (doc as any).offsets?.[`chrome.${name}`];
+  const label = name === "brand" ? "Mosaic logo" : "Event mark";
+  const setScale = (v: number) => { const next = { ...sc, [name]: v }; if (v === 1) delete next[name]; apply({ path: ["tokens", "scale"], value: Object.keys(next).length ? next : undefined, label: `${label} size`, coalesce: `scale.${name}` }); };
+  return <div className="panel chrome-panel">
+    <header className="ph"><span className="kind">{label}</span><code>chrome.{name}</code><button type="button" className="ghost" onClick={onDeselect}>Deselect</button></header>
+    <p className="muted small">Drag it on the stage to move it, pull a corner to resize it, or use the arrow keys. It stays part of the header wherever it goes.</p>
+    <section><h4>Size</h4><div className="row"><span className="lab">{label}<small>× the usual size</small></span><span className="slider"><input type="range" data-scale={name} min={0.5} max={3} step={0.05} value={sc[name] ?? 1} onChange={e => setScale(Number(e.target.value))} /><span className="val">{(sc[name] ?? 1).toFixed(2)}×</span></span></div></section>
+    <section><h4>Position</h4><p className="muted small">{off ? `Moved ${off.dx > 0 ? "right" : "left"} ${Math.abs(off.dx).toFixed(1)}% and ${off.dy > 0 ? "down" : "up"} ${Math.abs(off.dy).toFixed(1)}% of the stage.` : "Where the renderer puts it."}</p>
+      <button type="button" className="ghost" disabled={!off && !sc[name]} onClick={() => { if (off) apply({ path: ["offsets", `chrome.${name}`], value: undefined, label: `${label}: put back` }); if (sc[name]) setScale(1); }}>Put back</button></section>
+  </div>;
+}

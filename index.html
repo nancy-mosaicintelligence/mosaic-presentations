@@ -61,7 +61,7 @@ body.present{ overflow:hidden; height:100vh; }
 body.present #track{ display:none; }
 
 header{ position:fixed; top:0; left:0; right:0; z-index:40;
-  display:flex; align-items:center; gap:16px; padding:0 var(--pad); height:var(--bar);
+  display:flex; align-items:center; gap:16px; padding:var(--chrome-pad, 0px) var(--pad) 0; min-height:var(--bar); box-sizing:border-box;
   background:linear-gradient(180deg, rgba(4,1,2,.7), rgba(4,1,2,0)); }
 /* the official lockup, icon left of wordmark, white on the dark stage */
 #brand{ display:flex; align-items:center; flex:0 0 auto; }
@@ -674,6 +674,7 @@ body.editing figure[data-empty]{cursor:pointer}
 body.editing #lab{pointer-events:auto}
 body.editing #road,body.editing #annot{pointer-events:none}
 body.editing [data-copy],body.editing #tlbox .yr,body.editing #tlbox .tx{pointer-events:auto!important;cursor:text}
+body.editing [data-chrome]{pointer-events:auto!important;cursor:move} body.editing [data-chrome]:hover{outline:1px dashed rgba(252,100,82,.55);outline-offset:4px}
 body.editing [data-copy]:hover{outline:1px dashed rgba(252,100,82,.55);outline-offset:4px}
 /* layouts the composer's beats use */
 .cols{display:grid;grid-template-columns:1fr 1fr;gap:clamp(24px,4vw,64px);margin-top:clamp(14px,2vh,24px);text-align:left}
@@ -707,9 +708,9 @@ figure.pic.cropping{outline:2px solid rgba(252,100,82,.9);outline-offset:2px;cur
 <canvas id="fx"></canvas>
 
 <header>
-  <span id="brand"></span>
+  <span id="brand" data-chrome="brand"></span>
   <span class="grow"></span>
-  <span id="partner"><span role="img" aria-label="Wave by Vento"><svg aria-hidden="true"><path/><path/></svg></span><span class="when">October 2026, Italy</span></span>
+  <span id="partner"><span role="img" aria-label="Wave by Vento" data-chrome="partner"><svg aria-hidden="true"><path/><path/></svg></span><span class="when">October 2026, Italy</span></span>
 </header>
 
 <div id="annot">
@@ -1121,6 +1122,8 @@ figure.pic.cropping{outline:2px solid rgba(252,100,82,.9);outline-offset:2px;cur
     for (k in doc.tokens.fonts) root.style.setProperty("--f-" + k, doc.tokens.fonts[k]);
     /* the header's marks at the size the document asks for (none = the renderer's own) */
     var sc = doc.tokens.scale || {}; root.style.setProperty("--brand-scale", sc.brand ? String(sc.brand) : "1"); root.style.setProperty("--partner-scale", sc.partner ? String(sc.partner) : "1");
+    root.style.setProperty("--chrome-pad", (Math.max((sc.brand || 1) - 1, (sc.partner || 1) - 1, 0) * 24).toFixed(1) + "px");   /* enlarged logos: the header pads itself so they sit off the edge */
+    ["brand", "partner"].forEach(function (n) { var el = document.querySelector('[data-chrome="' + n + '"]'), o = doc.offsets && doc.offsets["chrome." + n]; if (el) el.style.translate = o ? o.dx + "vw " + o.dy + "vh" : ""; });
     function reveal(el, rv) { if (!rv) return; el.setAttribute("data-p", String(rv.p)); if (rv.seq !== undefined) el.setAttribute("data-seq", String(rv.seq)); }
     var STYLE_KEYS = ["maxWidth", "margin", "marginTop", "marginBottom", "textAlign", "fontSize", "lineHeight", "color"];
     doc.sections.forEach(function (sec) {
@@ -3433,7 +3436,19 @@ figure.pic.cropping{outline:2px solid rgba(252,100,82,.9);outline-offset:2px;cur
     function rectsOf(ids) { var out = {}; ids.forEach(function (i) { var n = document.querySelector('[data-id="' + i + '"]'); if (n) out[i] = pctOf(n); }); return out; }
     function nodeOf(id) { return id ? document.querySelector('[data-id="' + id + '"]') : null; }
     /* `add` (a shift or ⌘ press) toggles the element in the selection; otherwise the selection is that one element, or nothing */
+    var chromeSel = null;
+    function chromeNode(n) { return document.querySelector('[data-chrome="' + n + '"]'); }
+    function chromeScale(n) { return parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--" + n + "-scale")) || 1; }
+    function selectChrome(name, user) {
+      if (selectedIds.length) { selectedIds = []; selectedId = null; [].slice.call(document.querySelectorAll(".editsel")).forEach(function (n) { n.classList.remove("editsel"); }); }
+      if (chromeSel) { var prev = chromeNode(chromeSel); if (prev) prev.classList.remove("editsel"); }
+      chromeSel = name && chromeNode(name) ? name : null;
+      if (chromeSel) { chromeNode(chromeSel).classList.add("editsel"); post({ type: "itw:selected", id: "chrome." + chromeSel, chrome: chromeSel, ids: [], rects: {}, user: !!user, scale: chromeScale(chromeSel) }); }
+      else post({ type: "itw:selected", id: null, ids: [], rects: {}, user: !!user });
+      paintHandles();
+    }
     function select(id, user, add) {
+      if (chromeSel) { var cprev = chromeNode(chromeSel); if (cprev) cprev.classList.remove("editsel"); chromeSel = null; }
       if (cropping && cropping.getAttribute("data-id") !== id) exitCrop();
       if (add && id && nodeOf(id)) { var at = selectedIds.indexOf(id); if (at >= 0) selectedIds.splice(at, 1); else selectedIds.push(id); }
       else selectedIds = id && nodeOf(id) ? [id] : [];
@@ -3452,9 +3467,9 @@ figure.pic.cropping{outline:2px solid rgba(252,100,82,.9);outline-offset:2px;cur
     /* ---- moving and resizing: a press on the selected element drags it; the corner handles resize it ---- */
     var handles = null, drag = null;
     function paintHandles() {
-      var el = selectedId && document.querySelector('[data-id="' + selectedId + '"]');
+      var el = chromeSel ? chromeNode(chromeSel) : selectedId && document.querySelector('[data-id="' + selectedId + '"]');
       if (!handles) { handles = document.createElement("div"); handles.id = "editHandles"; handles.innerHTML = '<i data-h="nw"></i><i data-h="ne"></i><i data-h="sw"></i><i data-h="se"></i>'; document.body.appendChild(handles); }
-      if (!el || !editing || editingEl || selectedIds.length !== 1) { handles.style.display = "none"; return; }
+      if (!el || !editing || editingEl || (!chromeSel && selectedIds.length !== 1)) { handles.style.display = "none"; return; }
       var r = el.getBoundingClientRect(); handles.style.display = "block"; handles.style.left = r.left + "px"; handles.style.top = r.top + "px"; handles.style.width = r.width + "px"; handles.style.height = r.height + "px";
     }
     function vwOf(px) { return px / window.innerWidth * 100; } function vhOf(px) { return px / window.innerHeight * 100; }
@@ -3468,6 +3483,8 @@ figure.pic.cropping{outline:2px solid rgba(252,100,82,.9);outline-offset:2px;cur
     window.addEventListener("pointermove", function (e) {
       if (!drag) return; var dx = e.clientX - drag.sx, dy = e.clientY - drag.sy; if (!drag.moved && Math.abs(dx) < 4 && Math.abs(dy) < 4) return; drag.moved = true;
       if (drag.cropPan) { var cs2 = drag.cropPan.__cropState; if (cs2) setCrop(drag.cropPan, { x: drag.c0.x - dx / (cs2.W * cs2.s), y: drag.c0.y - dy / (cs2.H * cs2.s), w: drag.c0.w, h: drag.c0.h }); return; }
+      if (drag.chrome) { drag.el.style.translate = (drag.dx0 + vwOf(dx)) + "vw " + (drag.dy0 + vhOf(dy)) + "vh"; paintHandles(); return; }
+      if (drag.chromeScale) { var sign = drag.handle.indexOf("e") >= 0 ? 1 : -1, f = Math.max(0.2, (drag.w0 + sign * dx) / drag.w0), sc = Math.max(0.5, Math.min(3, drag.s0 * f)); drag.scale = +sc.toFixed(2); document.documentElement.style.setProperty("--" + drag.chromeScale + "-scale", String(drag.scale)); paintHandles(); return; }
       if (drag.copy) { drag.el.style.translate = (drag.dx0 + vwOf(dx)) + "vw " + (drag.dy0 + vhOf(dy)) + "vh"; return; }
       if (drag.handle) {
         var sign = drag.handle.indexOf("e") >= 0 ? 1 : -1, w = Math.max(24, drag.w0 + sign * dx);
@@ -3482,6 +3499,8 @@ figure.pic.cropping{outline:2px solid rgba(252,100,82,.9);outline-offset:2px;cur
     window.addEventListener("pointerup", function () {
       if (!drag) return; var d = drag; drag = null;
       if (d.cropPan) return;   /* the crop is written to the document once, when the session closes */
+      if (d.chrome) { if (d.moved) { var ct2 = (d.el.style.translate || "").split(" "); post({ type: "itw:chromeMoved", name: d.chrome, dx: +(parseFloat(ct2[0]) || 0).toFixed(2), dy: +(parseFloat(ct2[1]) || 0).toFixed(2) }); } paintHandles(); return; }
+      if (d.chromeScale) { if (d.moved && d.scale) post({ type: "itw:chromeScaled", name: d.chromeScale, scale: d.scale }); paintHandles(); return; }
       if (!d.moved) { if (d.group) { select(d.id, true); return; } if (d.pendingEdit) startEdit(d.pendingEdit.hit, d.pendingEdit.x, d.pendingEdit.y); return; }   /* a still press on one of several: that one alone */
       if (d.copy) { var t1 = (d.el.style.translate || "").split(" "); post({ type: "itw:copyMoved", path: d.copy, dx: +(parseFloat(t1[0]) || 0).toFixed(2), dy: +(parseFloat(t1[1]) || 0).toFixed(2) }); return; }
       var moveOf = function (n) { if (n.classList.contains("placed")) return { place: { x: +parseFloat(n.style.left).toFixed(2), y: +parseFloat(n.style.top).toFixed(2), w: +parseFloat(n.style.width).toFixed(2) } }; var t = TR_RE.exec(n.style.transform || ""); return { nudge: { dx: +(t ? parseFloat(t[1]) : 0).toFixed(2), dy: +(t ? parseFloat(t[2]) : 0).toFixed(2) } }; };
@@ -3589,6 +3608,12 @@ figure.pic.cropping{outline:2px solid rgba(252,100,82,.9);outline-offset:2px;cur
       if (mod && key === "v") { e.preventDefault(); e.stopPropagation(); post({ type: "itw:paste" }); return; }
       if (mod && selectedId && (key === "c" || key === "d")) { e.preventDefault(); e.stopPropagation(); post({ type: key === "c" ? "itw:copy" : "itw:duplicate", id: selectedId, ids: selectedIds.slice() }); return; }
       if (mod && selectedId && key === "a") { e.preventDefault(); e.stopPropagation(); var all = [].slice.call(document.querySelectorAll(".placed[data-id]")).filter(function (n) { return visibleUnder(0, 0).length >= 0 && parseFloat(getComputedStyle(n.closest("section.beat") || n).opacity) > 0.02; }).map(function (n) { return n.getAttribute("data-id"); }); if (all.length) selectMany(all); return; }
+      if (chromeSel) {
+        var cstep = e.shiftKey ? 5 : 1;
+        if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); selectChrome(null, true); }
+        else if (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "ArrowUp" || e.key === "ArrowDown") { e.preventDefault(); e.stopPropagation(); post({ type: "itw:chromeNudge", name: chromeSel, dx: e.key === "ArrowLeft" ? -cstep : e.key === "ArrowRight" ? cstep : 0, dy: e.key === "ArrowUp" ? -cstep : e.key === "ArrowDown" ? cstep : 0 }); }
+        return;
+      }
       /* with a selection and nothing open: Delete removes it, Escape lets go, the arrows nudge it (Shift: by more) */
       if (!selectedId) return;
       var step = e.shiftKey ? 5 : 1;
@@ -3649,7 +3674,10 @@ figure.pic.cropping{outline:2px solid rgba(252,100,82,.9);outline-offset:2px;cur
         exitCrop();
       }
       var h = e.target.closest && e.target.closest("#editHandles i");
+      if (h && chromeSel) { var cn = chromeNode(chromeSel), cr = cn.getBoundingClientRect(); drag = { chromeScale: chromeSel, el: cn, handle: h.getAttribute("data-h"), sx: e.clientX, sy: e.clientY, w0: cr.width, s0: chromeScale(chromeSel), moved: false }; return; }
       if (h) { var selEl = selectedId && document.querySelector('[data-id="' + selectedId + '"]'); if (selEl) startDrag(selEl, e, h.getAttribute("data-h")); return; }
+      var chEl = e.target.closest && e.target.closest("[data-chrome]");
+      if (chEl) { var cname = chEl.getAttribute("data-chrome"); if (chromeSel !== cname) selectChrome(cname, true); var ct = (chEl.style.translate || "").split(" "); drag = { chrome: cname, el: chEl, sx: e.clientX, sy: e.clientY, dx0: parseFloat(ct[0]) || 0, dy0: parseFloat(ct[1]) || 0, moved: false }; return; }
       var under = visibleUnder(e.clientX, e.clientY), el = null, hit = null, i;
       for (i = 0; i < under.length && !el; i++) el = under[i].closest && under[i].closest("[data-id]");
       for (i = 0; i < under.length && !hit; i++) hit = editableAt(under[i]);
