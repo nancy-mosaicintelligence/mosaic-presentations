@@ -3331,7 +3331,7 @@ body.exporting #hud,body.exporting #notes,body.exporting .cue,body.exporting #ed
     function onStage(r) { return r.width >= 1 && r.height >= 1 && r.right > 0 && r.bottom > 0 && r.left < window.innerWidth && r.top < window.innerHeight; }
     function shown(el) { for (var e = el; e && e !== document.body; e = e.parentElement) { var cs = getComputedStyle(e); if (cs.display === "none" || cs.visibility === "hidden") return false; } return opacityUpTo(el, document.body.parentElement) >= .05 && onStage(el.getBoundingClientRect()); }
     /* --- the objects --- */
-    var cand = document.querySelectorAll("[data-chrome], figure, img, svg[data-id], [data-id].icons, [data-id].impchart, [data-id].marrow, .chips span > svg");
+    var cand = document.querySelectorAll("[data-chrome], figure, img, svg[data-id], .ico svg, [data-id].impchart, .marrow svg, .chips span > svg");
     for (var ci = 0; ci < cand.length; ci++) {
       var o = cand[ci];
       if (o.closest("#hud, #notes, .cue, #editHandles, [data-export]")) continue;
@@ -3407,9 +3407,10 @@ body.exporting #hud,body.exporting #notes,body.exporting .cue,body.exporting #ed
       }
       texts.push({ id: box.getAttribute("data-id") || box.getAttribute("data-copy") || "", x: x0, y: lines[0].top, w: x1 - x0, h: lines[lines.length - 1].b - lines[0].top,
         lines: lines.length, maxLine: maxLine, line: lines[0].b - lines[0].top, lineHeight: isNaN(lh) ? fs * 1.2 : lh, fontSize: fs, align: b.cs.textAlign, opacity: b.opacity, runs: runs, pill: pill });
-      /* blank the words (not the icons that borrow their colour) for the picture */
+      /* blank the words for the picture — after the icons that borrow their colour have been given it outright */
+      [].slice.call(box.querySelectorAll("svg")).forEach(function (sv) { var was = sv.style.color; sv.style.color = getComputedStyle(sv).color; EXP.undo.push(function () { sv.style.color = was; }); });
       [box].concat([].slice.call(box.querySelectorAll("*"))).forEach(function (el) {
-        if (el.closest("svg") || el.closest("[data-export]")) { if (el.tagName === "svg") { var was = el.style.color; el.style.color = getComputedStyle(el).color; EXP.undo.push(function () { el.style.color = was; }); } return; }
+        if (el.closest("svg") || el.closest("[data-export]")) return;
         var old = el.style.getPropertyValue("color"), pri = el.style.getPropertyPriority("color");
         el.style.setProperty("color", "transparent", "important");
         EXP.undo.push(function () { if (old) el.style.setProperty("color", old, pri); else el.style.removeProperty("color"); });

@@ -92,8 +92,11 @@ test("a station on the rendered scene and one on white export too", async () => 
     const z = await JSZip.loadAsync(readFileSync(await file.path()));
     const rels = await z.file("ppt/slides/_rels/slide1.xml.rels").async("string"); const media = /Target="\.\.\/media\/([^"]+)"/.exec(rels);
     writeFileSync(join(APP, "test-results", `export-station${n}.jpeg`), await z.file(`ppt/media/${media[1]}`).async("nodebuffer"));
-    return z.file("ppt/slides/slide1.xml").async("string");
+    const pngs = [...rels.matchAll(/Target="\.\.\/media\/([^"]+\.png)"/g)].map(m => m[1]);
+    for (const [k, name] of pngs.entries()) writeFileSync(join(APP, "test-results", `export-station${n}-pic${k}.png`), await z.file(`ppt/media/${name}`).async("nodebuffer"));
+    last = z; return z.file("ppt/slides/slide1.xml").async("string");
   };
+  let last;
   // safe mode (the watchdog's fallback, no scene) steps aside for the export and comes back afterwards
   await page.evaluate(() => { const w = document.querySelector("iframe").contentWindow; w.postMessage({ v: 1, type: "itw:safe", on: true }, location.origin); window.__safeSeen = []; window.addEventListener("message", e => { if (e.data && e.data.type === "itw:exportReady") window.__safeSeen.push(document.querySelector("iframe").contentDocument.body.classList.contains("safe")); }); });
   await frame().waitForFunction(() => document.body.classList.contains("safe"));
@@ -108,6 +111,12 @@ test("a station on the rendered scene and one on white export too", async () => 
   assert.ok(pill[0].includes('prst="roundRect"') && /<p:spPr>(?:(?!<\/p:spPr>).)*<a:ln/s.test(pill[0]), "a rounded box with an edge");
   assert.ok(["radiation", "energy"].every(t => chips.includes(`<a:t>${t}</a:t>`)), "every chip, however late it reveals");
   assert.ok((chips.match(/<p:pic>/g) || []).length >= 5, "the marks and the chip icons are pictures");
+  // the icon rows: pictures of their own whose strokes come from the stylesheet — they must survive the raster
+  const nature = await one(37); const rels37 = /<Relationship[^>]+Target="\.\.\/media\/([^"]+\.png)"/g; let m37, big = 0;
+  const r37 = await last.file("ppt/slides/_rels/slide1.xml.rels").async("string");
+  while ((m37 = rels37.exec(r37))) { const buf = await last.file(`ppt/media/${m37[1]}`).async("nodebuffer"); if (buf.length > big) { big = buf.length; writeFileSync(join(APP, "test-results", "export-icons.png"), buf); } }
+  assert.ok(nature.includes("But nature") && nature.includes("<a:t>ultrasound</a:t>"), "station 37's lines, the icon labels among them");
+  assert.ok((nature.match(/<p:pic>/g) || []).length >= 8, "the marks and every icon are pictures of their own");
   await dlg.getByRole("button", { name: "×" }).click();
 }, { timeout: 240000 });
 

@@ -21,14 +21,28 @@ const colour = (c: string) => {
   return { hex: [m[1], m[2], m[3]].map(v => (+v).toString(16).padStart(2, "0")).join("").toUpperCase(), a };
 };
 
+const PAINT = ["fill", "fill-opacity", "fill-rule", "stroke", "stroke-width", "stroke-opacity", "stroke-linecap", "stroke-linejoin", "stroke-dasharray", "opacity", "font-family", "font-size", "font-weight", "letter-spacing", "text-anchor"];
+
+/** html2canvas serialises inline SVG without the stylesheet, so strokes and fills set by CSS (currentColor, the icon
+ *  rows, the road) vanish. Inline every SVG's computed paint under `root` for the duration; returns the undo. */
+function inlineSvgPaint(root: Element): () => void {
+  const win = root.ownerDocument.defaultView!; const undo: { el: Element; was: string | null }[] = [];
+  const svgs = root.tagName.toLowerCase() === "svg" ? [root] : Array.from(root.querySelectorAll("svg"));
+  for (const svg of svgs) for (const e of [svg, ...Array.from(svg.querySelectorAll("*"))]) {
+    const cs = win.getComputedStyle(e); if (cs.display === "none") continue;
+    undo.push({ el: e, was: e.getAttribute("style") });
+    e.setAttribute("style", (e.getAttribute("style") || "").replace(/;?\s*$/, ";") + PAINT.map(k => `${k}:${cs.getPropertyValue(k)}`).join(";"));
+  }
+  return () => { for (const u of undo) { if (u.was === null) u.el.removeAttribute("style"); else u.el.setAttribute("style", u.was); } };
+}
+
 /** An inline SVG as a PNG: a clone with its computed paint inlined (currentColor and the stylesheet resolved), drawn at `scale`. */
 async function rasterSvg(svg: SVGElement, scale: number): Promise<string> {
   const win = svg.ownerDocument.defaultView!;
   const r = svg.getBoundingClientRect();
   const clone = svg.cloneNode(true) as SVGElement;
   const src = [svg, ...Array.from(svg.querySelectorAll("*"))], dst = [clone, ...Array.from(clone.querySelectorAll("*"))];
-  const PROPS = ["fill", "fill-opacity", "fill-rule", "stroke", "stroke-width", "stroke-opacity", "stroke-linecap", "stroke-linejoin", "stroke-dasharray", "opacity", "font-family", "font-size", "font-weight", "letter-spacing", "text-anchor"];
-  src.forEach((e, i) => { const cs = win.getComputedStyle(e); dst[i].setAttribute("style", PROPS.map(k => `${k}:${cs.getPropertyValue(k)}`).join(";")); });
+  src.forEach((e, i) => { const cs = win.getComputedStyle(e); dst[i].setAttribute("style", PAINT.map(k => `${k}:${cs.getPropertyValue(k)}`).join(";")); });
   clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
   clone.setAttribute("width", String(r.width)); clone.setAttribute("height", String(r.height));
   const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(clone)], { type: "image/svg+xml;charset=utf-8" }));
@@ -61,15 +75,18 @@ export async function exportToSlides(o: { frame: HTMLIFrameElement; bridge: Play
         try {
           let data: string, box = { x: ob.x, y: ob.y, w: ob.w, h: ob.h };
           if (inner) { const ir = inner.getBoundingClientRect(); box = { x: ir.left, y: ir.top, w: ir.width, h: ir.height }; data = await rasterSvg(inner as unknown as SVGElement, scale); }
-          else data = (await html2canvas(el, { scale, backgroundColor: null, logging: false, useCORS: true, imageTimeout: 0 })).toDataURL("image/png");
+          else { const undo = inlineSvgPaint(el); try { data = (await html2canvas(el, { scale, backgroundColor: null, logging: false, useCORS: true, imageTimeout: 0 })).toDataURL("image/png"); } finally { undo(); } }
           pictures.push({ data, ...box });
           hidden.push({ el, was: el.style.visibility }); el.style.visibility = "hidden";
         } catch { /* it stays in the picture */ }
       }
       for (const el of Array.from(doc.querySelectorAll("[data-export-hide]")) as HTMLElement[]) { hidden.push({ el, was: el.style.visibility }); el.style.visibility = "hidden"; }
-      const cv = await html2canvas(doc.body, { scale: 1, width: r.w, height: r.h, windowWidth: r.w, windowHeight: r.h, x: 0, y: 0, scrollX: 0, scrollY: 0,
-        backgroundColor: getComputedStyle(doc.body).backgroundColor || "#000000", logging: false, useCORS: true, imageTimeout: 0 });
-      picture = cv.toDataURL("image/jpeg", 0.9);
+      const undoPaint = inlineSvgPaint(doc.body);
+      try {
+        const cv = await html2canvas(doc.body, { scale: 1, width: r.w, height: r.h, windowWidth: r.w, windowHeight: r.h, x: 0, y: 0, scrollX: 0, scrollY: 0,
+          backgroundColor: getComputedStyle(doc.body).backgroundColor || "#000000", logging: false, useCORS: true, imageTimeout: 0 });
+        picture = cv.toDataURL("image/jpeg", 0.9);
+      } finally { undoPaint(); }
     } finally {
       for (const h of hidden) h.el.style.visibility = h.was;
       o.bridge.send({ type: "itw:exportDone" });
