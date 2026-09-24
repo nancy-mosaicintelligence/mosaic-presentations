@@ -80,6 +80,26 @@ test("delete removes a presentation for everyone — rows and files; owners only
   assert.equal(await o.locator('.pcard[data-slug="italian-tech-week"] button:has-text("Delete")').count(), 0); assert.equal(await o.locator('.pcard[data-slug="italian-tech-week"] button:has-text("Archive")').count(), 1);
 });
 
+test("Make a copy: a new deck of the caller's own, whose draft is the source's current document, pictures copied along", async () => {
+  const o = await as("owner");
+  // the source: the test keynote with an edit and a picture in its library
+  const d = (await json(o, "/api/presentations/e2e-keynote/draft")).body.document; d.stations[0].note = "copied along";
+  const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAQAAAADCAIAAAA7ljmRAAAAFklEQVR4nGP4z8DwHwyBFBhCWFAlYAAAtQ8Xg2gTMh0AAAAASUVORK5CYII=", "base64");
+  const up = await o.request.post(`${BASE}/api/presentations/e2e-keynote/images`, { multipart: { file: { name: "room.png", mimeType: "image/png", buffer: PNG } } }); const img = await up.json(); assert.ok([200, 201].includes(up.status()), JSON.stringify(img));
+  const { url: _u, createdAt: _c, id: _i, ...asset } = img; d.assets[img.id] = asset; d.sections[0].elements.push({ id: "open.90", type: "image", asset: img.id, place: { x: 10, y: 10, w: 20 }, reveal: { p: d.stations[0].p } });
+  assert.equal((await json(o, "/api/presentations/e2e-keynote/draft", { method: "PUT", data: { document: d } })).status, 200);
+  const made = await json(o, "/api/presentations/e2e-keynote/copy", { method: "POST" }); assert.equal(made.status, 201, JSON.stringify(made.body)); assert.equal(made.body.title, "Copy of E2E keynote");
+  const lib = (await json(o, "/api/presentations")).body.find(p => p.slug === made.body.slug); assert.equal(lib.role, "owner");
+  const copy = (await json(o, `/api/presentations/${made.body.slug}/draft`)).body.document;
+  assert.equal(copy.stations[0].note, "copied along", "the current document, edits included");
+  const a = copy.assets[img.id]; assert.ok(a.src.includes(`storage://images/${made.body.id}/`), "the picture now lives under the copy: " + a.src);
+  assert.equal((await o.request.get(`${BASE}/img/${made.body.slug}/${a.src.split("/").pop()}`)).status(), 200, "served from the copy's own storage");
+  assert.ok(copy.sections[0].elements.some(e => e.id === "open.90" && e.asset === img.id));
+  // an editor may copy; a viewer may not
+  const c = await as("colleague"); assert.equal((await json(c, "/api/presentations/e2e-keynote/copy", { method: "POST" })).status, 403);
+  await o.goto(BASE + "/"); await o.waitForSelector('.pcard[data-slug="e2e-keynote"] button:has-text("Make a copy")');
+});
+
 test("an editable copy of the keynote starts from its document, with its own draft and its creator as owner", async () => {
   const c = await as("colleague");
   const made = await json(c, "/api/presentations", { method: "POST", data: { kind: "deck", title: "Series A narrative", renderer: "itw-keynote" } });

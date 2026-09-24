@@ -23,6 +23,10 @@ export function validate(doc) {
   if (!isObj(doc)) return { ok: false, errors: [{ path: "", message: "document must be an object" }] };
   const d = /** @type {Record<string, any>} */ (doc);
   checkFields(d, PRESENTATION_FIELDS, "", err);
+  if (d.tokens && d.tokens.scale !== undefined) {
+    if (!isObj(d.tokens.scale)) err("tokens.scale", "must be an object");
+    else for (const k of Object.keys(d.tokens.scale)) { const v = d.tokens.scale[k]; if (!["brand", "partner"].includes(k)) err(`tokens.scale.${k}`, "unknown mark"); else if (typeof v !== "number" || v < 0.5 || v > 3) err(`tokens.scale.${k}`, "must be a number from 0.5 to 3"); }
+  }
   if (d.offsets !== undefined) {
     if (!isObj(d.offsets)) err("offsets", "must be an object");
     else for (const k of Object.keys(d.offsets)) { const o = d.offsets[k]; if (!isObj(o) || typeof o.dx !== "number" || typeof o.dy !== "number" || Math.abs(o.dx) > 100 || Math.abs(o.dy) > 100) err(`offsets.${k}`, "must be { dx, dy } within ±100 % of the stage"); }

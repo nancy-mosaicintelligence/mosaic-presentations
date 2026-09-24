@@ -22,4 +22,5 @@ export function locate(doc: Doc, id: string | null): { si: number; ei: number; s
 /** Plain text of runs, for labels. */
 export function plain(runs: Run[] | undefined): string { return (runs || []).map(r => r.t ?? (r.icon ? `[${r.icon}]` : "")).join(""); }
 /** Which paths the framed deck cannot take live: it reads these at start-up, so the player reloads. */
-export function needsReload(path: Path): boolean { const head = String(path[0]); return head === "copy" || head === "assets" || (head === "tokens" && path[1] === "fonts"); }
+/** The stage takes most changes live; the renderer's own copy and a font change still need a reload (assets and sizes are re-applied on every load message). */
+export function needsReload(path: Path): boolean { const head = String(path[0]); return head === "copy" || (head === "tokens" && path[1] === "fonts"); }

@@ -6,6 +6,7 @@ import type { Doc, Command } from "@/lib/doc";
 import { needsReload } from "@/lib/doc";
 import { CANVAS } from "@/lib/player-chrome";
 import { ContextMenu, ArrangeButtons, arrange, type ArrangeOp, type Rect } from "./Arrange";
+import { SetupPanel } from "./Setup";
 import { PlayerBridge, type BridgeMessage } from "./bridge";
 import { Inspector } from "./Inspector";
 import { Filmstrip } from "./Filmstrip";
@@ -18,7 +19,7 @@ import { ImagesPanel } from "./Images";
 import { StationTools, addBeat, removeStation, moveStation } from "./Structure";
 
 type SaveState = { kind: "idle" } | { kind: "dirty" } | { kind: "saving" } | { kind: "saved"; at: string } | { kind: "error"; message: string; issues?: { path: string; message: string }[] };
-type Tab = "element" | "images" | "motion" | "copy" | "assets" | "versions";
+type Tab = "element" | "images" | "motion" | "setup" | "copy" | "assets" | "versions";
 /** The stage renders images from the served route; the stored document keeps storage:// paths. */
 const forStage = (doc: Doc, slug: string): Doc => JSON.parse(JSON.stringify(doc).replace(/storage:\/\/images\/[0-9a-f-]{36}\//g, `/img/${slug}/`));
 
@@ -440,13 +441,14 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
     </main>
 
     {!inPreview && showRight && doc && <aside className="side right">
-      <nav className="tabs">{(["element", "images", "motion", "versions"] as Tab[]).map(t => <button key={t} type="button" className={tab === t ? "on" : ""} onClick={() => setTab(t)}>{t === "element" ? "Element" : t === "images" ? "Images" : t === "motion" ? "Motion" : t === "copy" ? "Renderer copy" : t === "assets" ? "Marks" : `Versions${versions.length ? ` · ${versions.length}` : ""}`}</button>)}</nav>
+      <nav className="tabs">{(["element", "images", "motion", "setup", "versions"] as Tab[]).map(t => <button key={t} type="button" className={tab === t ? "on" : ""} onClick={() => setTab(t)}>{t === "element" ? "Element" : t === "images" ? "Images" : t === "motion" ? "Motion" : t === "setup" ? "Setup" : t === "copy" ? "Renderer copy" : t === "assets" ? "Marks" : `Versions${versions.length ? ` · ${versions.length}` : ""}`}</button>)}</nav>
       {issues.length > 0 && <div className="issues">{issues.slice(0, 5).map((i, k) => <div key={k}><code>{i.path}</code> {i.message}</div>)}</div>}
       {tab === "element" && selectedIds.length > 1 && <div className="panel multi"><header className="ph"><span className="kind">{selectedIds.length} elements</span><button type="button" className="ghost danger" onClick={() => removeManyRef.current(selectedIds)}>Remove</button><button type="button" className="ghost" onClick={() => { setSelected(null); setSelectedIds([]); bridge.send({ type: "itw:select", id: null }); }}>Deselect</button></header><p className="muted small">Shift-click adds to the selection; drag moves them together; right-click for the same menu.</p><ArrangeButtons count={selectedIds.length} onArrange={op => arrangeRef.current(op)} /></div>}
       {tab === "element" && selectedIds.length <= 1 && <Inspector doc={doc} slug={id} selectedId={selected} apply={apply} onDeselect={() => { setSelected(null); bridge.send({ type: "itw:select", id: null }); }} onFill={eid => { setFillTarget(eid); setTab("images"); }} onRemove={eid => removeRef.current(eid)} />}
       {tab === "images" && <ImagesPanel doc={doc} slug={id} station={station} apply={apply} fillTarget={fillTarget} onPick={a => placeImage(a, undefined, fillTarget)} onPlaced={pid => { setSelected(pid); setTab("element"); setTimeout(() => bridge.send({ type: "itw:select", id: pid }), 150); }} />}
       <input type="file" accept="image/*" multiple hidden ref={fileDrop} onChange={async e => { const files = Array.from(e.target.files || []); e.target.value = ""; const made = await uploadFiles(files); made.forEach((a, i) => placeImage(a, { x: 34 + i * 3, y: 30 + i * 3 }, i === 0 ? fillTarget : null)); }} />
       {tab === "motion" && <AnimationPanel doc={doc} apply={apply} />}
+      {tab === "setup" && <SetupPanel doc={doc} slug={id} apply={apply} />}
       {tab === "copy" && <CopyPanel doc={doc} apply={apply} />}
       {tab === "assets" && <AssetsPanel doc={doc} apply={apply} presentationId={id} />}
       {tab === "versions" && <VersionsPanel versions={versions} currentHash={hash} draftBasedOn={draftBasedOn} previewing={null} onPreview={previewVersionToggle} onDuplicate={duplicate} onRestore={restore} published={published} onPublish={role === "owner" ? publish : undefined} onReset={async () => { if (!window.confirm("Reset the draft to the committed document? Versions are kept; the current draft is replaced.")) return; const r = await fetch(`${api}/draft/reset`, { method: "POST" }); if (!r.ok) { setSave({ kind: "error", message: (await r.json()).error }); return; } await loadDraft(); reloadPlayer(); }} />}

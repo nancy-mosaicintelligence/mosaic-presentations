@@ -95,7 +95,8 @@ export const PRESENTATION_FIELDS = Object.freeze({
 
 export const TOKEN_FIELDS = Object.freeze({
   colors: { type: "object", req: true },
-  fonts: { type: "object", req: true }
+  fonts: { type: "object", req: true },
+  scale: { type: "object" }   // the header's marks: { brand?: ×, partner?: × } of the renderer's own sizes (0.5–3; schema 8, optional)
 });
 
 export const SECTION_FIELDS = Object.freeze({

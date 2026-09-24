@@ -207,3 +207,8 @@ button.danger { color: var(--signal); }
 .ctx-actions { display: grid; gap: 2px; } .ctx-actions button { display: flex; justify-content: space-between; } .ctx-actions kbd { font: 11px ui-monospace, monospace; color: var(--ink-3); }
 .ctx-menu button.danger { color: var(--signal); }
 .multi { padding: 12px 16px; } .multi .arr { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin: 6px 0 10px; }
+
+/* the deck's set-up: event marks and header sizes */
+.marks { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 8px; }
+.marks .mark { display: grid; grid-template-rows: 64px auto; gap: 6px; padding: 8px; background: #000; border: 1px solid var(--hair-2); border-radius: 8px; text-align: center; color: var(--ink-2); }
+.marks .mark img { height: 100%; width: 100%; object-fit: contain; padding: 6px; } .marks .mark.on { border-color: var(--signal); color: var(--ink); } .marks .mark.upload { background: var(--panel-2); place-items: center; grid-template-rows: 1fr; }

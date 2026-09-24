@@ -499,3 +499,12 @@
   - **A right-click on the stage opens a menu** (the deck hands the editor the click point and every selected rectangle in percent of the canvas): Align left / centre / right / top / middle / bottom (to the selection's own bounds; one element aligns to the page), Distribute horizontally / vertically (three or more), Centre on page, Match size — width / height / both (the first selected is the reference; a framed picture takes the reference's frame for "both"), then Copy, Paste, Duplicate, Delete. The same buttons sit in the side panel while several are selected.
   - Free boxes move by their place; the keynote's own lines by a nudge; sizes change only on free boxes. **Every operation is one undo step** (a whole-document command).
 - Proof: a slides test (three boxes: shift-click, the menu, Align top, Match width, Distribute with equal gaps, one undo per step, a group drag); the seven suites; keynote parity and 54/54 after the deck change.
+
+## D-052: A copy of a deck; the event mark and header sizes in Setup (2026-09-24)
+
+- Status: accepted (the owner needs the keynote again for the Fundomo AGM in New York: same deck, Fundomo's mark in place of Vento Wave's, a bigger Mosaic logo and mark)
+- What changed:
+  - **Make a copy** (library card; `POST /api/presentations/<id>/copy`, editors and owners): a new deck the caller owns, whose draft is the source's *current* document — edits included — with the source's pictures copied into the new presentation's own storage (objects and library rows) and the document pointed at them.
+  - **Setup tab** in the editor: the event mark (the mark that turns beside the event line) picked from built-in marks — Wave by Vento, Fundomo — or uploaded as an SVG drawn from paths; and the header sizes: the Mosaic logo and the event mark as multiples of the renderer's own sizes (`tokens.scale.brand` / `.partner`, 0.5–3; schema 8, optional; the deck sets `--brand-scale` / `--partner-scale`).
+  - The marks ship with the app under `apps/web/public/marks/` with their path data in `lib/marks.json`; the document names the file and its hash as the source. The Fundomo wordmark is the one on agm.fundomo.com.
+- Proof: library test (the copy holds the edit and the picture, served from its own storage; viewers refused), slides test (the Fundomo mark in the document and in the header; the sizes in the document and on the stage); core tests; parity and 54/54 after the deck change.

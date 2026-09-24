@@ -65,12 +65,12 @@ header{ position:fixed; top:0; left:0; right:0; z-index:40;
   background:linear-gradient(180deg, rgba(4,1,2,.7), rgba(4,1,2,0)); }
 /* the official lockup, icon left of wordmark, white on the dark stage */
 #brand{ display:flex; align-items:center; flex:0 0 auto; }
-#brand svg{ height:30px; width:auto; display:block; }
+#brand svg{ height:calc(30px * var(--brand-scale, 1)); width:auto; display:block; }
 #brand .li, #brand .lw{ fill:#FFFFFF; }
 header .grow{ flex:1 1 auto; }
 /* the event's mark, turning slowly, as on its own site */
 #partner{ display:flex; flex-direction:column; align-items:center; gap:12px; flex:0 0 auto; perspective:600px; }
-#partner svg{ height:26px; width:auto; display:block; transform-style:preserve-3d; animation:turn 7s linear infinite; }
+#partner svg{ height:calc(26px * var(--partner-scale, 1)); width:auto; display:block; transform-style:preserve-3d; animation:turn 7s linear infinite; }
 #partner path{ fill:#FFFFFF; }
 #partner .when{ font-family:var(--f-body); font-size:18px; font-weight:400; line-height:1; color:var(--ink); white-space:nowrap; letter-spacing:.01em; }
 @keyframes turn{ from{ transform:rotateY(0deg); } to{ transform:rotateY(360deg); } }
@@ -1119,6 +1119,8 @@ figure.pic.cropping{outline:2px solid rgba(252,100,82,.9);outline-offset:2px;cur
     var root = document.documentElement, k;
     for (k in doc.tokens.colors) root.style.setProperty("--" + k, doc.tokens.colors[k]);
     for (k in doc.tokens.fonts) root.style.setProperty("--f-" + k, doc.tokens.fonts[k]);
+    /* the header's marks at the size the document asks for (none = the renderer's own) */
+    var sc = doc.tokens.scale || {}; root.style.setProperty("--brand-scale", sc.brand ? String(sc.brand) : "1"); root.style.setProperty("--partner-scale", sc.partner ? String(sc.partner) : "1");
     function reveal(el, rv) { if (!rv) return; el.setAttribute("data-p", String(rv.p)); if (rv.seq !== undefined) el.setAttribute("data-seq", String(rv.seq)); }
     var STYLE_KEYS = ["maxWidth", "margin", "marginTop", "marginBottom", "textAlign", "fontSize", "lineHeight", "color"];
     doc.sections.forEach(function (sec) {
@@ -1174,7 +1176,13 @@ figure.pic.cropping{outline:2px solid rgba(252,100,82,.9);outline-offset:2px;cur
     [].slice.call(document.querySelectorAll("[data-copy]")).forEach(offsetNode);
     /* the event mark's geometry; a deck without one shows only its event line */
     var pm = doc.assets["wave-by-vento-w"], psvg = document.querySelector("#partner svg"), pps = psvg.querySelectorAll("path");
-    if (pm) { psvg.parentNode.hidden = false; psvg.setAttribute("viewBox", pm.viewBox); pm.paths.forEach(function (p, i) { if (pps[i]) pps[i].setAttribute("d", p.d); }); }
+    if (pm) {
+      psvg.parentNode.hidden = false; psvg.setAttribute("viewBox", pm.viewBox);
+      /* as many paths as the mark has (a replaced mark may have more or fewer than the markup's two) */
+      while (psvg.querySelectorAll("path").length < pm.paths.length) psvg.appendChild(document.createElementNS("http://www.w3.org/2000/svg", "path"));
+      while (psvg.querySelectorAll("path").length > pm.paths.length) psvg.removeChild(psvg.querySelector("path"));
+      pps = psvg.querySelectorAll("path"); pm.paths.forEach(function (p, i) { pps[i].setAttribute("d", p.d); });
+    }
     else psvg.parentNode.hidden = true;
     var c = doc.copy;
     var ants = document.querySelectorAll("#annot .ant"); c.annotations.forEach(function (t, i) { if (ants[i]) ants[i].textContent = t; });
@@ -3474,7 +3482,7 @@ figure.pic.cropping{outline:2px solid rgba(252,100,82,.9);outline-offset:2px;cur
     window.addEventListener("pointerup", function () {
       if (!drag) return; var d = drag; drag = null;
       if (d.cropPan) return;   /* the crop is written to the document once, when the session closes */
-      if (!d.moved) { if (d.pendingEdit) startEdit(d.pendingEdit.hit, d.pendingEdit.x, d.pendingEdit.y); return; }
+      if (!d.moved) { if (d.group) { select(d.id, true); return; } if (d.pendingEdit) startEdit(d.pendingEdit.hit, d.pendingEdit.x, d.pendingEdit.y); return; }   /* a still press on one of several: that one alone */
       if (d.copy) { var t1 = (d.el.style.translate || "").split(" "); post({ type: "itw:copyMoved", path: d.copy, dx: +(parseFloat(t1[0]) || 0).toFixed(2), dy: +(parseFloat(t1[1]) || 0).toFixed(2) }); return; }
       var moveOf = function (n) { if (n.classList.contains("placed")) return { place: { x: +parseFloat(n.style.left).toFixed(2), y: +parseFloat(n.style.top).toFixed(2), w: +parseFloat(n.style.width).toFixed(2) } }; var t = TR_RE.exec(n.style.transform || ""); return { nudge: { dx: +(t ? parseFloat(t[1]) : 0).toFixed(2), dy: +(t ? parseFloat(t[2]) : 0).toFixed(2) } }; };
       if (d.group) { var moves = [{ id: d.id, move: moveOf(d.el) }]; d.group.forEach(function (g) { moves.push({ id: g.id, move: moveOf(g.el) }); }); post({ type: "itw:movedGroup", moves: moves }); paintHandles(); return; }

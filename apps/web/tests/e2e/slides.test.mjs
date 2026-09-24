@@ -297,13 +297,29 @@ test("several elements: shift-click adds to the selection; right-click opens the
   await page.locator(".stage-fit").click({ position: { x: 4, y: 4 } }); await page.keyboard.press("Meta+z");
   await untilDraft(d => ids.every(i => Math.abs(el(d, i).place.w - 14) < 0.3) && Math.abs(el(d, ids[1]).place.x - 40) < 0.05, "undo takes back the distribute only");
   await frame().waitForFunction((id) => Math.abs(parseFloat(document.querySelector(`[data-id="${id}"]`)?.style.left) - 40) < 0.05, ids[1], { timeout: 15000 }); await page.waitForTimeout(400);   /* the stage has taken the undone document */
-  // a group drag
-  const cA = await centre(ids[0]); await page.mouse.click(cA.x, cA.y); const cB = await centre(ids[1]); await shiftClick(cB.x, cB.y);
+  // a group drag, from a fresh selection of two
+  await page.keyboard.press("Escape"); await frame().waitForFunction(() => document.querySelectorAll(".editsel").length === 0);
+  const cA = await centre(ids[0]); await page.mouse.click(cA.x, cA.y); await frame().waitForFunction(() => document.querySelectorAll(".editsel").length === 1); const cB = await centre(ids[1]); await shiftClick(cB.x, cB.y);
   await frame().waitForFunction(() => document.querySelectorAll(".editsel").length === 2);
   await page.mouse.move(cB.x, cB.y); await page.mouse.down(); await page.mouse.move(cB.x + 60, cB.y + 40, { steps: 8 }); await page.mouse.up();
   await untilDraft(d => el(d, ids[0]).place.x > 12 && el(d, ids[1]).place.x > 42 && Math.abs((el(d, ids[0]).place.x - 10) - (el(d, ids[1]).place.x - 40)) < 0.3, "both moved by the same amount");
   await page.keyboard.press("Escape");
 }, { timeout: 120000 });
+
+test("Setup: the event mark is picked from the built-in marks (Fundomo) and the header logos are sized; the deck shows both", async () => {
+  await goto(0); await stageReady();
+  await page.click('.tabs button:has-text("Setup")'); await page.waitForSelector(".marks .mark");
+  await page.click('.marks .mark:has-text("Fundomo")');
+  await untilDraft(d => d.assets["wave-by-vento-w"].viewBox === "0 0 107.75 16.3608" && d.assets["wave-by-vento-w"].paths.length === 7, "the Fundomo mark in the document");
+  await frame().waitForFunction(() => document.querySelector("#partner svg")?.getAttribute("viewBox") === "0 0 107.75 16.3608", null, { timeout: 15000 });
+  const setRange = (sel, v) => page.evaluate(([q, val]) => { const i = document.querySelector(q); const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set; set.call(i, val); i.dispatchEvent(new Event("input", { bubbles: true })); i.dispatchEvent(new Event("change", { bubbles: true })); }, [sel, String(v)]);
+  const brandSel = '.setup input[data-scale="brand"]', markSel = '.setup input[data-scale="partner"]';
+  await page.waitForSelector(brandSel); await setRange(brandSel, 1.6); await setRange(markSel, 2);
+  await untilDraft(d => d.tokens.scale && d.tokens.scale.brand === 1.6 && d.tokens.scale.partner === 2, "the sizes in the document");
+  await frame().waitForFunction(() => Math.round(document.querySelector("#brand svg").getBoundingClientRect().height) === 48 && Math.round(document.querySelector("#partner svg").getBoundingClientRect().height) === 52, null, { timeout: 15000 });
+  await page.click('.marks .mark:has-text("Wave by Vento")'); await untilDraft(d => d.assets["wave-by-vento-w"].viewBox === "0 0 122.57 89", "back to the Vento mark");
+  await setRange(brandSel, 1); await setRange(markSel, 1); await untilDraft(d => !d.tokens.scale, "the usual sizes again");
+}, { timeout: 90000 });
 
 test("History offers a reset of the draft to the committed document", async () => {
   await page.click('.bar button:has-text("History")'); await page.waitForSelector('button:has-text("Reset the draft")');

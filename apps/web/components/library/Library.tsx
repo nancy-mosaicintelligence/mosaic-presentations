@@ -31,6 +31,10 @@ export function Library({ entries, me, canCreate }: { entries: LibraryEntry[]; m
     const r = await fetch(`/api/presentations/${p.slug}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: t }) });
     if (r.ok) setList(l => l.map(x => (x.id === p.id ? { ...x, title: t } : x))); else setErr((await r.json()).error);
   };
+  const copy = async (p: LibraryEntry) => {
+    setErr(null); const r = await fetch(`/api/presentations/${p.slug}/copy`, { method: "POST" }); const body = await r.json().catch(() => ({}));
+    if (r.ok) window.location.href = `/presentations/${body.slug}/edit`; else setErr(body.error || r.statusText);
+  };
   const remove = async (p: LibraryEntry) => {
     if (!window.confirm(`Delete “${p.title}” for everyone?\n\nIts draft, versions, people, invitations and files go with it. There is no undo. (Archive keeps everything and only hides it.)`)) return;
     const r = await fetch(`/api/presentations/${p.slug}`, { method: "DELETE" }); if (r.ok) setList(list.filter(x => x.id !== p.id)); else setErr((await r.json()).error);
@@ -89,6 +93,7 @@ export function Library({ entries, me, canCreate }: { entries: LibraryEntry[]; m
             <div className="pcard-actions">
               {p.kind === "deck" && (p.role === "viewer" ? <a className="btn primary" href={`/p/${p.slug}`}>Open</a> : <a className="btn primary" href={`/presentations/${p.slug}/edit`}>Edit</a>)}
               {p.kind === "deck" && p.role !== "viewer" && <a className="btn" href={`/player/${p.slug}?source=draft&back=%2F`} title="The working document, exactly as Edit shows it">Present</a>}
+              {p.kind === "deck" && p.role !== "viewer" && <button type="button" className="ghost" title="A copy of this deck as it is now, yours to edit" onClick={() => copy(p)}>Make a copy</button>}
               {p.kind === "deck" && p.role !== "viewer" && p.published && <a className="btn" href={`/p/${p.slug}?source=published`} title="The published version, frozen">Published</a>}
               {p.kind === "html" && <a className="btn primary" href={`/p/${p.slug}`}>Present</a>}
               {p.kind === "link" && <a className="btn primary" href={`/p/${p.slug}`} target="_blank" rel="noreferrer">Open link</a>}

@@ -315,3 +315,5 @@ Production cannot be marked complete until the deployed URL has been opened and 
 | Leaving the editor with unsaved changes asks; Save and leave writes the draft first | PASS | `slides.test.mjs` (D-049) |
 | The stage, Present and the shared link show the same 1920×1080 canvas scaled to fit; the viewer page is a shell around the deck (`raw=1`), deep links and Escape work through it | PASS | `access.test.mjs`, `slides.test.mjs` (D-050); parity; 54/54 |
 | Several elements: shift-click builds the selection, the right-click menu aligns, distributes and matches sizes, one undo step each; a group drag moves them together | PASS | `slides.test.mjs` (D-051); parity; 54/54 |
+| Make a copy: a new deck of the caller's own with the source's current document and pictures; viewers refused | PASS | `library.test.mjs` (D-052) |
+| Setup: the event mark picked from built-in marks or uploaded; the header logo sizes in the document and on the stage | PASS | `slides.test.mjs` (D-052); parity; 54/54 |

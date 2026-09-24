@@ -1,3 +1,4 @@
+import { contentHash } from "@mosaic/presentation-core";
 import "server-only";
 import { promises as fs } from "node:fs";
 import { join } from "node:path";
@@ -113,6 +114,26 @@ export async function archivePresentation(sb: SupabaseClient, admin: SupabaseCli
   const { error } = await admin.from("presentations").update({ archived_at: new Date().toISOString() }).eq("id", p.id);
   if (error) throw new StoreError(500, error.message);
   await sb.from("audit_events").insert({ presentation_id: p.id, actor_id: user.id, actor_email: user.email, action: "presentation.archived" });
+}
+
+/** A copy of an editable deck for the caller: a new presentation they own, whose draft is the source's *current* document
+ *  (what the editor shows), with the source's pictures copied into the new presentation's own storage. */
+export async function copyPresentation(sb: SupabaseClient, admin: SupabaseClient, user: { id: string; email: string }, src: Presentation, sourceDoc: unknown): Promise<Presentation> {
+  if (src.kind !== "deck") throw new StoreError(422, "only an editable deck can be copied");
+  const made = await createPresentation(admin, user, { kind: "deck", renderer: src.renderer || "itw-keynote", title: `Copy of ${src.title}`.slice(0, 140), description: src.description || undefined });
+  // the pictures: the same objects under the new presentation's folder, the library rows with them, the document pointing at them
+  const { data: rows } = await admin.from("presentation_assets").select("storage_path, name, sha256, bytes, mime, width, height, kind").eq("presentation_id", src.id);
+  for (const r of rows || []) {
+    const file = r.storage_path.slice(r.storage_path.indexOf("/") + 1); const to = `${made.id}/${file}`;
+    const { error } = await admin.storage.from("images").copy(r.storage_path, to); if (error && !/already exists/i.test(error.message)) throw new StoreError(500, `could not copy ${r.name}: ${error.message}`);
+    await admin.from("presentation_assets").upsert({ ...r, presentation_id: made.id, storage_path: to, uploaded_by: user.id }, { onConflict: "storage_path" });
+  }
+  const doc = JSON.parse(JSON.stringify(sourceDoc).split(`storage://images/${src.id}/`).join(`storage://images/${made.id}/`));
+  doc.id = made.slug; doc.title = made.title;
+  const { error } = await admin.from("presentation_drafts").upsert({ presentation_id: made.id, document: doc, content_hash: contentHash(doc), based_on: null, updated_at: new Date().toISOString(), updated_by: user.id });
+  if (error) throw new StoreError(500, error.message);
+  await sb.from("audit_events").insert({ presentation_id: made.id, actor_id: user.id, actor_email: user.email, action: "presentation.copied", detail: { from: src.slug } });
+  return made;
 }
 
 /** Owners and editors rename a presentation: the title the library and the bar show (a deck's own text is its own). */
