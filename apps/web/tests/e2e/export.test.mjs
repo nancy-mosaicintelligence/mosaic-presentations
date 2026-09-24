@@ -86,7 +86,13 @@ test("a station on the rendered scene and one on white export too", async () => 
     writeFileSync(join(APP, "test-results", `export-station${n}.jpeg`), await z.file(`ppt/media/${media[1]}`).async("nodebuffer"));
     return z.file("ppt/slides/slide1.xml").async("string");
   };
+  // safe mode (the watchdog's fallback, no scene) steps aside for the export and comes back afterwards
+  await page.evaluate(() => { const w = document.querySelector("iframe").contentWindow; w.postMessage({ v: 1, type: "itw:safe", on: true }, location.origin); window.__safeSeen = []; window.addEventListener("message", e => { if (e.data && e.data.type === "itw:exportReady") window.__safeSeen.push(document.querySelector("iframe").contentDocument.body.classList.contains("safe")); }); });
+  await frame().waitForFunction(() => document.body.classList.contains("safe"));
   const room = await one(8); assert.ok(room.includes("vascular system"), "station 8's line");
+  assert.deepEqual(await page.evaluate(() => window.__safeSeen), [false], "the picture was taken with the scene on");
+  assert.equal(await frame().evaluate(() => document.body.classList.contains("safe")), true, "safe mode is back");
+  await page.evaluate(() => document.querySelector("iframe").contentWindow.postMessage({ v: 1, type: "itw:safe", on: false }, location.origin));
   const white = await one(24); assert.ok(white.includes('typeface="'), "station 24 has words");
   await dlg.getByRole("button", { name: "×" }).click();
 }, { timeout: 240000 });

@@ -3284,9 +3284,12 @@ body.exporting #hud,body.exporting #notes,body.exporting .cue,body.exporting #ed
      copy of the rendered scene in for the WebGL canvas (whose buffer cannot be read once the frame is over) and
      blanks the words, so the parent can rasterise everything else. itw:exportDone puts it all back.
      ================================================================ */
-  var EXP = { pending: null, reply: null, undo: [] };
+  var EXP = { pending: null, reply: null, undo: [], safeWas: false };
   function exportStation(i, reply) {
     if (EXP.reply) exportRestore();
+    /* the picture is the full scene: safe mode steps aside for the export (and the watchdog holds still — a slow
+       or hidden tab must not switch the scene off halfway through), then comes back as it was */
+    EXP.safeWas = safe; if (safe) setSafe(false, false);
     goto(i); P = PT; TW.from = PT; TW.to = PT; TW.dur = 0;
     EXP.reply = reply;
     /* the time-driven entrances (labels, crowd, staggered reveals) need a moment to land */
@@ -3307,6 +3310,7 @@ body.exporting #hud,body.exporting #notes,body.exporting .cue,body.exporting #ed
   function exportRestore() {
     while (EXP.undo.length) EXP.undo.pop()();
     document.body.classList.remove("exporting"); EXP.reply = null; EXP.pending = null;
+    if (EXP.safeWas && !safe) setSafe(true, false); EXP.safeWas = false;
   }
   /* every run of visible text, grouped by its box: the nearest ancestor that is not laid out inline */
   function exportTexts() {
@@ -3376,7 +3380,7 @@ body.exporting #hud,body.exporting #notes,body.exporting .cue,body.exporting #ed
   /* ?watchdog=off keeps the frame-rate guard out of automated captures, where software rendering is far below a real GPU */
   var NOWATCH = /(^|[?&])watchdog=off(&|$)/.test(location.search);
   function watchdog(now) {
-    if (NOWATCH || PLAIN || wDone || safe || !started || !SCENE_OK) return;
+    if (NOWATCH || PLAIN || wDone || safe || !started || !SCENE_OK || EXP.reply) return;
     if (!wStart) { wStart = now; wFrames = 0; return; }
     wFrames++;
     var span = now - wStart;
