@@ -212,3 +212,7 @@ button.danger { color: var(--signal); }
 .marks { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 8px; }
 .marks .mark { display: grid; grid-template-rows: 64px auto; gap: 6px; padding: 8px; background: #000; border: 1px solid var(--hair-2); border-radius: 8px; text-align: center; color: var(--ink-2); }
 .marks .mark img { height: 100%; width: 100%; object-fit: contain; padding: 6px; } .marks .mark.on { border-color: var(--signal); color: var(--ink); } .marks .mark.upload { background: var(--panel-2); place-items: center; grid-template-rows: 1fr; }
+
+/* the address in the share dialog */
+.share .address { display: grid; grid-template-columns: auto 1fr auto auto; gap: 6px; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--hair); }
+.share .address .lab { color: var(--ink-2); font-size: 13px; } .share .address .field { font: 12px/1.4 "IBM Plex Mono", ui-monospace, monospace; }

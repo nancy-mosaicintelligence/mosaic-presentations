@@ -258,6 +258,7 @@ Sixth pass (D-027, D-028): the room recedes for the whole run of text and never 
 - Refinement (D-050): one 1920×1080 canvas everywhere — the stage, Present and the shared link show the same frame scaled to fit
 - Refinement (D-051): several elements at once — shift-click, group drag, a right-click menu with align, distribute, centre on page and match size
 - Refinement (D-052): Make a copy of a deck (current document and pictures); a Setup tab with the event mark (Vento Wave, Fundomo, or an SVG) and header sizes
+- Refinement (D-053): published decks are public at their link; owners set the address (slug)
 - Next: a custom domain when wanted
 
 ## Deployment (2026-09-21)

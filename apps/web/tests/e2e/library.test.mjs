@@ -100,6 +100,18 @@ test("Make a copy: a new deck of the caller's own, whose draft is the source's c
   await o.goto(BASE + "/"); await o.waitForSelector('.pcard[data-slug="e2e-keynote"] button:has-text("Make a copy")');
 });
 
+test("the address: owners set the slug in every link; taken, built-in and malformed ones are refused; editors may not", async () => {
+  const o = await as("owner");
+  const made = await json(o, "/api/presentations", { method: "POST", data: { kind: "deck", title: "Address test", renderer: "itw-keynote" } }); assert.equal(made.status, 201); assert.equal(made.body.slug, "address-test");
+  assert.equal((await json(o, "/api/presentations/address-test", { method: "PATCH", data: { slug: "Bad Slug!" } })).status, 422);
+  assert.equal((await json(o, "/api/presentations/address-test", { method: "PATCH", data: { slug: "italian-tech-week" } })).status, 409, "a built-in deck's address");
+  assert.equal((await json(o, "/api/presentations/address-test", { method: "PATCH", data: { slug: "e2e-keynote" } })).status, 409, "taken");
+  const moved = await json(o, "/api/presentations/address-test", { method: "PATCH", data: { slug: "fundomo-agm-2026" } }); assert.equal(moved.status, 200, JSON.stringify(moved.body)); assert.equal(moved.body.slug, "fundomo-agm-2026");
+  assert.equal((await json(o, "/api/presentations/fundomo-agm-2026/draft")).status, 200, "the deck answers at its new address"); assert.equal((await json(o, "/api/presentations/address-test/draft")).status, 404, "and no longer at the old one");
+  const c = await as("colleague"); assert.equal((await json(c, "/api/presentations/fundomo-agm-2026", { method: "PATCH", data: { slug: "x" } })).status, 403);
+  await json(o, "/api/presentations/fundomo-agm-2026", { method: "DELETE" });
+});
+
 test("an editable copy of the keynote starts from its document, with its own draft and its creator as owner", async () => {
   const c = await as("colleague");
   const made = await json(c, "/api/presentations", { method: "POST", data: { kind: "deck", title: "Series A narrative", renderer: "itw-keynote" } });

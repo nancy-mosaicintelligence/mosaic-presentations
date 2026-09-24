@@ -317,3 +317,5 @@ Production cannot be marked complete until the deployed URL has been opened and 
 | Several elements: shift-click builds the selection, the right-click menu aligns, distributes and matches sizes, one undo step each; a group drag moves them together | PASS | `slides.test.mjs` (D-051); parity; 54/54 |
 | Make a copy: a new deck of the caller's own with the source's current document and pictures; viewers refused | PASS | `library.test.mjs` (D-052) |
 | Setup: the event mark picked from built-in marks or uploaded; the header logo sizes in the document and on the stage | PASS | `slides.test.mjs` (D-052); parity; 54/54 |
+| Published means public: a stranger sees the published version at the link (and its pictures) with no sign-in, an outsider likewise; before a publication a stranger is sent to sign in; members see the current document; the editor, player sources, draft API and versions stay with members | PASS | `access.test.mjs` (D-053) |
+| The address: owners set the slug; malformed, taken and built-in addresses refused; the deck answers at the new address and not the old; editors refused | PASS | `library.test.mjs` (D-053) |

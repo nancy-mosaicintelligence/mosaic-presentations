@@ -1181,7 +1181,7 @@ figure.pic.cropping{outline:2px solid rgba(252,100,82,.9);outline-offset:2px;cur
       /* as many paths as the mark has (a replaced mark may have more or fewer than the markup's two) */
       while (psvg.querySelectorAll("path").length < pm.paths.length) psvg.appendChild(document.createElementNS("http://www.w3.org/2000/svg", "path"));
       while (psvg.querySelectorAll("path").length > pm.paths.length) psvg.removeChild(psvg.querySelector("path"));
-      pps = psvg.querySelectorAll("path"); pm.paths.forEach(function (p, i) { pps[i].setAttribute("d", p.d); });
+      pps = psvg.querySelectorAll("path"); pm.paths.forEach(function (p, i) { pps[i].setAttribute("d", p.d); pps[i].style.fill = p.fill || ""; });   /* a path's own colour, else the renderer's white */
     }
     else psvg.parentNode.hidden = true;
     var c = doc.copy;

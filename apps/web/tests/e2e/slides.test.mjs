@@ -309,9 +309,9 @@ test("several elements: shift-click adds to the selection; right-click opens the
 test("Setup: the event mark is picked from the built-in marks (Fundomo) and the header logos are sized; the deck shows both", async () => {
   await goto(0); await stageReady();
   await page.click('.tabs button:has-text("Setup")'); await page.waitForSelector(".marks .mark");
-  await page.click('.marks .mark:has-text("Fundomo")');
-  await untilDraft(d => d.assets["wave-by-vento-w"].viewBox === "0 0 107.75 16.3608" && d.assets["wave-by-vento-w"].paths.length === 7, "the Fundomo mark in the document");
-  await frame().waitForFunction(() => document.querySelector("#partner svg")?.getAttribute("viewBox") === "0 0 107.75 16.3608", null, { timeout: 15000 });
+  await page.click('.marks .mark:has(span:text-is("Fundomo"))');   /* the icon; "Fundomo wordmark" is the other */
+  await untilDraft(d => d.assets["wave-by-vento-w"].viewBox === "0 0 40 39" && d.assets["wave-by-vento-w"].paths.length === 6 && d.assets["wave-by-vento-w"].paths[0].fill === "#FF3D00", "the Fundomo mark, in its colours, in the document");
+  await frame().waitForFunction(() => { const s = document.querySelector("#partner svg"); return s?.getAttribute("viewBox") === "0 0 40 39" && s.querySelectorAll("path").length === 6 && s.querySelector("path").style.fill.replace(/\s/g, "").toLowerCase() === "rgb(255,61,0)"; }, null, { timeout: 15000 });
   const setRange = (sel, v) => page.evaluate(([q, val]) => { const i = document.querySelector(q); const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set; set.call(i, val); i.dispatchEvent(new Event("input", { bubbles: true })); i.dispatchEvent(new Event("change", { bubbles: true })); }, [sel, String(v)]);
   const brandSel = '.setup input[data-scale="brand"]', markSel = '.setup input[data-scale="partner"]';
   await page.waitForSelector(brandSel); await setRange(brandSel, 1.6); await setRange(markSel, 2);

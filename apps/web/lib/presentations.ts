@@ -136,6 +136,27 @@ export async function copyPresentation(sb: SupabaseClient, admin: SupabaseClient
   return made;
 }
 
+/** Owners give a presentation its address: the slug in every link. Links already handed out stop working, so it is a deliberate act. */
+export const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,80}$/;
+export const slugFromTitle = (title: string) => slugify(title);
+export async function setSlug(sb: SupabaseClient, admin: SupabaseClient, p: Presentation, user: { id: string; email: string }, slug: string): Promise<string> {
+  slug = slug.trim().toLowerCase();
+  if (!SLUG_RE.test(slug)) throw new StoreError(422, "an address is 2–80 characters: lowercase letters, digits and hyphens, starting with a letter or digit");
+  if (SEEDS[slug] && slug !== p.slug) throw new StoreError(409, "that address is a built-in deck's");
+  if (slug === p.slug) return slug;
+  const { data: taken } = await admin.from("presentations").select("id").eq("slug", slug).maybeSingle(); if (taken) throw new StoreError(409, "that address is taken");
+  const { error } = await admin.from("presentations").update({ slug }).eq("id", p.id); if (error) throw new StoreError(500, error.message);
+  await sb.from("audit_events").insert({ presentation_id: p.id, actor_id: user.id, actor_email: user.email, action: "presentation.address", detail: { from: p.slug, to: slug } });
+  return slug;
+}
+
+/** The published version of a presentation for anyone at all (no session): what a public link shows. */
+export async function publishedPublic(admin: SupabaseClient, presentationId: string): Promise<{ versionId: string; publishedAt: string; name: string; document: unknown } | null> {
+  const { data } = await admin.from("publication_records").select("version_id, published_at, presentation_versions!inner(name, document)").eq("presentation_id", presentationId).eq("active", true).maybeSingle();
+  if (!data) return null; const v = (data as any).presentation_versions;
+  return { versionId: data.version_id, publishedAt: data.published_at, name: v.name, document: v.document };
+}
+
 /** Owners and editors rename a presentation: the title the library and the bar show (a deck's own text is its own). */
 export async function renamePresentation(sb: SupabaseClient, admin: SupabaseClient, p: Presentation, user: { id: string; email: string }, title: string): Promise<string> {
   const t = title.replace(/\s+/g, " ").trim(); if (!t) throw new StoreError(422, "a title is needed"); if (t.length > 160) throw new StoreError(422, "a title is at most 160 characters");

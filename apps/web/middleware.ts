@@ -3,7 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 
 // Session upkeep and the first gate: pages that need a signed-in user redirect to sign-in; API routes
 // answer 401 themselves. The offline file mode skips all of it.
-const PROTECTED = [/^\/presentations\//, /^\/p\//, /^\/player\//, /^\/invite\//];
+const PROTECTED = [/^\/presentations\//, /^\/player\//, /^\/invite\//];   /* /p/<slug> decides for itself: the published version is for anyone */
 
 export async function middleware(req: NextRequest) {
   if (process.env.ITW_STORE === "file" && process.env.NODE_ENV !== "production") return NextResponse.next();

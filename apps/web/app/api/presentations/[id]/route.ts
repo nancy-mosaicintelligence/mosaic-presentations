@@ -1,18 +1,21 @@
 import { requireRole } from "@/lib/auth/access";
 import { supabaseServer, supabaseAdmin } from "@/lib/auth/server";
 import { fileMode } from "@/lib/auth/config";
-import { getPresentation, renamePresentation, deletePresentation } from "@/lib/presentations";
+import { getPresentation, renamePresentation, deletePresentation, setSlug } from "@/lib/presentations";
 import { StoreError } from "@/lib/store";
 import { ok, fail } from "@/lib/api";
 
-/** PATCH { title }: owners and editors rename the presentation (the library's and the bar's title). */
+/** PATCH { title } renames (owners and editors); PATCH { slug } gives the presentation its address (owners). */
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await ctx.params; const a = await requireRole(id, "editor"); if (fileMode()) throw new StoreError(501, "renaming needs the database store");
+    const { id } = await ctx.params; const body = await req.json().catch(() => ({}));
+    const a = await requireRole(id, typeof body.slug === "string" ? "owner" : "editor"); if (fileMode()) throw new StoreError(501, "this needs the database store");
     const p = await getPresentation(id); if (!p) throw new StoreError(404, "unknown presentation");
-    const body = await req.json().catch(() => ({})); if (typeof body.title !== "string") throw new StoreError(422, "title must be a string");
-    const title = await renamePresentation(await supabaseServer(), supabaseAdmin(), p, a.user, body.title);
-    return ok({ id: p.id, slug: p.slug, title });
+    if (typeof body.title !== "string" && typeof body.slug !== "string") throw new StoreError(422, "title or slug must be a string");
+    const sb = await supabaseServer(), admin = supabaseAdmin();
+    const title = typeof body.title === "string" ? await renamePresentation(sb, admin, p, a.user, body.title) : p.title;
+    const slug = typeof body.slug === "string" ? await setSlug(sb, admin, p, a.user, body.slug) : p.slug;
+    return ok({ id: p.id, slug, title });
   } catch (e) { return fail(e); }
 }
 

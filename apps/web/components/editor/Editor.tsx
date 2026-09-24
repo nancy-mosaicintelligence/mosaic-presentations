@@ -49,7 +49,7 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
     const r = await fetch(`${api}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: t }) });
     if (r.ok) { setName(t); document.title = `${t} · Mosaic`; } else setSave({ kind: "error", message: (await r.json()).error });
   }, [api, name]);
-  const [shareOpen, setShareOpen] = useState(false); const [publishedLink, setPublishedLink] = useState<string | null>(null); const [publishing, setPublishing] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false); const [addr, setAddr] = useState(id); const [publishedLink, setPublishedLink] = useState<string | null>(null); const [publishing, setPublishing] = useState(false);
   const fileDrop = useRef<HTMLInputElement | null>(null);
   // the side panels fold away: by hand, or on their own when the window is narrow (a split screen, a small laptop)
   const [sides, setSides] = useState<{ left: boolean; right: boolean }>(() => { try { const v = JSON.parse(localStorage.getItem("itw.sides") || "null"); if (v) return v; } catch {} return { left: true, right: true }; });
@@ -416,8 +416,13 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
       </div>
       {shareOpen && !inPreview && <div className="share" role="dialog" aria-label="Share">
         <header><strong>Share</strong><button type="button" className="ghost" onClick={() => setShareOpen(false)}>×</button></header>
-        <p>Everyone with access sees the current document — what this editor shows — at<br /><code>{typeof window !== "undefined" ? window.location.origin : ""}/p/{id}</code> <button type="button" className="ghost" onClick={() => navigator.clipboard?.writeText(`${window.location.origin}/p/${id}`)}>Copy link</button></p>
-        {published ? <p className="muted small">Published: <strong>{published.name}</strong>, frozen at <code>/p/{id}?source=published</code> <button type="button" className="ghost" onClick={() => navigator.clipboard?.writeText(`${window.location.origin}/p/${id}?source=published`)}>Copy</button></p> : <p className="muted small">Publish freezes a named version, kept at <code>/p/{id}?source=published</code> while the shared link moves on.</p>}
+        <p>The link:<br /><code>{typeof window !== "undefined" ? window.location.origin : ""}/p/{id}</code> <button type="button" className="ghost" onClick={() => navigator.clipboard?.writeText(`${window.location.origin}/p/${id}`)}>Copy link</button></p>
+        <p className="muted small">People with access see the current document — what this editor shows. {published ? <>Anyone else on the internet sees the published version: <strong>{published.name}</strong>.</> : <>Nobody else can open it until you <strong>Publish</strong>; then anyone with the link sees that version.</>}</p>
+        {role === "owner" && <div className="address"><span className="lab">Address</span>
+          <input className="field" value={addr} onChange={e => setAddr(e.target.value.toLowerCase())} spellCheck={false} />
+          <button type="button" className="ghost" onClick={() => setAddr(name.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60))}>Use the name</button>
+          <button type="button" disabled={addr === id || !addr} onClick={async () => { if (!window.confirm(`Change the address to /p/${addr}? Links already shared to /p/${id} stop working.`)) return; const r = await fetch(`${api}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug: addr }) }); const b = await r.json().catch(() => ({})); if (r.ok) window.location.href = `/presentations/${b.slug}/edit`; else setSave({ kind: "error", message: b.error || r.statusText }); }}>Change</button>
+        </div>}
         {publishedLink && <p className="muted small">Just published.</p>}
         <p className="muted">Who has access — roles and invitations — is on the <a href={`/presentations/${id}/people`}>People</a> page.</p>
       </div>}

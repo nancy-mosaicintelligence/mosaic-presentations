@@ -219,7 +219,7 @@ export const ASSET_FIELDS = Object.freeze({
   paths: { type: "array", req: true },
   sources: { type: "array", req: true }
 });
-export const ASSET_PATH_FIELDS = Object.freeze({ d: { type: { re: /^[MmZzLlHhVvCcSsQqTtAa0-9,.\-+eE \n]+$/ }, req: true } });
+export const ASSET_PATH_FIELDS = Object.freeze({ d: { type: { re: /^[MmZzLlHhVvCcSsQqTtAa0-9,.\-+eE \n]+$/ }, req: true }, fill: { type: { re: /^#[0-9A-Fa-f]{6}$/ } } });   // a colour of its own (a multi-colour mark); none = the renderer's
 export const ASSET_SOURCE_FIELDS = Object.freeze({
   // a file in the repository (relative, no "..") or an object in the application's private storage
   path: { type: { re: /^(?!\/)(?!.*(^|\/)\.\.(\/|$))(storage:\/\/[a-z0-9-]+\/)?[A-Za-z0-9_\-./]+\.svg$/ }, req: true },
