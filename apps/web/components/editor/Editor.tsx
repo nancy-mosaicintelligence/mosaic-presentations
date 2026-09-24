@@ -17,6 +17,7 @@ import { AnimationPanel, CopyPanel, AssetsPanel } from "./Panels";
 import { VersionsPanel, type VersionMeta } from "./Versions";
 import { ImagesPanel } from "./Images";
 import { StationTools, addBeat, removeStation, moveStation } from "./Structure";
+import { ExportDialog, exportToSlides, type ExportReady } from "./Export";
 
 type SaveState = { kind: "idle" } | { kind: "dirty" } | { kind: "saving" } | { kind: "saved"; at: string } | { kind: "error"; message: string; issues?: { path: string; message: string }[] };
 type Tab = "element" | "images" | "motion" | "setup" | "copy" | "assets" | "versions";
@@ -95,6 +96,7 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
     else if (m.type === "itw:caret") { if (m.caret) setInline(s => (s ? { ...s, caret: m.caret } : s)); }
     else if (m.type === "itw:edited" || m.type === "itw:editDone") { if (m.copy) copyEditRef.current(m.copy, m.runs, m.text, m.type === "itw:edited"); else inlineEditRef.current(m.id, m.item, m.runs, m.type === "itw:edited"); if (m.type === "itw:editDone") setInline(null); else if (m.caret) setInline(s => (s ? { ...s, caret: m.caret, fontSize: m.fontSize } : s)); }
     else if (m.type === "itw:error") setSave({ kind: "error", message: m.message });
+    else if (m.type === "itw:exportReady") exportReadyRef.current(m as unknown as ExportReady);
   }, []);
   const inlineEditRef = useRef<(id: string, item: number, runs: any[], typing: boolean) => void>(() => {});
   const copyEditRef = useRef<(path: string, runs: any[], text: string, typing: boolean) => void>(() => {});
@@ -112,6 +114,8 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
   const chromeRef = useRef<{ move: (name: string, dx: number, dy: number, delta: boolean) => void; scale: (name: string, v: number) => void }>({ move: () => {}, scale: () => {} });
   const nudgeRef = useRef<(id: string, dx: number, dy: number) => void>(() => {});
   const dropRef = useRef<(m: BridgeMessage) => void>(() => {});
+  const exportReadyRef = useRef<(m: ExportReady) => void>(() => {});
+  const [exportOpen, setExportOpen] = useState(false);
   const bridge = useMemo(() => new PlayerBridge(() => frame.current, onMessage), [onMessage]);
   // attach, and ask the frame for its state in case it is already running (a remount never reloads the frame)
   useEffect(() => { bridge.attach(); bridge.send({ type: "itw:state" }); return () => bridge.detach(); }, [bridge]);
@@ -339,6 +343,16 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
   const undo = useCallback(() => { const e = history.peekUndo(); if (!e) return; afterChange(history.undo() as Doc, e.path); }, [history, afterChange]);
   const redo = useCallback(() => { const e = history.peekRedo(); if (!e) return; afterChange(history.redo() as Doc, e.path); }, [history, afterChange]);
   const stationRef = useRef(station); stationRef.current = station;
+  const runExport = useCallback(async (from: number, to: number, onProgress: (done: number, total: number) => void) => {
+    const back = stationRef.current; const fr = frame.current; if (!fr) throw new Error("the stage is not open");
+    const ask = (index: number) => new Promise<ExportReady>((res, rej) => {
+      let done = false; exportReadyRef.current = (m) => { done = true; res(m); };
+      bridge.send({ type: "itw:export", index });
+      setTimeout(() => { if (!done) rej(new Error(`the stage did not render station ${index + 1}`)); }, 30000);
+    });
+    try { return await exportToSlides({ frame: fr, bridge, ask, from, to, title: name, onProgress }); }
+    finally { bridge.send({ type: "itw:exportDone" }); bridge.send({ type: "itw:goto", index: back }); }
+  }, [bridge, name]);
   const selectedRef = useRef(selected); selectedRef.current = selected;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -432,10 +446,12 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
           ? <button type="button" onClick={() => previewVersionToggle(null)}>Back to draft</button>
           : preview ? <button type="button" onClick={() => setPreview(false)}>Back to editor</button> : <button type="button" onClick={present} title="The draft, fullscreen, from this station">Present</button>}
         {!inPreview && role === "owner" && <button type="button" className="ghost" onClick={() => setShareOpen(s => !s)}>Share</button>}
+        {!inPreview && <button type="button" className="ghost" onClick={() => { setExportOpen(s => !s); setShareOpen(false); }} disabled={!doc || !ready} title="A .pptx file for Google Slides">Export</button>}
         {!inPreview && <button type="button" className={"ghost side-toggle" + (showRight ? " on" : "")} title={narrow ? "the panel is folded away on a narrow window" : sides.right ? "hide the panel" : "show the panel"} onClick={() => setSides(s => ({ ...s, right: !s.right }))} disabled={narrow}>◨</button>}
         {!inPreview && <button type="button" className={role === "owner" ? "" : "primary"} onClick={newVersion} disabled={!doc} title="Name the current state as a version, without publishing">New version</button>}
         {!inPreview && role === "owner" && <button type="button" className="primary" onClick={publishNow} disabled={!doc || publishing}>{publishing ? "Publishing…" : "Publish"}</button>}
       </div>
+      {exportOpen && !inPreview && doc && <ExportDialog total={doc.stations.length} title={name} onClose={() => setExportOpen(false)} run={runExport} />}
       {shareOpen && !inPreview && <div className="share" role="dialog" aria-label="Share">
         <header><strong>Share</strong><button type="button" className="ghost" onClick={() => setShareOpen(false)}>×</button></header>
         <p>The link:<br /><code>{typeof window !== "undefined" ? window.location.origin : ""}/p/{id}</code> <button type="button" className="ghost" onClick={() => navigator.clipboard?.writeText(`${window.location.origin}/p/${id}`)}>Copy link</button></p>

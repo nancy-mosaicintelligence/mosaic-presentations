@@ -698,6 +698,7 @@ body.editing .editline::selection,body.editing .editline *::selection{background
 body.editing .editsel{cursor:move}
 section.beat.placed-host{pointer-events:none!important;background:none!important} section.beat.placed-host .placed{pointer-events:auto!important}
 figure.pic.cropping{outline:2px solid rgba(252,100,82,.9);outline-offset:2px;cursor:grab} figure.pic.cropping .rot{overflow:visible} figure.pic.cropping .ghost{position:absolute;opacity:.35;pointer-events:none;max-width:none}
+body.exporting #hud,body.exporting #notes,body.exporting .cue,body.exporting #editHandles{visibility:hidden!important} body.exporting [data-id]:hover,body.exporting [data-chrome]:hover,body.exporting [data-copy]:hover{outline:none!important}
 </style>
 </head>
 <body>
@@ -3273,7 +3274,102 @@ figure.pic.cropping{outline:2px solid rgba(252,100,82,.9);outline-offset:2px;cur
     }
     if (!present) paintHudFromP();
     paintRail(P);
+    if (EXP.pending !== null) exportSnap();
     watchdog(now);
+  }
+
+  /* ================================================================
+     EXPORT — a station as a still plus its words. The parent asks for a station; the deck settles it, lists every
+     visible line of text with its box and style (so the parent can lay editable text over the picture), stands a
+     copy of the rendered scene in for the WebGL canvas (whose buffer cannot be read once the frame is over) and
+     blanks the words, so the parent can rasterise everything else. itw:exportDone puts it all back.
+     ================================================================ */
+  var EXP = { pending: null, reply: null, undo: [] };
+  function exportStation(i, reply) {
+    if (EXP.reply) exportRestore();
+    goto(i); P = PT; TW.from = PT; TW.to = PT; TW.dur = 0;
+    EXP.reply = reply;
+    /* the time-driven entrances (labels, crowd, staggered reveals) need a moment to land */
+    setTimeout(function () { EXP.pending = i; }, REDUCED ? 200 : 1500);
+  }
+  function exportSnap() {
+    var i = EXP.pending; EXP.pending = null; if (!EXP.reply) return;
+    var still = document.createElement("canvas"); still.width = canvas.width; still.height = canvas.height;
+    still.getContext("2d").drawImage(canvas, 0, 0);
+    still.id = "glstill"; still.style.cssText = "display:block;width:100%;height:100%";
+    canvas.parentNode.insertBefore(still, canvas); canvas.style.display = "none";
+    EXP.undo.push(function () { still.remove(); canvas.style.display = ""; });
+    var texts = exportTexts();
+    document.body.classList.add("exporting");
+    EXP.reply({ type: "itw:exportReady", index: i, w: window.innerWidth, h: window.innerHeight, texts: texts,
+      note: STATIONS[i].n || "", chapter: STATIONS[i].c || "" });
+  }
+  function exportRestore() {
+    while (EXP.undo.length) EXP.undo.pop()();
+    document.body.classList.remove("exporting"); EXP.reply = null; EXP.pending = null;
+  }
+  /* every run of visible text, grouped by its box: the nearest ancestor that is not laid out inline */
+  function exportTexts() {
+    var out = [], boxes = [], byBox = new Map();
+    function opacityUpTo(el, stop) { var o = 1; for (var e = el; e && e !== stop; e = e.parentElement) o *= parseFloat(getComputedStyle(e).opacity) || 0; return o; }
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT), n;
+    while ((n = walker.nextNode())) {
+      if (!/\S/.test(n.nodeValue)) continue;
+      var pe = n.parentElement; if (!pe || pe.closest("#hud, #notes, .cue, script, style, svg, #editHandles")) continue;
+      var box = pe; while (box !== document.body && getComputedStyle(box).display === "inline") box = box.parentElement;
+      if (box === document.body || byBox.has(box)) continue;
+      var cs = getComputedStyle(box); if (cs.visibility === "hidden") continue;
+      var op = opacityUpTo(box, document.body.parentElement); if (op < .05) continue;
+      var r = box.getBoundingClientRect(); if (r.width < 1 || r.height < 1 || r.right < 0 || r.bottom < 0 || r.left > window.innerWidth || r.top > window.innerHeight) continue;
+      byBox.set(box, true); boxes.push({ el: box, cs: cs, opacity: op });
+    }
+    boxes.forEach(function (b) {
+      var runs = [], rects = [], first = 0, box = b.el;
+      (function walk(el) {
+        for (var c = el.firstChild; c; c = c.nextSibling) {
+          if (c.nodeType === 3) {
+            var t = c.nodeValue; if (!/\S/.test(t) && !runs.length) continue;
+            var ps = getComputedStyle(c.parentElement), ws = ps.whiteSpace, pre = /^pre/.test(ws);
+            var ro = opacityUpTo(c.parentElement, box); if (ro < .05) continue;
+            var fam = (ps.fontFamily.split(",")[0] || "").replace(/["']/g, "").trim();
+            var st = { font: fam, size: parseFloat(ps.fontSize), bold: parseInt(ps.fontWeight, 10) >= 600, italic: ps.fontStyle === "italic",
+              color: ps.color, opacity: ro, spacing: parseFloat(ps.letterSpacing) || 0, upper: ps.textTransform === "uppercase" };
+            var rg = document.createRange(); rg.selectNodeContents(c);
+            var cr = rg.getClientRects(); for (var k = 0; k < cr.length; k++) if (cr[k].width > 0 && cr[k].height > 0) { rects.push(cr[k]); if (!first) first = cr[k].height; }
+            var parts = pre ? t.split("\n") : [t.replace(/\s+/g, " ")];
+            parts.forEach(function (part, pi) {
+              if (pi > 0) runs.push({ br: true });
+              if (part) runs.push(Object.assign({ t: st.upper ? part.toUpperCase() : part }, st));
+            });
+          } else if (c.nodeType === 1) {
+            if (c.tagName === "BR") { runs.push({ br: true }); continue; }
+            if (c.tagName === "svg" || c.tagName === "SVG") continue;
+            var ds = getComputedStyle(c); if (ds.display === "none" || ds.visibility === "hidden") continue;
+            if (ds.display !== "inline") continue;   /* its own box, or a container of boxes */
+            walk(c);
+          }
+        }
+      })(box);
+      /* trim: no leading space on a line, no trailing space at the end */
+      var lineStart = true;
+      runs.forEach(function (r) { if (r.br) { lineStart = true; return; } if (lineStart) r.t = r.t.replace(/^\s+/, ""); if (r.t) lineStart = false; });
+      for (var q = runs.length - 1; q >= 0; q--) { if (runs[q].br) { runs.pop(); continue; } runs[q].t = runs[q].t.replace(/\s+$/, ""); if (runs[q].t) break; runs.pop(); }
+      runs = runs.filter(function (r) { return r.br || r.t; });
+      if (!runs.length || !rects.length) return;
+      var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      rects.forEach(function (r) { x0 = Math.min(x0, r.left); y0 = Math.min(y0, r.top); x1 = Math.max(x1, r.right); y1 = Math.max(y1, r.bottom); });
+      var lh = parseFloat(b.cs.lineHeight), fs = parseFloat(b.cs.fontSize);
+      out.push({ id: box.getAttribute("data-id") || box.getAttribute("data-copy") || "", x: x0, y: y0, w: x1 - x0, h: y1 - y0, line: first,
+        lineHeight: isNaN(lh) ? fs * 1.2 : lh, fontSize: fs, align: b.cs.textAlign, opacity: b.opacity, runs: runs });
+      /* blank the words (not the icons that borrow their colour) for the picture */
+      [box].concat([].slice.call(box.querySelectorAll("*"))).forEach(function (el) {
+        if (el.closest("svg")) { if (el.tagName === "svg") { var was = el.style.color; el.style.color = getComputedStyle(el).color; EXP.undo.push(function () { el.style.color = was; }); } return; }
+        var old = el.style.getPropertyValue("color"), pri = el.style.getPropertyPriority("color");
+        el.style.setProperty("color", "transparent", "important");
+        EXP.undo.push(function () { if (old) el.style.setProperty("color", old, pri); else el.style.removeProperty("color"); });
+      });
+    });
+    return out;
   }
 
   var wStart = 0, wFrames = 0, wDone = false;
@@ -3743,6 +3839,8 @@ figure.pic.cropping{outline:2px solid rgba(252,100,82,.9);outline-offset:2px;cur
         case "itw:safe": setSafe(!!m.on, false); break;
         case "itw:fullscreen": setFull(!!m.on); break;
         case "itw:state": post(state()); break;
+        case "itw:export": if (typeof m.index === "number") { if (!present) setMode(true); endEdit(); select(null); exportStation(Math.max(0, Math.min(STATIONS.length - 1, m.index)), post); } break;
+        case "itw:exportDone": exportRestore(); break;
       }
     });
     setInterval(function () {

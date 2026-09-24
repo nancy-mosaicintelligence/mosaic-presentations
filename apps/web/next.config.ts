@@ -11,6 +11,15 @@ const config: NextConfig = {
   // a second dev server (the browser tests) needs its own build directory; two on one .next corrupt each other
   distDir: process.env.NEXT_DIST_DIR || ".next",
   poweredByHeader: false,
+  // pptxgenjs (the Google Slides export, browser only) carries Node-only branches behind dynamic imports of node:fs and
+  // node:https; the browser bundle never runs them, so they resolve to nothing instead of failing the build
+  webpack: (config, { isServer, webpack }) => {
+    if (!isServer) {
+      config.plugins.push(new webpack.NormalModuleReplacementPlugin(/^node:(fs|https)$/, (r: { request: string }) => { r.request = r.request.replace(/^node:/, ""); }));
+      config.resolve.fallback = { ...(config.resolve.fallback || {}), fs: false, https: false };
+    }
+    return config;
+  },
   headers: async () => [{ source: "/(.*)", headers: [{ key: "X-Content-Type-Options", value: "nosniff" }, { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" }] }]
 };
 export default config;
