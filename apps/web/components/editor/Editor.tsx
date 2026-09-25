@@ -343,14 +343,14 @@ export function Editor({ id, title, role, email }: { id: string; title: string; 
   const undo = useCallback(() => { const e = history.peekUndo(); if (!e) return; afterChange(history.undo() as Doc, e.path); }, [history, afterChange]);
   const redo = useCallback(() => { const e = history.peekRedo(); if (!e) return; afterChange(history.redo() as Doc, e.path); }, [history, afterChange]);
   const stationRef = useRef(station); stationRef.current = station;
-  const runExport = useCallback(async (from: number, to: number, onProgress: (done: number, total: number) => void) => {
+  const runExport = useCallback(async (from: number, to: number, textScale: number, onProgress: (done: number, total: number) => void) => {
     const back = stationRef.current; const fr = frame.current; if (!fr) throw new Error("the stage is not open");
     const ask = (index: number) => new Promise<ExportReady>((res, rej) => {
       let done = false; exportReadyRef.current = (m) => { done = true; res(m); };
       bridge.send({ type: "itw:export", index });
       setTimeout(() => { if (!done) rej(new Error(`the stage did not render station ${index + 1}`)); }, 30000);
     });
-    try { return await exportToSlides({ frame: fr, bridge, ask, from, to, title: name, onProgress }); }
+    try { return await exportToSlides({ frame: fr, bridge, ask, from, to, title: name, textScale, onProgress }); }
     finally { bridge.send({ type: "itw:exportDone" }); bridge.send({ type: "itw:goto", index: back }); }
   }, [bridge, name]);
   const selectedRef = useRef(selected); selectedRef.current = selected;

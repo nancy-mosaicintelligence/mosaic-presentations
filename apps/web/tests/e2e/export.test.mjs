@@ -27,8 +27,15 @@ before(async () => {
   page.on("pageerror", e => console.error("pageerror:", e.message));
   await ensureUsers(); await resetPresentation();
   const r = await signIn(page, BASE, USERS.owner); assert.equal(r.status, 200, JSON.stringify(r.body));
+  const up = await page.request.post(`${BASE}/api/presentations/${ID}/images`, { multipart: { file: { name: "frame.png", mimeType: "image/png", buffer: PNG } } }); assert.equal(up.status(), 201); const img = await up.json();
+  const d = (await (await page.request.get(`${BASE}/api/presentations/${ID}/draft`)).json()).document;
+  d.assets = { ...(d.assets || {}), [img.id]: { kind: "image", src: img.src, sha256: img.sha256, width: img.width, height: img.height, mime: img.mime, name: img.name } };
+  for (const sec of d.sections) for (const e of sec.elements) if (e.id === "lab.1") { e.asset = img.id; e.adjust = { crop: { x: 0.25, y: 0, w: 0.5, h: 1 } }; }
+  const put = await page.request.put(`${BASE}/api/presentations/${ID}/draft`, { data: { document: d } }); assert.equal(put.status(), 200, await put.text());
   await page.goto(`${BASE}/presentations/${ID}/edit`); await stageReady();
 }, { timeout: 180000 });
+// an 8×6 picture, orange on the left and ink on the right (a valid PNG: the crop must show the orange half)
+const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAgAAAAGCAIAAABxZ0isAAAAFUlEQVR4nGP4kxIER1ISonDEMJASALzIL1k2SfDCAAAAAElFTkSuQmCC", "base64");
 after(async () => { await browser?.close(); server?.kill(); });
 
 let zip, slides;
@@ -74,7 +81,7 @@ test("each slide has the scene as its background, the words as text boxes in the
   // the words line for line, as the deck breaks them; the header marks as pictures of their own
   const hero = /<p:sp>(?:(?!<\/p:sp>).)*Surgery is the closest(?:(?!<\/p:sp>).)*<\/p:sp>/s.exec(s1); assert.ok(hero && hero[0].includes("<a:br/>"), "the opening line breaks where the deck breaks it");
   assert.equal((hero[0].match(/<a:p>/g) || []).length, 1, "one paragraph"); assert.equal((hero[0].match(/<a:pPr/g) || []).length, 1, "its properties once");
-  assert.ok(hero[0].includes('<a:spcPts val='), "an exact line pitch");
+  const pct = /<a:spcPct val="(\d+)"\/>/.exec(hero[0]); assert.ok(pct && +pct[1] > 60000 && +pct[1] < 200000, "a line pitch as a share of the face's own line height");
   assert.ok((s1.match(/<p:pic>/g) || []).length >= 2, "the Mosaic logo and the event mark are pictures");
   const rels1 = await zip.file("ppt/slides/_rels/slide1.xml.rels").async("string"); const pngs = [...rels1.matchAll(/Target="\.\.\/media\/([^"]+\.png)"/g)].map(m => m[1]);
   assert.ok(pngs.length >= 3, "the background and two transparent pictures");
@@ -105,6 +112,12 @@ test("a station on the rendered scene and one on white export too", async () => 
   assert.equal(await frame().evaluate(() => document.body.classList.contains("safe")), true, "safe mode is back");
   await page.evaluate(() => document.querySelector("iframe").contentWindow.postMessage({ v: 1, type: "itw:safe", on: false }, location.origin));
   const white = await one(24); assert.ok(white.includes('typeface="'), "station 24 has words");
+  // the filled fluoroscopy frame is a picture of its own, drawn from the image with the deck's crop (half the width)
+  const r24 = await last.file("ppt/slides/_rels/slide1.xml.rels").async("string"); const pngs24 = [...r24.matchAll(/Target="\.\.\/media\/([^"]+\.png)"/g)].map(m => m[1]);
+  assert.ok(pngs24.length >= 4, "the marks and the frame's picture");
+  const pics24 = [...white.matchAll(/<p:pic>.*?<\/p:pic>/gs)].map(m => /<a:ext cx="(\d+)" cy="(\d+)"\/>/.exec(m[0])).map(m => ({ w: +m[1], h: +m[2] }));
+  assert.ok(pics24.some(p => Math.abs(p.w / p.h - 1) < 0.05), "a square frame among the pictures");
+  const framePng = await last.file(`ppt/media/${pngs24[pngs24.length - 1]}`).async("nodebuffer"); assert.ok(framePng.length > 300, "the frame's picture has content");
   // the pills (chips) are filled, rounded text boxes with their icons as pictures; the staggered reveals have all landed
   const chips = await one(18);
   const pill = /<p:sp>(?:(?!<\/p:sp>).)*<a:t>drugs<\/a:t>(?:(?!<\/p:sp>).)*<\/p:sp>/s.exec(chips); assert.ok(pill, "the drugs pill");

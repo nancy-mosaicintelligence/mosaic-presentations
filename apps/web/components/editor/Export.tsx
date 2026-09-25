@@ -54,7 +54,33 @@ async function rasterSvg(svg: SVGElement, scale: number): Promise<string> {
   } finally { URL.revokeObjectURL(url); }
 }
 
-export async function exportToSlides(o: { frame: HTMLIFrameElement; bridge: PlayerBridge; ask: (index: number) => Promise<ExportReady>; from: number; to: number; title: string; onProgress: (done: number, total: number) => void }): Promise<Blob> {
+/** A framed picture as the deck shows it: the image drawn into the frame's clip with the crop, turn, flip and filters the
+ *  deck applies (frame > .rot clips, .crop turns about its centre, the img sits inside). Null when the frame is empty. */
+function rasterFigure(fig: HTMLElement, scale: number): { data: string; x: number; y: number; w: number; h: number } | null {
+  const win = fig.ownerDocument.defaultView!;
+  const rot = fig.querySelector(".rot") as HTMLElement | null, crop = fig.querySelector(".crop") as HTMLElement | null, img = fig.querySelector("img") as HTMLImageElement | null;
+  if (!rot || !crop || !img || !img.complete || !img.naturalWidth || img.offsetParent !== crop) return null;
+  const R = rot.getBoundingClientRect(); if (R.width < 1 || R.height < 1) return null;
+  const cv = document.createElement("canvas"); cv.width = Math.round(R.width * scale); cv.height = Math.round(R.height * scale);
+  const ctx = cv.getContext("2d")!; ctx.scale(scale, scale);
+  const rs = win.getComputedStyle(rot), cs = win.getComputedStyle(crop), is = win.getComputedStyle(img);
+  ctx.globalAlpha = parseFloat(rs.opacity) || 1;
+  const radius = parseFloat(rs.borderRadius) || 0;
+  ctx.beginPath(); if (radius > 0 && "roundRect" in ctx) (ctx as unknown as { roundRect: (x: number, y: number, w: number, h: number, r: number) => void }).roundRect(0, 0, R.width, R.height, radius); else ctx.rect(0, 0, R.width, R.height); ctx.clip();
+  // the turn wrapper's untransformed box, relative to the frame (offsets accumulate up the offsetParent chain)
+  const at = (e: HTMLElement) => { let x = 0, y = 0; for (let n: HTMLElement | null = e; n; n = n.offsetParent as HTMLElement | null) { x += n.offsetLeft; y += n.offsetTop; } return { x, y }; };
+  const pr = at(rot), pc = at(crop);
+  const cl = pc.x - pr.x, ct = pc.y - pr.y, cw = crop.offsetWidth, ch = crop.offsetHeight;
+  const m = /matrix\(([^)]+)\)/.exec(cs.transform || ""); const ox = cl + cw / 2, oy = ct + ch / 2;
+  if (m) { const a = m[1].split(",").map(parseFloat); ctx.translate(ox, oy); ctx.transform(a[0], a[1], a[2], a[3], a[4], a[5]); ctx.translate(-ox, -oy); }
+  if (cs.overflow === "hidden") { ctx.beginPath(); ctx.rect(cl, ct, cw, ch); ctx.clip(); }
+  try { if (is.filter && is.filter !== "none") ctx.filter = is.filter; } catch { /* no filters: the plain picture */ }
+  ctx.drawImage(img, cl + img.offsetLeft, ct + img.offsetTop, img.offsetWidth, img.offsetHeight);
+  return { data: cv.toDataURL("image/png"), x: R.left, y: R.top, w: R.width, h: R.height };
+}
+
+export async function exportToSlides(o: { frame: HTMLIFrameElement; bridge: PlayerBridge; ask: (index: number) => Promise<ExportReady>; from: number; to: number; title: string; textScale?: number; onProgress: (done: number, total: number) => void }): Promise<Blob> {
+  const k = o.textScale && o.textScale > 0 ? o.textScale : 1;   // the words larger than the deck's, when asked
   const [{ default: html2canvas }, { default: PptxGenJS }, { default: JSZip }] = await Promise.all([import("html2canvas"), import("pptxgenjs"), import("jszip")]);
   const pptx = new PptxGenJS();
   pptx.layout = "LAYOUT_16x9"; pptx.title = o.title;
@@ -74,7 +100,9 @@ export async function exportToSlides(o: { frame: HTMLIFrameElement; bridge: Play
         const scale = Math.max(2, Math.min(4, Math.ceil(600 / Math.max(ob.w, ob.h))));
         try {
           let data: string, box = { x: ob.x, y: ob.y, w: ob.w, h: ob.h };
-          if (inner) { const ir = inner.getBoundingClientRect(); box = { x: ir.left, y: ir.top, w: ir.width, h: ir.height }; data = await rasterSvg(inner as unknown as SVGElement, scale); }
+          const framed = el.tagName === "FIGURE" ? rasterFigure(el, scale) : null;
+          if (framed) { data = framed.data; box = { x: framed.x, y: framed.y, w: framed.w, h: framed.h }; }
+          else if (inner) { const ir = inner.getBoundingClientRect(); box = { x: ir.left, y: ir.top, w: ir.width, h: ir.height }; data = await rasterSvg(inner as unknown as SVGElement, scale); }
           else { const undo = inlineSvgPaint(el); try { data = (await html2canvas(el, { scale, backgroundColor: null, logging: false, useCORS: true, imageTimeout: 0 })).toDataURL("image/png"); } finally { undo(); } }
           pictures.push({ data, ...box });
           hidden.push({ el, was: el.style.visibility }); el.style.visibility = "hidden";
@@ -100,28 +128,30 @@ export async function exportToSlides(o: { frame: HTMLIFrameElement; bridge: Play
       for (const u of t.runs) {
         if ("br" in u) { br = true; continue; }
         const c = colour(u.color), op = c.a * u.opacity;
-        runs.push({ text: u.t, options: { fontFace: u.font, fontSize: +(u.size * pt).toFixed(1), bold: u.bold, italic: u.italic, color: c.hex, ...(br ? { softBreakBefore: true } : {}),
-          ...(op < 0.995 ? { transparency: Math.round((1 - op) * 100) } : {}), ...(u.spacing ? { charSpacing: +(u.spacing * pt).toFixed(2) } : {}) } });
+        runs.push({ text: u.t, options: { fontFace: u.font, fontSize: +(u.size * pt * k).toFixed(1), bold: u.bold, italic: u.italic, color: c.hex, ...(br ? { softBreakBefore: true } : {}),
+          ...(op < 0.995 ? { transparency: Math.round((1 - op) * 100) } : {}), ...(Math.abs(u.spacing) >= 0.3 ? { charSpacing: +(u.spacing * pt * k).toFixed(2) } : {}) } });
         br = false;
       }
       if (!runs.length) continue;
       const align = t.align === "center" ? "center" : t.align === "right" || t.align === "end" ? "right" : t.align === "justify" ? "justify" : "left";
       const half = Math.max(0, (t.lineHeight - t.line) / 2);   // CSS centres a line in its line box; the box starts at the line box
-      const common = { valign: "top" as const, align: align as "left" | "center" | "right" | "justify", wrap: true, autoFit: false, lineSpacing: +(t.lineHeight * pt).toFixed(2),
+      // the pitch as a share of the face's own line height (Slides knows percentages, not points): the deck's line-height over the first line's glyph box
+      const common = { valign: "top" as const, align: align as "left" | "center" | "right" | "justify", wrap: true, autoFit: false, lineSpacingMultiple: Math.max(0.8, Math.min(3, +(t.lineHeight / Math.max(1, t.line)).toFixed(3))),
         ...(t.opacity < 0.995 ? { transparency: Math.round((1 - t.opacity) * 100) } : {}) };
       if (t.pill) {
         // a pill: the element's own box, its fill and edge, the words at their inset (room on the right for a wider face)
-        const f = colour(t.pill.fill), e = colour(t.pill.stroke), extra = Math.max(0, t.maxLine * 0.25);
-        const w = t.pill.w + extra, ml = t.pill.inset.l, mr = Math.max(0, t.pill.inset.r), mt = Math.max(0, t.pill.inset.t - half), mb = Math.max(0, t.pill.inset.b);
-        slide.addText(runs as never, { ...common, x: t.pill.x * kx, y: t.pill.y * ky, w: w * kx, h: t.pill.h * ky, margin: [ml * pt, mr * pt, mb * pt, mt * pt],
+        const f = colour(t.pill.fill), e = colour(t.pill.stroke);
+        const ml = t.pill.inset.l, mr = Math.max(0, t.pill.inset.r), mt = Math.max(0, t.pill.inset.t - half), mb = Math.max(0, t.pill.inset.b);
+        const w = ml + t.maxLine * 1.3 * k + 12 + mr, h = Math.max(t.pill.h, mt + t.lines * t.lineHeight * k + 2 + mb);
+        slide.addText(runs as never, { ...common, x: t.pill.x * kx, y: t.pill.y * ky, w: w * kx, h: h * ky, margin: [ml * pt, mr * pt, mb * pt, mt * pt],
           shape: pptx.ShapeType.roundRect, rectRadius: Math.min(t.pill.radius, t.pill.h / 2) * kx,
           ...(f.a > 0 ? { fill: { color: f.hex, transparency: Math.round((1 - f.a) * 100) } } : {}),
           ...(t.pill.strokeW > 0 && e.a > 0 ? { line: { color: e.hex, width: +(t.pill.strokeW * pt).toFixed(2), transparency: Math.round((1 - e.a) * 100) } } : {}) });
         continue;
       }
       // the lines break where the deck breaks them; the box is wide enough that a wider face cannot wrap a line early
-      const w = t.maxLine * 1.3 + 12, x = t.x - (align === "center" ? (w - t.w) / 2 : align === "right" ? w - t.w : 0);
-      slide.addText(runs as never, { ...common, x: x * kx, y: (t.y - half) * ky, w: w * kx, h: (t.lines * t.lineHeight + 4) * ky, margin: 0 });
+      const w = t.maxLine * 1.3 * k + 12, x = t.x - (align === "center" ? (w - t.w) / 2 : align === "right" ? w - t.w : 0);
+      slide.addText(runs as never, { ...common, x: x * kx, y: (t.y - half) * ky, w: w * kx, h: (t.lines * t.lineHeight * k + 4) * ky, margin: 0 });
     }
     if (r.note) slide.addNotes(r.note);
     o.onProgress(i - o.from + 1, total);
@@ -141,8 +171,8 @@ export async function exportToSlides(o: { frame: HTMLIFrameElement; bridge: Play
   return zip.generateAsync({ type: "blob", mimeType: "application/vnd.openxmlformats-officedocument.presentationml.presentation" });
 }
 
-export function ExportDialog({ total, title, onClose, run }: { total: number; title: string; onClose: () => void; run: (from: number, to: number, onProgress: (done: number, total: number) => void) => Promise<Blob> }) {
-  const [from, setFrom] = useState(1); const [to, setTo] = useState(total);
+export function ExportDialog({ total, title, onClose, run }: { total: number; title: string; onClose: () => void; run: (from: number, to: number, textScale: number, onProgress: (done: number, total: number) => void) => Promise<Blob> }) {
+  const [from, setFrom] = useState(1); const [to, setTo] = useState(total); const [textScale, setTextScale] = useState(1.15);
   const [state, setState] = useState<{ kind: "idle" } | { kind: "busy"; done: number; total: number } | { kind: "done"; file: string } | { kind: "error"; message: string }>({ kind: "idle" });
   const alive = useRef(true); useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   const busy = state.kind === "busy";
@@ -151,7 +181,7 @@ export function ExportDialog({ total, title, onClose, run }: { total: number; ti
     const a = Math.min(clamp(from), clamp(to)), b = Math.max(clamp(from), clamp(to));
     setState({ kind: "busy", done: 0, total: b - a + 1 });
     try {
-      const blob = await run(a - 1, b - 1, (done, n) => { if (alive.current) setState({ kind: "busy", done, total: n }); });
+      const blob = await run(a - 1, b - 1, textScale, (done, n) => { if (alive.current) setState({ kind: "busy", done, total: n }); });
       const file = `${title.replace(/[\\/:*?"<>|]+/g, " ").trim() || "presentation"}.pptx`;
       const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = file; document.body.appendChild(link); link.click(); link.remove();
       setTimeout(() => URL.revokeObjectURL(url), 60000);
@@ -167,6 +197,12 @@ export function ExportDialog({ total, title, onClose, run }: { total: number; ti
       <span className="lab">to</span>
       <input className="field" type="number" min={1} max={total} value={to} disabled={busy} onChange={e => setTo(+e.target.value)} aria-label="to station" />
       <button type="button" className="primary" onClick={go} disabled={busy}>{busy ? "Exporting…" : "Export"}</button>
+    </div>
+    <div className="range size"><span className="lab">Text size</span>
+      <select className="field" value={String(textScale)} disabled={busy} onChange={e => setTextScale(+e.target.value)} aria-label="text size">
+        <option value="1">As the deck (100%)</option><option value="1.15">Larger (115%)</option><option value="1.3">Largest (130%)</option>
+      </select>
+      <span className="lab muted">The deck's words are small on a slide; larger keeps every line where it is, with more presence.</span>
     </div>
     {state.kind === "busy" && <p className="muted small" aria-live="polite">Rendering station {Math.min(state.done + 1, state.total)} of {state.total}… keep this tab in front; it takes a couple of seconds per station.</p>}
     {state.kind === "done" && <p className="small" aria-live="polite">Done: <strong>{state.file}</strong> is in your downloads.</p>}

@@ -333,6 +333,10 @@ p.sub{ font-family:var(--f-body); font-size:clamp(13px,1.05vw,15px); letter-spac
 .fluowrap{ display:grid; grid-template-columns:repeat(3,1fr); gap:clamp(8px,1vw,16px); width:100%; }
 .fluo{ margin:0; opacity:0; transition:opacity .5s var(--ease); }
 .fluo img{ width:100%; height:auto; display:block; border-radius:2px; }
+/* a filled frame: the frame clips, the turn wrapper fills it, the picture is laid out inside by the crop (as .pic) */
+.fluo .rot{ position:relative; width:100%; overflow:hidden; }
+.fluo .crop{ position:absolute; left:0; top:0; width:100%; height:100%; overflow:hidden; transform-origin:center; }
+.fluo .rot img{ position:absolute; max-width:none; }
 .fluo .ph{ aspect-ratio:1; border:1px dashed rgba(11,7,8,.28); border-radius:2px;
   background:rgba(11,7,8,.035); display:flex; align-items:center; justify-content:center;
   text-align:center; padding:8px; }
