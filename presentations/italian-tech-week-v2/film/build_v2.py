@@ -6,7 +6,7 @@ TLj=json.load(open('timeline.json'))
 TL={'dur':TLj['dur'],'segs':[{'id':s['id'],'start':s['start'],'dur':s['dur'],'words':s['words']} for s in TLj['segs']]}
 cue=[t for t,st,sp in TLj['cues']]
 hold=[None,None]+[round(cue[k+1]-0.15,2) for k in range(2,54)]+[189.5]
-FIX={9:43.6,21:76.0,24:88.05,25:89.45,29:95.6,35:119.9,36:122.0,47:155.7,48:157.5}
+FIX={33:111.1,9:43.6,21:76.0,24:88.05,25:89.45,29:95.6,35:119.9,36:122.0,47:155.7,48:157.5}
 for k,v in FIX.items(): hold[k-1]=v
 hold[0]=hold[1]=16.8
 data=open('data.js').read().replace('getElementById("tunsvg")','getElementById("filmtunsvg")').replace('id:"wsclip"','id:"fwsclip"').replace('url(#wsclip)','url(#fwsclip)').replace('id:"grn"','id:"fgrn"').replace('url(#grn)','url(#fgrn)')

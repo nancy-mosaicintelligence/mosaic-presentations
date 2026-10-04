@@ -389,17 +389,19 @@ scene(95.8, 116.3, t => {
     const cnt = Math.round(100 * eo(ramp(t, wt('21', 'hundredbilliondollar') - .2, wt('21', 'industry') + .2)));
     label('$' + cnt + 'B', 120, 260, { font: 'serif', size: 150, weight: 300, color: rgba(COL.sig, 1), a: a2 });
     say('industry, still scaling|one human at a time.', 120, 350, { seg: '21', t: wt('21', 'still'), size: 46, em: ['one', 'human'], color: rgba(DARK, 1), a: a2 });
-    const R = [['Operation', null, 1], ['Surgeon', 'surgeon'], ['Resident', 'resident'], ['Scrub nurse', 'scrub'], ['Circulating nurse', 'circ'], ['Radiology tech', 'tech']];
-    const many = eio(ramp(t, wt('21', 'people') - .2, wt('21', 'people') + .8)), two = ramp(t, wt('21', 'twice') - .1, wt('21', 'twice') + .5);
-    const rows = [[0, 1], [1, two], [2, many], [3, many], [4, many]];
-    const h = lerp(170, 98, many), y0 = lerp(680, 520, many), dy = lerp(220, 120, many), y1 = lerp(680 + 0, 520, many);
-    R.forEach(([lab, deco], i) => { const x = 960 + i * 165, k = ramp(t, wt('21', 'one') - .2 + i * .12, wt('21', 'one') + .3 + i * .12); if (k <= 0) return;
+    /* the team: role names as column headers above, rows of people below; a row per operation */
+    const R = [['Operation', null], ['Surgeon', 'surgeon'], ['Resident', 'resident'], ['Scrub nurse', 'scrub'], ['Circulating nurse', 'circ'], ['Radiology tech', 'tech']];
+    const two = ramp(t, wt('21', 'twice') - .1, wt('21', 'twice') + .5), many = eio(ramp(t, wt('21', 'people') - .2, wt('21', 'people') + .8));
+    const h = lerp(lerp(190, 150, two), 88, many), y0 = lerp(lerp(640, 590, two), 545, many), dy = lerp(205, 104, many);
+    const nRows = 5, colX = i => 790 + i * 192, headY = y0 - h * .62 - 26;
+    R.forEach(([lab, deco], i) => { const x = colX(i), k = ramp(t, wt('21', 'one') - .2 + i * .12, wt('21', 'one') + .3 + i * .12); if (k <= 0) return;
       const pat = i === 0;
-      rows.forEach(([r, v], ri) => { const vv = ri === 0 ? k : v * k * (ri >= 2 ? ramp(many, (ri - 2) * .25, (ri - 2) * .25 + .4) : 1); if (vv <= .01) return;
-        const yy = (ri === 0 ? y1 : y0) + ri * dy - (ri === 0 ? 0 : dy) + (ri === 0 ? 0 : dy);
-        const Y = y0 + ri * dy; const s = 1; person(x, Y, h, pat ? COL.sig : DARK, a2 * vv, pat ? 1.6 : 1.2, deco); });
-      label(lab, x, y0 + (1 + 4 * many + (1 - many) * two) * dy - dy + 70 - (1 - many) * (1 - two) * 0, { align: 'center', size: 20, color: rgba(pat ? COL.sig : COL.dark2, 1), a: a2 * k }); });
-    const tw = wt('21', 'twice'); label('×2', 920, y0 + dy - 40, { font: 'serif', size: 44, color: rgba(COL.sig, 1), a: a2 * ramp(t, tw, tw + .4) * (1 - many) });
+      label(lab, x, headY, { align: 'center', size: 21, color: rgba(pat ? COL.sig : COL.dark2, 1), a: a2 * k });
+      for (let r = 0; r < nRows; r++) { const v = r === 0 ? 1 : r === 1 ? two : ramp(many, (r - 2) * .22, (r - 2) * .22 + .4); if (v <= .01) continue;
+        person(x, y0 + r * dy, h, pat ? COL.sig : DARK, a2 * k * v, pat ? 1.6 : 1.2, deco); } });
+    const tw = wt('21', 'twice');
+    label('×2', colX(0) - 120, y0 + dy + 14, { font: 'serif', size: 46, align: 'center', color: rgba(COL.sig, 1), a: a2 * ramp(t, tw, tw + .4) * (1 - many) });
+    label('×5', colX(0) - 120, y0 + 2 * dy + 14, { font: 'serif', size: 46, align: 'center', color: rgba(COL.sig, 1), a: a2 * many });
   }
   /* the straight line, and the curve we are after */
   const a3 = env(t, 111.4, 116.0, .5, .5);
