@@ -31,7 +31,7 @@ function tick(now) {
 async function boot() {
   cv = document.getElementById('film'); ctx = cv.getContext('2d'); TL = __TL__;
   const load = src => new Promise(r => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = src; });
-  IMG.a = await load(__IMGA__); IMG.b = await load(__IMGB__);
+  IMG.a = await load(__IMGA__); IMG.b = await load(__IMGB__); IMG.vento = await load(__IMGV__);
   try { await Promise.all(['300 64px Fraunces', '400 24px "DM Sans"', '400 24px "IBM Plex Mono"', '400 24px "Architects Daughter"'].map(f => document.fonts.load(f))); } catch (e) {}
   prep();
   if (window.__V2TEST) { window.V2 = { render, setStation, goStation, get ST() { return ST; } }; window.READY = true; return; }

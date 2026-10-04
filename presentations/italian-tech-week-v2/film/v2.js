@@ -269,9 +269,9 @@ function whiteAct() {
     const slide = ST >= 26 ? (ST === 26 ? eio(age(26) / .9) : 1) : 0;
     const mw = lerp(720, 520, slide), mh = mw * .75, mx = lerp(960, 470, slide) - mw / 2, my = lerp(180, 230, slide), a = ap(24, .9, .5);
     ctx.save(); ctx.globalAlpha = a; ctx.beginPath(); ctx.rect(mx, my, mw, mh); ctx.clip();
-    const fi = Math.floor(TA / .6) % 2, im = fi ? IMG.b : IMG.a;
-    if (im) { const iw = im.naturalWidth, ih = im.naturalHeight, crop = fi ? [0, 40, iw, ih - 40] : [130, 200, iw - 130, 560];
-      ctx.filter = `brightness(${.84 + .16 * Math.sin(TA * 23) * Math.sin(TA * 7.1)}) contrast(1.15)`; ctx.drawImage(im, crop[0], crop[1], crop[2], crop[3], mx, my, mw, mh); ctx.filter = 'none'; }
+    const fi = Math.floor(TA / .9) % 2, im = fi ? IMG.b : IMG.a;
+    if (im) { const iw = im.naturalWidth, ih = im.naturalHeight, s = Math.max(mw / iw, mh / ih), dw = iw * s, dh = ih * s;
+      ctx.filter = `brightness(${.86 + .14 * Math.sin(TA * 23) * Math.sin(TA * 7.1)}) contrast(1.1)`; ctx.drawImage(im, mx + (mw - dw) / 2, my + (mh - dh) / 2, dw, dh); ctx.filter = 'none'; }
     grain(mx, my, mw, mh, 1600, Math.floor(TA * 24), '0,0,0', .16); grain(mx, my, mw, mh, 900, Math.floor(TA * 24) + 9, '255,255,255', .12); ctx.restore();
     draw(hbox(mx - 10, my - 10, mw + 20, mh + 20, 111, 1.2), ape(24, .9, .4), { c: COL.dark, a, w: 1.8 });
     label('This is what they see.', mx + mw / 2, my + mh + 70, { align: 'center', font: 'serif', weight: 300, size: lerp(52, 38, slide), color: DK, a: ap(25, .6) });
@@ -334,11 +334,10 @@ function teamGrid(v) {
       person(x, y0 + r * dy + Math.sin(TA * 1.3 + i + r) * 1.5, h, pat ? COL.sig : COL.dark, v * k * vv, pat ? 1.6 : 1.2, deco); } });
   label('×2', colX(0) - 95, y0 + dy + 14, { font: 'serif', size: 46, align: 'center', color: SIG, a: v * two * (1 - ramp(many, 0, .3)) });
   label('×5', colX(0) - 95, y0 + 2 * dy + 14, { font: 'serif', size: 46, align: 'center', color: SIG, a: v * many });
-  /* the left column: one statement at a time */
-  label('$100B', 120, 300, { font: 'serif', weight: 300, size: 140, color: SIG, a: v * vis(31, 33) });
-  para('As a result, surgery may be the last $100B industry that still scales *one highly trained human at a time.*', 120, 390, { size: 38, maxW: 600, color: DK, a: v * vis(31, 33) * (ST >= 32 ? .45 : 1) });
-  para('If you want to perform ×2 as many operations, you need at least ×2 as many surgeons, residents, and ×2 as many scrub nurses, circulating nurses, and radiology techs.', 120, 640, { font: 'sans', size: 25, maxW: 600, color: DK2, a: v * vis(32, 33) });
-  para('Bound by a *linear labor-to-output relationship.*', 120, 470, { size: 62, maxW: 620, color: DK, a: v * ap(33, .7, .6) });
+  /* the left column: the count, and one line */
+  const cnt = ST > 31 ? 100 : Math.round(100 * eo(ramp(age(31), .3, 1.9)));
+  label('$' + cnt + 'B', 120, 300, { font: 'serif', weight: 300, size: 150, color: SIG, a: v });
+  para('industry, still scaling *one human* at a time.', 120, 390, { size: 46, maxW: 620, color: DK, a: v * ap(31, .6, 1.4) });
 }
 function icoRow(list, x, y, a, seedK) {
   list.forEach(([name, d], i) => { const k = ape(seedK, .5, .3 + i * .12); if (k <= 0) return; const cx = x + i * 125;
@@ -394,22 +393,38 @@ function board() {
   draw(hline(x + 60, y + h + 26, x + w - 60, y + h + 22, 213, 1, 1), ape(39, .9, .2), { c: COL.dark, a, w: 2 });
   para('Self-driving taught us one big lesson:', 960, y + 170, { font: 'chalk', weight: 400, size: 42, align: 'center', color: rgba(COL.ink, .62), a: a * ap(39, .6, .5) });
   para('A car can’t decide anything without an *accurate model of the world.*', 960, y + 330, { font: 'chalk', weight: 400, size: 84, maxW: 1400, align: 'center', lh: 112, color: rgba(COL.ink, .95), emc: COL.sig2, a: a * ap(39, .8, 1.1) });
-  draw(hline(700, y + 620, 1220, y + 612, 215, 3, 1.4), ape(39, .7, 2.0), { c: COL.sig2, a: a * .8, w: 2.4, ghost: false });
+  worldModel(a * ap(39, .8, 1.8), 960, y + 620);
+}
+/* a chalk sketch: a car seen from above, its sweep, and the world it has mapped as points — road edges, a car ahead, a person, a tree */
+function worldModel(a, cx, cy) {
+  if (a <= .003) return; const sw = TA * 1.3;
+  ctx.save(); ctx.beginPath(); ctx.rect(cx - 560, cy - 110, 1120, 225); ctx.clip();
+  const pts = [];
+  for (let x = cx - 520; x <= cx + 520; x += 18) { pts.push([x, cy - 88 + Math.sin(x / 140) * 4]); pts.push([x, cy + 88 + Math.sin(x / 150) * 4]); }
+  for (let i = 0; i < 22; i++) { const u = i / 21; pts.push([cx + 250 + u * 130, cy - 32]); pts.push([cx + 250 + u * 130, cy + 32]); }
+  for (let i = 0; i < 8; i++) { pts.push([cx + 250, cy - 32 + i * 9]); pts.push([cx + 380, cy - 32 + i * 9]); }
+  for (let i = 0; i < 16; i++) { const an = i / 16 * Math.PI * 2; pts.push([cx - 300 + Math.cos(an) * 12, cy + 45 + Math.sin(an) * 12]); pts.push([cx + 500 + Math.cos(an) * 18, cy - 45 + Math.sin(an) * 18]); }
+  pts.forEach(([x, y]) => { const an = (Math.atan2(y - cy, x - cx) + Math.PI * 8) % (Math.PI * 2), since = ((sw % (Math.PI * 2)) - an + Math.PI * 4) % (Math.PI * 2);
+    dot(x, y, 2.6, COL.sig2, a * (.45 + .55 * Math.max(0, 1 - since / 2.4))); });
+  ctx.save(); ctx.translate(cx, cy); ctx.scale(.62, .62); draw(WORLD.carTop, 1, { c: COL.ink, a: a * .9, w: 3 }); ctx.restore();
+  ctx.save(); ctx.strokeStyle = rgba(COL.sig2, .45 * a); ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(sw) * 560, cy + Math.sin(sw) * 560); ctx.stroke(); ctx.restore();
+  for (let k = 0; k < 3; k++) { const kk = (TA * .4 + k / 3) % 1; ring(cx, cy, 30 + 200 * kk, COL.ink, (1 - kk) * a * .25, 1); }
+  ctx.restore();
 }
 function samePath() {
   const v = ap(42, .7); if (ST !== 42 || v <= .003) return;
   para('We think surgery needs to follow *the same path.*', 960, 160, { size: 54, align: 'center', a: v });
   const cols = [[640, '01', 'PERCEPTION'], [1060, '02', 'REASONING'], [1480, '03', 'CONTROL']], x0 = 260, x1 = 1760;
   cols.forEach(([x, n, t], i) => { const k = ap(42, .5, .3 + i * .15); ctx.save(); ctx.fillStyle = rgba('255,255,255', .045 * v * k); ctx.fillRect(x - 16, 250, 32, 700); ctx.restore();
-    label(n, x, 244, { align: 'center', font: 'mono', size: 28, color: rgba(COL.ink, 1), a: v * k }); label(t, x, 272, { align: 'center', font: 'mono', size: 14, ls: 3, color: INK3, a: v * k }); });
+    label(n, x, 240, { align: 'center', font: 'mono', size: 44, color: rgba(COL.ink, 1), a: v * k }); label(t, x, 284, { align: 'center', font: 'mono', size: 22, ls: 4, color: INK2, a: v * k }); });
   /* the road */
-  label('AUTONOMOUS VEHICLES', x0, 330, { font: 'mono', size: 15, ls: 3, color: INK2, a: v });
+  label('Autonomous vehicles', x0, 345, { font: 'serif', weight: 300, size: 42, color: rgba(COL.ink, 1), a: v });
   const ry = 445, road = s => Array.from({ length: 70 }, (_, i) => { const x = x0 + (x1 - x0) * i / 69; return [x, ry + s + Math.sin(i / 69 * 5) * 14]; });
   draw([PL(road(-46))], ape(42, 1.2, .4), { c: COL.ink2, a: v, w: 1.8 }); draw([PL(road(46))], ape(42, 1.2, .4), { c: COL.ink2, a: v, w: 1.8 });
   ctx.save(); ctx.setLineDash([10, 12]); ctx.lineDashOffset = -TA * 22; ctx.beginPath(); road(0).forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.strokeStyle = rgba(COL.ink3, .6 * v); ctx.lineWidth = 1.2; ctx.stroke(); ctx.restore();
   const car = road(0)[Math.round((1480 - x0) / (x1 - x0) * 69)], ra = ap(42, .6, 1.2);
   /* trees and people along the road, picked out by the car's sensing */
-  const things = [[400, -98, 't'], [560, 98, 'p'], [760, -100, 't'], [900, 100, 't'], [1130, -96, 'p'], [1280, 100, 't'], [1380, -100, 't'], [1620, 98, 'p'], [1700, -100, 't']];
+  const things = [[430, 98, 't'], [600, 98, 'p'], [760, -100, 't'], [900, 100, 't'], [1130, -96, 'p'], [1280, 100, 't'], [1380, -100, 't'], [1620, 98, 'p'], [1700, -100, 't']];
   things.forEach(([x, dy, kd], i) => { const y = ry + dy + Math.sin((x - x0) / (x1 - x0) * 5) * 14, sensed = Math.abs(x - car[0]) < 330, al = v * ap(42, .5, .6 + i * .06);
     const c = sensed ? COL.sig : COL.ink3;
     if (kd === 't') { draw(hoval(x, y - 6, 18, 18, 300 + i, .12), 1, { c, a: al, w: 1.4, ghost: false }); ctx.save(); ctx.strokeStyle = rgba(c, al); ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(x, y + 12); ctx.lineTo(x, y + 26); ctx.stroke(); ctx.restore(); }
@@ -419,9 +434,9 @@ function samePath() {
   ctx.save(); ctx.fillStyle = rgba(COL.sig, .1 * v * ra); ctx.beginPath(); ctx.moveTo(car[0] + 40, car[1]); ctx.arc(car[0] + 40, car[1], 300, -.42, .42); ctx.closePath(); ctx.fill(); ctx.restore();
   ctx.save(); ctx.strokeStyle = rgba(COL.ink3, .5 * v); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x0, 590); ctx.lineTo(x1, 590); ctx.stroke(); ctx.restore();
   /* the vessel */
-  label('ENDOVASCULAR SURGERY', x0, 650, { font: 'mono', size: 15, ls: 3, color: SIG, a: v });
+  label('Endovascular surgery', x0, 668, { font: 'serif', weight: 300, size: 42, color: SIG, a: v });
   const vy = 790, mid = x => vy + Math.sin((x - x0) / 260) * 16, half = x => 70 - (x - x0) * .01 + Math.sin(x / 47) * 5;
-  const tipX = 640 + Math.sin(TA * .6) * 6;
+  const tipX = lerp(x0 - 300, 640, eio(ramp(age(42), .1, 2.6))) + Math.sin(TA * .6) * 6 * ap(42, .5, 2.6);
   for (const side of [-1, 1]) { const pts = []; for (let x = x0; x <= x1; x += 8) pts.push([x, mid(x) + side * half(x)]);
     draw([PL(pts)], ape(42, 1.4, .6), { c: COL.ink3, a: v * .55, w: 1.6 });
     const seen = pts.filter(p => p[0] < tipX + 120); if (seen.length > 1) draw([PL(seen)], ape(42, 1.0, 1.4), { c: COL.ink, a: v, w: 2 }); }
@@ -430,9 +445,9 @@ function samePath() {
     ctx.save(); ctx.globalAlpha = al; ctx.fillStyle = seen ? 'rgba(236,228,214,.9)' : 'rgba(236,228,214,.18)'; ctx.beginPath();
     for (let j = 0; j <= 16; j++) { const t = j / 16, px = x - w / 2 + w * t, py = y - side * (Math.sin(t * Math.PI) * 16 * (1 + .25 * Math.sin(j * 2.3 + i))); j ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
     ctx.lineTo(x + w / 2, mid(x + w / 2) + side * half(x + w / 2)); ctx.lineTo(x - w / 2, mid(x - w / 2) + side * half(x - w / 2)); ctx.closePath(); ctx.fill(); ctx.restore(); });
-  label('calcified plaque', 830, mid(830) + half(830) + 34, { align: 'center', font: 'mono', size: 15, color: INK3, a: v * ap(42, .5, 1.6) });
-  const cpts = []; for (let x = x0 - 40; x <= tipX; x += 8) cpts.push([x, mid(x)]); draw([PL(cpts)], 1, { c: COL.sig, a: v, w: 2.6, ghost: false });
-  dot(tipX, mid(tipX), 6, COL.sig, v, 5); for (let k = 0; k < 3; k++) { const kk = (TA * .55 + k / 3) % 1; ring(tipX, mid(tipX), 8 + 60 * kk, COL.sig, (1 - kk) * v * .6, 1.2); }
+  label('calcified plaque', 830, mid(830) + half(830) + 40, { align: 'center', font: 'mono', size: 22, color: INK3, a: v * ap(42, .5, 1.6) });
+  const cpts = []; for (let x = x0 - 300; x <= tipX; x += 8) cpts.push([x, mid(x)]); if (cpts.length > 1) draw([PL(cpts)], 1, { c: COL.sig, a: Math.max(v, .9), w: 2.6, ghost: false });
+  dot(tipX, mid(tipX), 6, COL.sig, Math.max(v, .9), 5); for (let k = 0; k < 3; k++) { const kk = (TA * .55 + k / 3) % 1; ring(tipX, mid(tipX), 8 + 60 * kk, COL.sig, (1 - kk) * v * .6 * ap(42, .5, 2.4), 1.2); }
 }
 
 /* ======================= ACT E — back in the vessel, and the close (43–55) ======================= */
@@ -504,7 +519,9 @@ function closeAct() {
         const gx = c.gx * W, gy = c.gy * H + Math.sin(TA * .7 + c.s * 21) * 4, x = gx + (ox + c.mx * kx - gx) * settle, y = gy + 60 + (oy + c.my * ky - gy - 60) * settle;
         const h = 130 * (1 - .93 * settle), col = settle > .5 ? COL.sig : COL.ink2;
         person(x, y, h, col, a0 * (1 - .15 * settle) * (1 - ramp(settle, .82, .99)) * (settle > .5 ? .35 + .55 * settle : .64), Math.max(.6, h * .012)); }); }
-    if (ST >= 55) { const mi = ramp(age(55), 3.3, 4.1), nm = ramp(age(55), 4.2, 5.2); if (mi > 0) logoDraw(W / 2, H * .5, 150 * lerp(1.95, 1, eio(nm)), mi, nm, '#FC6452', '#FFFFFF', nm > .001); } }
+    if (ST >= 55) { const mi = ramp(age(55), 3.3, 4.1), nm = ramp(age(55), 4.2, 5.2), up = eio(ramp(age(55), 5.8, 7.0)), ve = sm(ramp(age(55), 6.8, 7.8));
+      if (mi > 0) logoDraw(W / 2, lerp(H * .5, H * .38, up), 150 * lerp(1.95, 1, eio(nm)), mi, nm, '#FC6452', '#FFFFFF', nm > .001);
+      if (ve > 0 && IMG.vento) { const h = 128, w = h * IMG.vento.naturalWidth / IMG.vento.naturalHeight; ctx.save(); ctx.globalAlpha = ve; ctx.drawImage(IMG.vento, W / 2 - w / 2, H * .6 + (1 - ve) * 14, w, h); ctx.restore(); } } }
 }
 
 function mosaicIntro() {
@@ -512,7 +529,7 @@ function mosaicIntro() {
   const lg = sm(ramp(g, .3, 1.0)) * (1 - sm(ramp(g, 2.2, 2.9))), k = eio(ramp(g, 2.0, 3.0));
   if (lg > .003) logoDraw(lerp(960, 120, k), lerp(520, 560, k), lerp(110, 40, k), lg, lg * (1 - k));
   const vy = 560, x0 = -40, x1 = 1960, mid = x => vy + Math.sin(x / 300) * 22, half = x => 118 - (x - x0) * .018 + Math.sin(x / 70) * 6;
-  const tipX = lerp(100, 1500, eio(ramp(g, 2.6, 7.5))) + Math.sin(TA * .7) * 8;
+  const tipX = lerp(100, 2060, ramp(g, 2.6, 10.5) * .35 + eio(ramp(g, 2.6, 10.5)) * .65);
   /* walls appear where the instrument's pulses have reached */
   for (const side of [-1, 1]) { ctx.save(); ctx.lineWidth = 1.8; ctx.lineCap = 'round';
     for (let x = x0; x < x1; x += 10) { const near = cl(1 - (x - tipX - 260) / 120) * cl(ramp(g, 2.6, 3.2)); if (near <= .01) continue;
