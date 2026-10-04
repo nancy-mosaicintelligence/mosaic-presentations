@@ -219,7 +219,7 @@ const TUN = (() => {
       if (ringA <= .004) continue;
       for (let j = 0; j < RP; j++) { const k = (i * RP + j) * 3; const d = [P[k] - c[0], P[k + 1] - c[1], P[k + 2] - c[2]];
         const zc = dot3(d, tg); if (zc < .05) continue; let xc = dot3(d, bb), yc = dot3(d, nn); const xr = xc * cr - yc * sr, yr = xc * sr + yc * cr;
-        const sx = cx + f * xr / zc, sy = cy - f * yr / zc; if (sx < -20 || sx > W + 20 || sy < -20 || sy > H + 20) continue;
+        const bob = o.t != null ? Math.sin(o.t * .9 + J[i * RP + j] * 31) * 1.8 : 0; const sx = cx + f * xr / zc, sy = cy - f * yr / zc + bob; if (sx < -20 || sx > W + 20 || sy < -20 || sy > H + 20) continue;
         const s = cl(5.2 / zc, 1.2, 5.5), jj = J[i * RP + j];
         const near = cl(1 - zc / 6); const warm = o.warm ?? 1;
         ctx.fillStyle = jj < .18 ? rgba(COL.ink2, ringA * .9 * near + ringA * .25) : rgba(warm > .5 ? COL.sig : COL.ink2, ringA * (.6 + .4 * jj));
@@ -227,5 +227,9 @@ const TUN = (() => {
     }
     ctx.restore();
   }
-  return { draw, N, pos };
+  /* project a world point as seen from camera parameter u (same camera as draw) */
+  function proj(u, q, roll = 0, f = 760) { const ic = Math.floor(cl(u) * (N - 1)), c = pos[ic], tg = tan[ic], nn = nrm[ic], bb = bin[ic];
+    const d = [q[0] - c[0], q[1] - c[1], q[2] - c[2]], zc = dot3(d, tg); if (zc < .05) return null; const xc = dot3(d, bb), yc = dot3(d, nn);
+    const xr = xc * Math.cos(roll) - yc * Math.sin(roll), yr = xc * Math.sin(roll) + yc * Math.cos(roll); return [W / 2 + f * xr / zc, H / 2 - f * yr / zc, zc]; }
+  return { draw, proj, N, pos, tan, nrm, bin, rad };
 })();

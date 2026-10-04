@@ -1,7 +1,7 @@
 /* v2 in the deck: the deck's station drives the scenes; an ambient clock keeps them alive; a change of scene
    (or a step back) crossfades from the last frame. Stations 1–2 are the deck's own opening. */
 let op = 0, last = 0, snap = null, snapT = -1;
-const GROUP = st => st <= 6 ? 'road' : st <= 20 ? 'body' : st <= 23 ? 'vessel' : st <= 29 ? 'see' : st <= 33 ? 'scale' : st <= 34 ? 'q' : st <= 38 ? 'sense' : st <= 40 ? 'board' : st <= 41 ? 'first' : st <= 42 ? 'path' : st <= 49 ? 'loop' : st <= 51 ? 'stack' : st <= 52 ? 'road2' : 'close';
+const GROUP = st => st <= 6 ? 'road' : st <= 20 ? 'body' : st <= 23 ? 'vessel' : st <= 29 ? 'see' : st <= 33 ? 'scale' : st <= 34 ? 'q' : st <= 38 ? 'sense' : st <= 39 ? 'board' : st <= 40 ? 'first' : st <= 41 ? 'mosaic' : st <= 42 ? 'path' : st <= 49 ? 'loop' : st <= 51 ? 'stack' : st <= 52 ? 'road2' : 'close';
 function fit() { const dpr = Math.min(2, window.devicePixelRatio || 1), w = innerWidth, h = innerHeight;
   if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
   const s = Math.min(w / W, h / H); BASE = [s * dpr, 0, 0, s * dpr, (w - W * s) / 2 * dpr, (h - H * s) / 2 * dpr]; }

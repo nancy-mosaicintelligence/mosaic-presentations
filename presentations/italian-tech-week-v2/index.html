@@ -4551,7 +4551,7 @@ const TUN = (() => {
       if (ringA <= .004) continue;
       for (let j = 0; j < RP; j++) { const k = (i * RP + j) * 3; const d = [P[k] - c[0], P[k + 1] - c[1], P[k + 2] - c[2]];
         const zc = dot3(d, tg); if (zc < .05) continue; let xc = dot3(d, bb), yc = dot3(d, nn); const xr = xc * cr - yc * sr, yr = xc * sr + yc * cr;
-        const sx = cx + f * xr / zc, sy = cy - f * yr / zc; if (sx < -20 || sx > W + 20 || sy < -20 || sy > H + 20) continue;
+        const bob = o.t != null ? Math.sin(o.t * .9 + J[i * RP + j] * 31) * 1.8 : 0; const sx = cx + f * xr / zc, sy = cy - f * yr / zc + bob; if (sx < -20 || sx > W + 20 || sy < -20 || sy > H + 20) continue;
         const s = cl(5.2 / zc, 1.2, 5.5), jj = J[i * RP + j];
         const near = cl(1 - zc / 6); const warm = o.warm ?? 1;
         ctx.fillStyle = jj < .18 ? rgba(COL.ink2, ringA * .9 * near + ringA * .25) : rgba(warm > .5 ? COL.sig : COL.ink2, ringA * (.6 + .4 * jj));
@@ -4559,7 +4559,11 @@ const TUN = (() => {
     }
     ctx.restore();
   }
-  return { draw, N, pos };
+  /* project a world point as seen from camera parameter u (same camera as draw) */
+  function proj(u, q, roll = 0, f = 760) { const ic = Math.floor(cl(u) * (N - 1)), c = pos[ic], tg = tan[ic], nn = nrm[ic], bb = bin[ic];
+    const d = [q[0] - c[0], q[1] - c[1], q[2] - c[2]], zc = dot3(d, tg); if (zc < .05) return null; const xc = dot3(d, bb), yc = dot3(d, nn);
+    const xr = xc * Math.cos(roll) - yc * Math.sin(roll), yr = xc * Math.sin(roll) + yc * Math.cos(roll); return [W / 2 + f * xr / zc, H / 2 - f * yr / zc, zc]; }
+  return { draw, proj, N, pos, tan, nrm, bin, rad };
 })();
 
 /* The film, scene by scene. Every time is tied to a word of the narration (wt), so the picture moves with the voice. */
@@ -5196,7 +5200,7 @@ const age = k => (ST >= k && ENT[k] != null) ? TA - ENT[k] : -1;
 const ap = (k, d = .8, delay = 0) => { const a = age(k); return a < 0 ? 0 : sm((a - delay) / d); };
 const ape = (k, d = .8, delay = 0) => { const a = age(k); return a < 0 ? 0 : eo((a - delay) / d); };
 const vis = (k0, k1, d = .7, d1 = .45) => ap(k0, d) * (1 - ap(k1, d1));
-const WHITE = st => st >= 24 && st <= 42 ? 1 : 0;
+const WHITE = st => st >= 24 && st <= 40 ? 1 : 0;
 let camNow = { x: 0, y: 0, z: 1 }, bgNow = 0;
 
 /* moving to station `st` (called by the host on every change) */
@@ -5235,29 +5239,22 @@ const DK = rgba(COL.dark, 1), DK2 = rgba(COL.dark2, 1), INK2 = rgba(COL.ink2, 1)
 /* ---------- the vessel from inside, with its rings outlined and the wire in it ---------- */
 function tunnel(a, o = {}) {
   if (a <= .003) return;
-  const u = .09 + (o.u || 0) + .045 * Math.sin(TA * .021), roll = TA * .035 % (Math.PI * 2) + (o.roll || 0);
-  TUN.draw(u, { a, span: 300, roll, bright: o.bright || (() => 1) });
-  /* the deck's linings: every so often a ring is drawn as a wavering line */
+  const u = .1 + (o.u || 0), roll = TA * .045 + (o.roll || 0);
+  TUN.draw(u, { a, span: 300, roll, t: TA, warm: o.warm ?? 1, bright: o.bright || (() => 1) });
   if (o.lines !== false) ringLines(u, roll, a * (o.linesA ?? .55));
-  if (o.wire) { const s = Math.sin(TA * .7) * 14, s2 = Math.cos(TA * .53) * 10; ctx.save(); ctx.strokeStyle = rgba(COL.sig, a * o.wire); ctx.lineWidth = 2.6; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(W / 2 + 140, H + 20); ctx.bezierCurveTo(W / 2 + 120 + s, H * .78, W / 2 + 30 + s2, H * .62, W / 2 + 8 + s * .3, H / 2 + 26); ctx.stroke(); ctx.restore();
-    dot(W / 2 + 8 + s * .3, H / 2 + 26, 4, COL.sig2, a * o.wire, 6); }
+  if (o.wire) wireLine(u, roll, a * o.wire, o.wireC || COL.sig2);
 }
 function ringLines(u, roll, a) {
-  const N = TUN.N, ic = Math.floor(cl(u) * (N - 1)); const pos = TUN.pos;
-  const c = pos[ic], tg = sub3(pos[Math.min(N - 1, ic + 2)], pos[Math.max(0, ic - 2)]), tl = Math.hypot(...tg); const T3 = tg.map(v => v / tl);
-  let up = [0, 1, 0]; const b = nz3(cr3(T3, up)), n = nz3(cr3(b, T3)); const cr = Math.cos(roll), sr = Math.sin(roll);
+  const N = TUN.N, ic = Math.floor(cl(u) * (N - 1));
   ctx.save(); ctx.lineWidth = 1.1; ctx.lineJoin = 'round';
   for (let i = ic + 30 - (ic % 30); i < Math.min(N - 1, ic + 300); i += 30) {
     const dep = (i - ic) / 300, al = a * (1 - dep) * .9; if (al < .01) continue;
-    const P = pos[i], tgi = sub3(pos[Math.min(N - 1, i + 2)], pos[Math.max(0, i - 2)]), Ti = nz3(tgi), bi = nz3(cr3(Ti, [0, 1, 0])), ni = nz3(cr3(bi, Ti));
-    const rad = 1.05 * (1 - .44 * i / N) * (1 + .1 * Math.sin(i / N * 47));
+    const P = TUN.pos[i], n = TUN.nrm[i], b = TUN.bin[i], rad = TUN.rad[i];
     ctx.beginPath(); let first = true;
-    for (let j = 0; j <= 48; j++) { const an = j / 48 * Math.PI * 2, wob = 1 + .07 * Math.sin(an * 5 + i * .3) + .04 * Math.sin(an * 11 - TA * .6 + i);
-      const q = [0, 1, 2].map(d => P[d] + (ni[d] * Math.cos(an) + bi[d] * Math.sin(an)) * rad * wob * 1.08);
-      const d = sub3(q, c), zc = dot3(d, T3); if (zc < .05) { first = true; continue; }
-      const xc = dot3(d, b), yc = dot3(d, n), xr = xc * cr - yc * sr, yr = xc * sr + yc * cr, sx = W / 2 + 760 * xr / zc, sy = H / 2 - 760 * yr / zc;
-      if (first) { ctx.moveTo(sx, sy); first = false; } else ctx.lineTo(sx, sy); }
+    for (let j = 0; j <= 56; j++) { const an = j / 56 * Math.PI * 2, wob = 1 + .07 * Math.sin(an * 5 + i * .3 + TA * .25) + .04 * Math.sin(an * 11 - TA * .4 + i);
+      const q = [0, 1, 2].map(d => P[d] + (n[d] * Math.cos(an) + b[d] * Math.sin(an)) * rad * wob * 1.1); const s = TUN.proj(u, q, roll);
+      if (!s) { first = true; continue; } const bob = Math.sin(TA * .9 + i * .7) * 1.6;
+      if (first) { ctx.moveTo(s[0], s[1] + bob); first = false; } else ctx.lineTo(s[0], s[1] + bob); }
     ctx.strokeStyle = rgba(COL.ink2, al * .55); ctx.stroke(); }
   ctx.restore();
 }
@@ -5384,23 +5381,21 @@ function reachLayer2(a0) {
   const a = a0 * vis(16, 19, .6, .6); if (a <= .003) return; const O = WORLD.org;
   const prostate = { c: [0, .095 * 440], sh: hoval(0, .095 * 440, 9, 7, 49) };
   const L = [['blocked coronary arteries', O.heart, 16, 0, -1], ['stopping strokes', O.brain, 16, .25, -1], ['repairing aneurysms', { c: [0, -.30 * 440] }, 16, .5, -1], ['blood flow to a limb', O.leg, 16, .75, -1],
-    ['liver · tumors', O.liver, 17, .2, 1], ['lungs', O.lungR, 18, 0, 1], ['uterus · fibroids', O.uterus, 18, .25, 1], ['prostate', prostate, 18, .5, 1, 34]];
+    ['lungs', O.lungR, 17, .2, 1], ['liver · tumors', O.liver, 17, .4, 1], ['uterus · fibroids', O.uterus, 17, .6, 1], ['prostate', prostate, 17, .8, 1, 34]];
   L.forEach(([txt, o, k, dl, side, dy]) => { const pr = ape(k, .7, dl); if (pr <= 0) return;
     const [ox, oy] = o.c, lx = side < 0 ? -460 : 430, ly = oy + (dy || 0), orange = side > 0;
     if (o.sh) draw(o.sh, pr, { c: orange ? COL.sig : COL.ink2, a: a * .85, w: 1.6 });
-    dot(ox, oy, 4.5 + (orange ? .8 * Math.sin(TA * 2.4 + ox) : 0), orange ? COL.sig : COL.ink, a * sm(pr * 3), orange ? 4 : 0);
+    dot(ox, oy, 4.5, orange ? COL.sig : COL.ink, a * sm(pr * 3), orange ? 4 * (1 + .2 * Math.sin(TA * 1.6 + ox)) : 0);
     draw([PL([[ox + side * 12, oy], [lx - side * 14, ly]])], pr, { c: orange ? COL.sig : COL.ink2, a: a * .6, w: 1.1, ghost: false });
     label(txt, lx, ly + 9, { align: side < 0 ? 'right' : 'left', font: orange ? 'serif' : 'sans', size: orange ? 34 : 26, weight: orange ? 300 : 400, color: rgba(orange ? COL.sig : COL.ink2, 1), a: a * sm(pr * 1.5) }); });
-  /* therapies on their way: slow, repeating trips from the access point */
-  if (ST === 18) { const P = [['drugs', O.liver], ['radiation', O.lungR], ['energy', O.uterus], ['embolic', prostate]]; const A = WORLD.ACC, per = 7.5;
-    P.forEach(([k, o], i) => { const ph = ((age(18) - 1.2 - i * 1.8) % per + per) % per; if (age(18) < 1.2 + i * 1.8) return;
-      const u = eio(ph / 4.2), fade = a * Math.min(sm(ph / .4), 1 - ramp(ph, 5.2, 6.2));
-      const path = [PL(cat([A, [A[0] - 20, A[1] - 60], [4, -40], [6, o.c[1] + 30], [o.c[0] * .6, o.c[1] + 4], o.c], false, 3))], h = shapeHead(path, u);
-      draw(path, u, { c: COL.sig, a: fade * .45, w: 1.4, ghost: false });
-      if (k !== 'embolic') { ctx.save(); ctx.translate(h[0], h[1] - 34); ctx.scale(.8, .8); draw(WORLD.pay[k], 1, { c: COL.sig, a: fade, w: 2.2, ghost: false }); ctx.restore(); }
-      else for (const [dx, dy] of [[-6, 0], [0, -6], [6, 0], [0, 6]]) dot(h[0] + dx, h[1] - 30 + dy, 2.6, COL.sig, fade);
-      label(k === 'embolic' ? 'embolic agents' : k, h[0], h[1] - 66, { align: 'center', font: 'mono', size: 18, color: SIG, a: fade });
-      const kk = ramp(ph, 4.2, 5.4); if (kk > 0 && kk < 1) ring(o.c[0], o.c[1], 10 + 46 * eo(kk), COL.sig, (1 - kk) * a, 2.2); }); }
+  /* 18: each new site shows what can be delivered there — a small badge on its leader line, no traffic */
+  if (ST >= 18) { const B = [['radiation', O.lungR, 0], ['drugs', O.liver, 0], ['embolic', O.uterus, 0], ['energy', prostate, 34]];
+    B.forEach(([k, o, dy], i) => { const v = a * ape(18, .6, .5 + i * .35); if (v <= .003) return; const bx = 300, by = o.c[1] + dy;
+      ctx.save(); ctx.fillStyle = 'rgba(4,1,2,.92)'; ctx.globalAlpha = v; ctx.beginPath(); ctx.arc(bx, by, 22, 0, 7); ctx.fill(); ctx.restore();
+      ring(bx, by, 22, COL.sig, v * .9, 1.3);
+      if (k !== 'embolic') { ctx.save(); ctx.translate(bx, by); ctx.scale(.55, .55); draw(WORLD.pay[k], 1, { c: COL.sig, a: v, w: 2.6, ghost: false }); ctx.restore(); }
+      else for (const [dx, dy2] of [[-6, 0], [0, -6], [6, 0], [0, 6]]) dot(bx + dx, by + dy2, 2.6, COL.sig, v);
+      const kk = ((TA * .35 + i * .25) % 1); ring(o.c[0], o.c[1], 8 + 24 * kk, COL.sig, v * (1 - kk) * .7, 1.2); }); }
 }
 function therapies(a) {
   if (a <= .003) return; const x = 1290, y = 715;
@@ -5462,10 +5457,9 @@ function operatorDiagram() {
 /* ======================= ACT D — the white act (24–42) ======================= */
 const IM = {};
 function whiteAct() {
-  if (ST < 24 || ST > 42) return;
-  /* 24–29: what they see, and the drive */
+  if (ST < 24 || ST > 40) return;
   if (ST <= 29) {
-    const slide = ST >= 26 ? (ST === 26 ? eio(age(26) / .9) : 1) : 0, fade = 1;
+    const slide = ST >= 26 ? (ST === 26 ? eio(age(26) / .9) : 1) : 0;
     const mw = lerp(720, 520, slide), mh = mw * .75, mx = lerp(960, 470, slide) - mw / 2, my = lerp(180, 230, slide), a = ap(24, .9, .5);
     ctx.save(); ctx.globalAlpha = a; ctx.beginPath(); ctx.rect(mx, my, mw, mh); ctx.clip();
     const fi = Math.floor(TA / .6) % 2, im = fi ? IMG.b : IMG.a;
@@ -5475,17 +5469,14 @@ function whiteAct() {
     draw(hbox(mx - 10, my - 10, mw + 20, mh + 20, 111, 1.2), ape(24, .9, .4), { c: COL.dark, a, w: 1.8 });
     label('This is what they see.', mx + mw / 2, my + mh + 70, { align: 'center', font: 'serif', weight: 300, size: lerp(52, 38, slide), color: DK, a: ap(25, .6) });
     if (ST >= 26) carView(); }
-  /* 30: the expert */
   { const v = vis(30, 31); if (v > .003) { const px = 1350, py = 610, ph = 520;
       const g = ctx.createRadialGradient(px, py - 90, 0, px, py - 90, 330); g.addColorStop(0, rgba(COL.sig, .2 * v * (1 + .15 * Math.sin(TA * 1.6)))); g.addColorStop(1, rgba(COL.sig, 0)); ctx.fillStyle = g; ctx.fillRect(px - 400, py - 500, 800, 900);
       personDraw(px, py, ph, COL.dark, ape(30, 1.2, .2), v, 2); person(px, py, ph, COL.dark, v * ap(30, .5, 1.0), 2, 'surgeon');
       [[1590, .5], [1740, .42], [1860, .34]].forEach(([x, sz], i) => { const k = ap(30, .5, 2.2 + i * .25), f = ramp(age(30), 3.4 + i * .25, 4.4 + i * .25); if (k <= 0) return;
-        ctx.save(); ctx.setLineDash([6, 7]); person(x, py + 40, ph * sz * 1.3, COL.dark, v * .5 * k * (1 - f) * (f > 0 ? .5 + .5 * Math.sin(TA * 40 + i) : 1), 1.3); ctx.restore(); });
+        ctx.save(); ctx.setLineDash([6, 7]); person(x, py + 40, ph * sz * 1.3, COL.dark, v * .5 * k * (1 - f), 1.3); ctx.restore(); });
       para('So what makes endovascular surgery possible today is extreme human expertise:', 120, 300, { font: 'sans', size: 28, maxW: 740, color: DK2, a: v });
       para('We have created extraordinary medicine that is *extraordinarily difficult to scale.*', 120, 420, { size: 58, maxW: 800, color: DK, a: v * ap(30, .7, .5) }); } }
-  /* 31–33: one human at a time */
   { const v = vis(31, 34); if (v > .003) teamGrid(v); }
-  /* 34: the question and the curve */
   { const v = vis(34, 35); if (v > .003) { para('So: What would it take to scale the knowledge of *the very best surgeons?*', 960, 230, { size: 52, maxW: 1100, align: 'center', color: DK, a: v });
       const gx = 700, gy = 900, gw = 520, gh = 420;
       draw(join(hline(gx, gy, gx + gw, gy, 121, 0, .8), hline(gx, gy, gx, gy - gh, 123, 0, .8)), ape(34, .7, .3), { c: COL.dark, a: v, w: 1.6 });
@@ -5493,14 +5484,15 @@ function whiteAct() {
       draw(hline(gx, gy, gx + gw * .92, gy - gh * .6, 125, 0, 1), ape(34, .8, .7), { c: COL.dark, a: v, w: 2.2 }); label('linear', gx + gw * .95, gy - gh * .6 + 6, { font: 'mono', size: 22, color: DK2, a: v * ap(34, .4, 1.4) });
       const cu = [PL(cat(Array.from({ length: 30 }, (_, i) => { const u = i / 29; return [gx + gw * .8 * u, gy - gh * (.5 * u + .55 * Math.pow(u, 3.2))]; }), false, 3))];
       draw(cu, ape(34, 1.2, 1.6), { c: COL.sig, a: v, w: 2.6, dash: [12, 10] }); label('?', gx + gw * .84, gy - gh * 1.02, { font: 'serif', size: 96, color: SIG, a: v * ap(34, .4, 2.8) }); } }
-  /* 35–38: where am I, what's around me — nature and engineering */
   sensing();
-  /* 39–40: the board */
   board();
-  /* 41: perception first */
-  para('But *perception* had to come first.', 960, 560, { size: 84, align: 'center', color: DK, a: vis(41, 42) });
-  /* 42: the same path — autonomous vehicles and endovascular surgery, side by side */
-  samePath();
+  /* 40: before it could plan, it had to perceive */
+  if (ST === 40) { const v = ap(40, .6), k = eio(ramp(age(40), 1.0, 1.8));
+    para('Before it could plan…', 960, 300, { size: 46, align: 'center', color: DK2, a: v });
+    label('plan', lerp(960, 1240, k), 600, { align: 'center', font: 'serif', size: 140, weight: 300, color: DK, a: v * ap(40, .5, .3) });
+    label('perceive', lerp(560, 680, k), 600, { align: 'center', font: 'serif', size: 140, weight: 300, color: SIG, a: v * k });
+    const ar = ramp(age(40), 1.9, 2.4); draw(hline(930, 560, 1080, 560, 141, 0, .6), ar, { c: COL.dark, a: v, w: 2.4 }); arrowHead(1080, 560, 0, 18, COL.dark, v * sm(ar * 3));
+    para('But *perception* had to come first.', 960, 840, { size: 54, align: 'center', color: DK, a: v * ap(40, .7, 2.8) }); }
 }
 function carView() {
   const ox = 820, oy = 200, s = 1.9, C = WORLD.car, ca = ap(26, .5, .4);
@@ -5548,24 +5540,20 @@ function icoRow(list, x, y, a, seedK) {
     const words = name.split(' '); words.forEach((w, j) => label(w, cx, y + 52 + j * 22, { align: 'center', size: 18, color: DK2, a: a * k })); });
 }
 function sensing() {
-  if (ST < 35 || ST > 38) return; const A = ap(35, .6);
-  const big = ST === 35 ? 1 : 1 - ape(36, .8);
-  label('Where am I?  /  What’s around me?', 120, lerp(160, 330, big), { font: 'serif', weight: 300, size: lerp(46, 72, big), color: SIG, a: A });
-  /* 35: a navigator */
-  { const v = A * (1 - ap(36, .5)); if (v > .003) { const x = 960, y = 640; dot(x, y, 10, COL.sig, v, 4); for (let k = 0; k < 3; k++) { const kk = ((TA * .5 + k / 3) % 1); ring(x, y, 20 + 220 * kk, COL.sig, (1 - kk) * v * .7, 1.4); }
-      const tr = [PL(cat([[260, 820], [500, 720], [760, 760], [960, 640]], false, 3))]; draw(tr, ape(35, 1.4), { c: COL.dark2, a: v * .5, w: 1.6, dash: [8, 10], ghost: false }); } }
-  /* 36: the internal picture */
-  para('Before you can choose where to go, you need an internal representation of the world. Humans tend to equate perception with *optical vision.*', 120, 240, { font: 'sans', size: 26, maxW: 780, color: DK2, a: ap(36, .6) });
+  if (ST < 35 || ST > 38) return;
+  { const v = ap(35, .6) * (1 - ap(36, .5)); if (v > .003) { const x = 960, y = 560;
+      const tr = [PL(cat([[200, 760], [480, 640], [760, 700], [960, 560]], false, 3))]; draw(tr, ape(35, 1.4), { c: COL.dark2, a: v * .5, w: 1.6, dash: [8, 10], ghost: false });
+      dot(x, y, 10, COL.sig, v, 4 * (1 + .2 * Math.sin(TA * 2))); for (let k = 0; k < 3; k++) { const kk = (TA * .35 + k / 3) % 1; ring(x, y, 20 + 200 * kk, COL.sig, (1 - kk) * v * .7, 1.4); }
+      label('Where am I?', 900, 470, { align: 'right', font: 'serif', weight: 300, size: 76, color: SIG, a: v * ap(35, .6, .5) });
+      label('And what’s around me?', 1020, 700, { font: 'serif', weight: 300, size: 76, color: DK, a: v * ap(35, .6, 1.1) }); } }
+  label('Where am I?  /  What’s around me?', 120, 160, { font: 'serif', weight: 300, size: 46, color: SIG, a: ap(36, .6, .3) });
+  para('Before you can choose where to go, you need an internal representation of the world. Humans tend to equate perception with *optical vision.*', 120, 240, { font: 'sans', size: 26, maxW: 780, color: DK2, a: ap(36, .6, .4) });
   { const v = vis(36, 37); if (v > .003) { const ex = 1150, ey = 560; draw(hpoly([[ex - 40, ey], [ex, ey - 20], [ex + 40, ey], [ex, ey + 20], [ex - 40, ey]], 101, .6, false), ape(36, .6), { c: COL.dark, a: v, w: 1.8 }); dot(ex + 3, ey, 8, COL.dark, v);
       ctx.save(); ctx.fillStyle = rgba(COL.sig, .12 * v); ctx.beginPath(); ctx.moveTo(ex + 50, ey); ctx.arc(ex + 50, ey, 560 * ape(36, 1, .4), -.32 + .03 * Math.sin(TA), .32 + .03 * Math.sin(TA)); ctx.closePath(); ctx.fill(); ctx.restore(); } }
-  /* 37: nature */
-  { const v = ap(37, .6); if (v > .003) { para('*But nature doesn’t.*', 120, 400, { size: 40, a: v });
-      icoRow(ICO.nature, 160, 470, v, 37);
+  { const v = ap(37, .6); if (v > .003) { para('*But nature doesn’t.*', 120, 400, { size: 40, a: v }); icoRow(ICO.nature, 160, 470, v, 37);
       para('Evolution selects the sensory system that is useful for your environment.', 120, 600, { font: 'sans', size: 22, maxW: 700, color: DK2, a: v }); } }
   { const v = vis(37, 38); if (v > .003) batDemo(v, 1420, 560); }
-  /* 38: engineering */
-  { const v = ap(38, .6); if (v > .003) { para('*Engineering works the same way.*', 120, 700, { size: 40, a: v });
-      icoRow(ICO.eng, 160, 770, v, 38);
+  { const v = ap(38, .6); if (v > .003) { para('*Engineering works the same way.*', 120, 700, { size: 40, a: v }); icoRow(ICO.eng, 160, 770, v, 38);
       para('Engineering fuses these systems together, to answer exactly the same 2 questions.', 120, 900, { font: 'sans', size: 22, maxW: 700, color: DK2, a: v }); carDemo(v, 1380, 590); } }
 }
 function batDemo(v, bx, by) {
@@ -5592,62 +5580,70 @@ function carDemo(v, cx, cy) {
   [['cameras', sx + 330, cy - 160], ['radar', sx + 120, cy + 175], ['lidar', sx - 110, cy - 160]].forEach(([t, x, y], i) => label(t, x, y, { font: 'mono', size: 20, color: SIG, a: v * ap(38, .5, .8 + i * .4) }));
 }
 function board() {
-  if (ST < 39 || ST > 40) return; const a = ap(39, .7), x = 300, y = 200, w = 1320, h = 600;
-  ctx.save(); ctx.globalAlpha = a; ctx.fillStyle = '#1C1A19'; ctx.beginPath(); ctx.roundRect(x, y, w, h, 18); ctx.fill(); ctx.restore();
-  draw(hbox(x - 6, y - 6, w + 12, h + 12, 211, 1.6), ape(39, .9), { c: COL.dark, a, w: 2 });
-  draw(hline(x - 120, y + h + 70, x + w + 120, y + h + 64, 213, 2, 1.2), ape(39, .9, .2), { c: COL.dark, a, w: 1.6 });
-  label('LESSONS LEARNT FROM THE AUTONOMOUS VEHICLE INDUSTRY:', x + 50, y + 60, { font: 'mono', size: 18, ls: 2, color: INK3, a: a * ap(39, .5, .5) });
-  para('Perception creates a *machine-readable representation* of the environment.', x + 50, y + 130, { font: 'chalk', weight: 400, size: 38, maxW: 760, color: rgba(COL.ink, .95), a: a * ap(39, .6, .8) });
-  para('→ *Only then can planning become useful.*', x + 50, y + 250, { font: 'chalk', weight: 400, size: 32, maxW: 760, color: rgba(COL.ink, .95), a: a * ap(39, .6, 1.4) });
-  const B = [['For a long time, autonomous driving looked like a *decision-making problem.*', 330], ['But none of that matters without a sufficiently accurate *model of the world* around it.', 735], ['Before the car could plan, *it had to perceive.*', 1140]];
-  B.forEach(([t, bx], i) => { const k = ape(40, .6, i * .9); if (k <= 0) return; const cy = y + 470;
-    draw(hoval(x + bx, cy, 175, 105, 221 + i, .05), k, { c: COL.ink2, a: a, w: 1.4 });
-    para(t, x + bx, cy - 38, { font: 'chalk', weight: 400, size: 22, maxW: 280, align: 'center', color: rgba(COL.ink, .9), emc: COL.sig2, a: a * sm(k * 1.5) });
-    if (i < 2) { const ar = ape(40, .4, i * .9 + .5); draw(hline(x + bx + 182, cy, x + bx + 222, cy, 231 + i, 0, .5), ar, { c: COL.sig, a, w: 2, ghost: false }); arrowHead(x + bx + 222, cy, 0, 10, COL.sig, a * ar); } });
+  if (ST !== 39) return; const a = ap(39, .7), x = 140, y = 150, w = 1640, h = 760;
+  ctx.save(); ctx.globalAlpha = a; ctx.fillStyle = '#1C1A19'; ctx.beginPath(); ctx.roundRect(x, y, w, h, 20); ctx.fill();
+  const g = ctx.createRadialGradient(x + w * .4, y + h * .35, 50, x + w * .5, y + h * .5, w * .7); g.addColorStop(0, 'rgba(255,255,255,.035)'); g.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = g; ctx.fillRect(x, y, w, h); ctx.restore();
+  draw(hbox(x - 8, y - 8, w + 16, h + 16, 211, 1.8), ape(39, .9), { c: COL.dark, a, w: 2.2 });
+  draw(hline(x + 60, y + h + 26, x + w - 60, y + h + 22, 213, 1, 1), ape(39, .9, .2), { c: COL.dark, a, w: 2 });
+  para('Self-driving taught us one big lesson:', 960, y + 170, { font: 'chalk', weight: 400, size: 42, align: 'center', color: rgba(COL.ink, .62), a: a * ap(39, .6, .5) });
+  para('A car can’t decide anything without an *accurate model of the world.*', 960, y + 330, { font: 'chalk', weight: 400, size: 84, maxW: 1400, align: 'center', lh: 112, color: rgba(COL.ink, .95), emc: COL.sig2, a: a * ap(39, .8, 1.1) });
+  draw(hline(700, y + 620, 1220, y + 612, 215, 3, 1.4), ape(39, .7, 2.0), { c: COL.sig2, a: a * .8, w: 2.4, ghost: false });
 }
 function samePath() {
   const v = ap(42, .7); if (ST !== 42 || v <= .003) return;
-  para('We think surgery needs to follow *the same path.*', 960, 170, { size: 54, align: 'center', color: DK, a: v });
-  const cols = [[640, '01', 'PERCEPTION'], [1060, '02', 'REASONING'], [1480, '03', 'CONTROL']], x0 = 300, x1 = 1700;
-  cols.forEach(([x, n, t], i) => { const k = ap(42, .5, .3 + i * .15); ctx.save(); ctx.fillStyle = rgba('236,224,222', .55 * v * k); ctx.fillRect(x - 14, 260, 28, 560); ctx.restore();
-    label(n, x, 252, { align: 'center', font: 'mono', size: 30, color: DK, a: v * k }); label(t, x, 280, { align: 'center', font: 'mono', size: 15, ls: 3, color: DK2, a: v * k }); });
-  /* autonomous vehicles: a road travelled to the third stage */
-  label('AUTONOMOUS VEHICLES', x0, 352, { font: 'mono', size: 16, ls: 3, color: DK, a: v });
-  const ry = 430, road = s => Array.from({ length: 60 }, (_, i) => { const x = x0 + (x1 - x0) * i / 59; return [x, ry + s + Math.sin(i / 59 * 5) * 16]; });
-  draw([PL(road(-44))], ape(42, 1.2, .4), { c: COL.dark, a: v, w: 1.8 }); draw([PL(road(44))], ape(42, 1.2, .4), { c: COL.dark, a: v, w: 1.8 });
-  ctx.save(); ctx.setLineDash([10, 10]); ctx.lineDashOffset = -TA * 20; ctx.beginPath(); road(0).forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.strokeStyle = rgba(COL.dark2, .5 * v); ctx.lineWidth = 1.2; ctx.stroke(); ctx.restore();
-  const av = road(0)[Math.round((1480 - x0) / (x1 - x0) * 59)]; dot(av[0], av[1], 8, COL.dark, v * ap(42, .5, 1.2)); label('today', av[0] + 18, av[1] - 18, { font: 'mono', size: 16, color: DK, a: v * ap(42, .5, 1.4) });
-  ctx.save(); ctx.strokeStyle = rgba(COL.dark, v); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x0, 540); ctx.lineTo(x1, 540); ctx.stroke(); ctx.strokeStyle = SIG; ctx.globalAlpha = v; ctx.beginPath(); ctx.moveTo(x0, 548); ctx.lineTo(640, 548); ctx.stroke(); ctx.restore();
-  /* endovascular surgery: a vessel perceived up to the first stage, the catheter on its centre line */
-  label('ENDOVASCULAR SURGERY', x0, 830, { font: 'mono', size: 16, ls: 3, color: SIG, a: v });
-  const vy = 690, mid = x => vy + Math.sin((x - x0) / 260) * 18, half = x => 62 - (x - x0) * .012;
-  const tipX = lerp(x0, 640, ape(42, 1.8, .9)) + Math.sin(TA * .8) * 6, r = rnd(17);
-  for (let i = 0; i < 520; i++) { const x = x0 + r() * (x1 - x0), side = r() < .5 ? -1 : 1, y = mid(x) + side * (half(x) + (r() - .5) * 10); const seen = x < tipX + 40;
-    dot(x, y, seen ? 1.9 : 1.2, seen ? COL.dark : COL.dark2, v * (seen ? .85 : .22) * ap(42, .6, .8)); }
-  const cpts = []; for (let x = x0 - 40; x <= tipX; x += 8) cpts.push([x, mid(x)]);
-  if (cpts.length > 1) draw([PL(cpts)], 1, { c: COL.sig, a: v, w: 2.4, ghost: false });
-  dot(tipX, mid(tipX), 6, COL.sig, v, 5); for (let k = 0; k < 3; k++) { const kk = (TA * .7 + k / 3) % 1; ring(tipX, mid(tipX), 8 + 70 * kk, COL.sig, (1 - kk) * v * .6, 1.2); }
-  label('today', tipX + 16, mid(tipX) - 22, { font: 'mono', size: 16, color: SIG, a: v * ap(42, .5, 2.2) });
-  para('At Mosaic, we build surgical instruments that can *perceive and navigate* human anatomy. We are starting in the vascular system: solving vascular navigation would unlock *delivering any therapy to any organ, anywhere.*', 960, 900, { font: 'sans', size: 24, maxW: 1300, align: 'center', color: DK2, a: v * ap(42, .7, 1.6) });
+  para('We think surgery needs to follow *the same path.*', 960, 160, { size: 54, align: 'center', a: v });
+  const cols = [[640, '01', 'PERCEPTION'], [1060, '02', 'REASONING'], [1480, '03', 'CONTROL']], x0 = 260, x1 = 1760;
+  cols.forEach(([x, n, t], i) => { const k = ap(42, .5, .3 + i * .15); ctx.save(); ctx.fillStyle = rgba('255,255,255', .045 * v * k); ctx.fillRect(x - 16, 250, 32, 700); ctx.restore();
+    label(n, x, 244, { align: 'center', font: 'mono', size: 28, color: rgba(COL.ink, 1), a: v * k }); label(t, x, 272, { align: 'center', font: 'mono', size: 14, ls: 3, color: INK3, a: v * k }); });
+  /* the road */
+  label('AUTONOMOUS VEHICLES', x0, 330, { font: 'mono', size: 15, ls: 3, color: INK2, a: v });
+  const ry = 445, road = s => Array.from({ length: 70 }, (_, i) => { const x = x0 + (x1 - x0) * i / 69; return [x, ry + s + Math.sin(i / 69 * 5) * 14]; });
+  draw([PL(road(-46))], ape(42, 1.2, .4), { c: COL.ink2, a: v, w: 1.8 }); draw([PL(road(46))], ape(42, 1.2, .4), { c: COL.ink2, a: v, w: 1.8 });
+  ctx.save(); ctx.setLineDash([10, 12]); ctx.lineDashOffset = -TA * 22; ctx.beginPath(); road(0).forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.strokeStyle = rgba(COL.ink3, .6 * v); ctx.lineWidth = 1.2; ctx.stroke(); ctx.restore();
+  const car = road(0)[Math.round((1480 - x0) / (x1 - x0) * 69)], ra = ap(42, .6, 1.2);
+  /* trees and people along the road, picked out by the car's sensing */
+  const things = [[400, -98, 't'], [560, 98, 'p'], [760, -100, 't'], [900, 100, 't'], [1130, -96, 'p'], [1280, 100, 't'], [1380, -100, 't'], [1620, 98, 'p'], [1700, -100, 't']];
+  things.forEach(([x, dy, kd], i) => { const y = ry + dy + Math.sin((x - x0) / (x1 - x0) * 5) * 14, sensed = Math.abs(x - car[0]) < 330, al = v * ap(42, .5, .6 + i * .06);
+    const c = sensed ? COL.sig : COL.ink3;
+    if (kd === 't') { draw(hoval(x, y - 6, 18, 18, 300 + i, .12), 1, { c, a: al, w: 1.4, ghost: false }); ctx.save(); ctx.strokeStyle = rgba(c, al); ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(x, y + 12); ctx.lineTo(x, y + 26); ctx.stroke(); ctx.restore(); }
+    else person(x, y + 2, 46, c, al, 1.1);
+    if (sensed) { const kk = (TA * .8 + i * .2) % 1; ring(x, y, 10 + 18 * kk, COL.sig, al * (1 - kk) * .6, 1); } });
+  ctx.save(); ctx.translate(car[0], car[1]); ctx.scale(.42, .42); draw(WORLD.carTop, 1, { c: COL.ink, a: v * ra, w: 3.2 }); ctx.restore();
+  ctx.save(); ctx.fillStyle = rgba(COL.sig, .1 * v * ra); ctx.beginPath(); ctx.moveTo(car[0] + 40, car[1]); ctx.arc(car[0] + 40, car[1], 300, -.42, .42); ctx.closePath(); ctx.fill(); ctx.restore();
+  ctx.save(); ctx.strokeStyle = rgba(COL.ink3, .5 * v); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x0, 590); ctx.lineTo(x1, 590); ctx.stroke(); ctx.restore();
+  /* the vessel */
+  label('ENDOVASCULAR SURGERY', x0, 650, { font: 'mono', size: 15, ls: 3, color: SIG, a: v });
+  const vy = 790, mid = x => vy + Math.sin((x - x0) / 260) * 16, half = x => 70 - (x - x0) * .01 + Math.sin(x / 47) * 5;
+  const tipX = 640 + Math.sin(TA * .6) * 6;
+  for (const side of [-1, 1]) { const pts = []; for (let x = x0; x <= x1; x += 8) pts.push([x, mid(x) + side * half(x)]);
+    draw([PL(pts)], ape(42, 1.4, .6), { c: COL.ink3, a: v * .55, w: 1.6 });
+    const seen = pts.filter(p => p[0] < tipX + 120); if (seen.length > 1) draw([PL(seen)], ape(42, 1.0, 1.4), { c: COL.ink, a: v, w: 2 }); }
+  /* calcium plaque along the walls */
+  [[480, -1, 70], [830, 1, 90], [1180, -1, 60], [1450, 1, 80], [1650, -1, 55]].forEach(([x, side, w], i) => { const seen = x < tipX + 160, al = v * ap(42, .5, 1.0 + i * .1), y = mid(x) + side * (half(x) - 10);
+    ctx.save(); ctx.globalAlpha = al; ctx.fillStyle = seen ? 'rgba(236,228,214,.9)' : 'rgba(236,228,214,.18)'; ctx.beginPath();
+    for (let j = 0; j <= 16; j++) { const t = j / 16, px = x - w / 2 + w * t, py = y - side * (Math.sin(t * Math.PI) * 16 * (1 + .25 * Math.sin(j * 2.3 + i))); j ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
+    ctx.lineTo(x + w / 2, mid(x + w / 2) + side * half(x + w / 2)); ctx.lineTo(x - w / 2, mid(x - w / 2) + side * half(x - w / 2)); ctx.closePath(); ctx.fill(); ctx.restore(); });
+  label('calcified plaque', 830, mid(830) + half(830) + 34, { align: 'center', font: 'mono', size: 15, color: INK3, a: v * ap(42, .5, 1.6) });
+  const cpts = []; for (let x = x0 - 40; x <= tipX; x += 8) cpts.push([x, mid(x)]); draw([PL(cpts)], 1, { c: COL.sig, a: v, w: 2.6, ghost: false });
+  dot(tipX, mid(tipX), 6, COL.sig, v, 5); for (let k = 0; k < 3; k++) { const kk = (TA * .55 + k / 3) % 1; ring(tipX, mid(tipX), 8 + 60 * kk, COL.sig, (1 - kk) * v * .6, 1.2); }
 }
 
 /* ======================= ACT E — back in the vessel, and the close (43–55) ======================= */
 function loopAct() {
   if (ST < 43 || ST > 49) return;
-  const a = ap(43, .9), lit = ST >= 47 ? .45 : .25 + .25 * ap(44, .8) + .25 * ap(45, .8) + .25 * ap(46, .8);
-  tunnel(a, { wire: .9, bright: () => lit, linesA: .5 + .3 * lit });
-  /* 43–46: the loop, one part per press */
+  const a = ap(43, .9), lit = ST >= 47 ? .5 : .35 + .2 * ap(44, .8) + .2 * ap(45, .8) + .25 * ap(46, .8);
+  tunnel(a, { warm: 0, wire: .55, wireC: COL.sig2, bright: () => lit, linesA: .6 });
   const la = ST <= 46 ? 1 : 1 - ap(47, .5); if (la > .003) {
-    const cx = 960, cy = 590, R = 250;
-    scrimC(960, 140, 520, 70, la * a); para('Much like AVs did, we start by:', 960, 152, { font: 'sans', size: 34, align: 'center', color: rgba(COL.ink, 1), a: la * a * ap(43, .6, .4) });
-    ctx.save(); ctx.setLineDash([3, 9]); ctx.strokeStyle = rgba(COL.ink2, .3 * la * a); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.stroke(); ctx.restore();
-    const arcs = [[-2.55, -.75, 44, 'Restoring', 'perception', [cx, 250], 'center'], [-.45, 1.35, 45, 'Generating', 'understanding', [cx + 330, 890], 'left'], [1.65, 3.45, 46, 'Closing the loop', 'on action', [cx - 330, 890], 'right']];
-    arcs.forEach(([a0, a1, k, l1, l2, [lx, ly], al]) => { const p = ape(k, .9); if (p <= 0) return;
-      draw([PL(arcPts(cx, cy, R, a0, lerp(a0, a1, p)))], 1, { c: COL.sig, a: la * a, w: 3 }); const e = lerp(a0, a1, p); arrowHead(cx + Math.cos(e) * R, cy + Math.sin(e) * R, e + Math.PI / 2, 16, COL.sig, la * a);
-      scrimC(lx + (al === 'left' ? 120 : al === 'right' ? -120 : 0), ly - 20, 220, 70, la * a * p);
-      label(l1, lx, ly - 34, { align: al, font: 'sans', size: 28, color: rgba(COL.ink, 1), a: la * a * p }); label(l2, lx, ly + 12, { align: al, font: 'serif', weight: 300, size: 46, color: SIG, a: la * a * p }); });
-    if (ST >= 46) { const an = -2.55 + (TA - (ENT[46] ?? TA)) * 1.6; dot(cx + Math.cos(an) * R, cy + Math.sin(an) * R, 8, COL.sig2, la * a * ap(46, .5, 1), 7); } }
-  /* 47–49: the chain, the way the keynote stacks it */
+    const cx = 960, cy = 600, R = 240;
+    scrimC(960, 150, 520, 70, la * a); para('Much like AVs did, we start by:', 960, 160, { font: 'sans', size: 36, align: 'center', color: rgba(COL.ink, 1), a: la * a * ap(43, .6, .4) });
+    const N = [[-Math.PI / 2, 44, 'Restoring', 'perception', 0, -62, 'center'], [Math.PI / 6, 45, 'Generating', 'understanding', 34, 6, 'left'], [Math.PI * 5 / 6, 46, 'Closing the loop', 'on action', -34, 6, 'right']];
+    N.forEach(([an, k, l1, l2, dx, dy, al], i) => { const p = ape(k, .8); if (p <= 0) return; const nx = cx + Math.cos(an) * R, ny = cy + Math.sin(an) * R;
+      const next = N[(i + 1) % 3][0] + (i === 2 ? Math.PI * 2 : 0), a0 = an + .16, a1 = lerp(a0, next - .16, ape(k, 1.0, .3));
+      if (a1 > a0 + .01) { draw([PL(arcPts(cx, cy, R, a0, a1))], 1, { c: COL.sig, a: la * a, w: 3 }); arrowHead(cx + Math.cos(a1) * R, cy + Math.sin(a1) * R, a1 + Math.PI / 2, 16, COL.sig, la * a * p); }
+      dot(nx, ny, 7, COL.sig, la * a * p, 4); ring(nx, ny, 15 + 2 * Math.sin(TA * 2 + i), COL.sig, la * a * p * .5, 1.2);
+      scrimC(nx + dx + (al === 'left' ? 110 : al === 'right' ? -110 : 0), ny + dy - 16, 190, 56, la * a * p);
+      label(l1, nx + dx, ny + dy - 28, { align: al, font: 'sans', size: 30, color: rgba(COL.ink, 1), a: la * a * p }); label(l2, nx + dx, ny + dy + 12, { align: al, font: 'sans', size: 30, color: SIG, a: la * a * p }); });
+    if (ST >= 46) { const an = -Math.PI / 2 + (TA - (ENT[46] ?? TA)) * .9; dot(cx + Math.cos(an) * R, cy + Math.sin(an) * R, 5, COL.sig2, la * a * ap(46, .6, 1.4), 6); } }
   if (ST >= 47) { scrimC(960, 520, 820, 300, ap(47, .6));
     const k48 = ST >= 48 ? ape(48, .9) : 0, k49 = ST >= 49 ? ape(49, .9) : 0;
     const L1 = { y: lerp(lerp(560, 430, k48), 360, k49), s: lerp(lerp(66, 46, k48), 38, k49), a: lerp(lerp(1, .5, k48), .35, k49) };
@@ -5658,42 +5654,44 @@ function loopAct() {
 }
 function closeAct() {
   if (ST < 50) return;
-  /* 50–51: from the bottom up, like every embodied system */
-  { const v = vis(50, 52); if (v > .003) { const shift = ST >= 51 ? ape(51, 1) : 0, cx = lerp(960, 640, shift), base = 900, bh = 110;
-      para('Surgical intelligence emerges *from the bottom up.*', 960, 190, { size: 56, align: 'center', a: v * (1 - ap(51, .5)) });
-      para('That is how every major *embodied intelligent system* has developed. And we believe surgery will be *no different.*', 960, 170, { size: 44, maxW: 1300, align: 'center', a: v * ap(51, .6, .4) });
-      [['Perception', 560], ['Understanding', 440], ['Action', 320]].forEach(([lab, w], i) => { const k = back(ramp(age(50), .4 + i * .55, .95 + i * .55)); if (ramp(age(50), .4 + i * .55, .5 + i * .55) <= 0) return;
-        const y = base - (i + 1) * (bh + 14) - (1 - k) * 160 + Math.sin(TA * 1.1 + i) * 1.5, aa = v * sm(ramp(age(50), .4 + i * .55, .7 + i * .55));
+  { const v = vis(50, 52); if (v > .003) { const cx = 760, base = 900, bh = 120;
+      para('Surgical intelligence emerges|from the *bottom up,*'.replace('|', ' '), 960, 150, { size: 58, maxW: 900, align: 'center', a: v });
+      [['Perception', 560], ['Understanding', 440], ['Action', 320]].forEach(([lab, w], i) => { const t0 = .4 + i * .55, k = back(ramp(age(50), t0, t0 + .55)); if (ST === 50 && ramp(age(50), t0, t0 + .1) <= 0) return;
+        const kk = ST > 50 ? 1 : k, y = base - (i + 1) * (bh + 14) - (1 - kk) * 160 + Math.sin(TA * 1.1 + i) * 1.5, aa = v * (ST > 50 ? 1 : sm(ramp(age(50), t0, t0 + .3)));
         ctx.save(); ctx.fillStyle = rgba(i === 2 ? COL.sig : '44,40,38', aa * (i === 2 ? .9 : .7)); ctx.fillRect(cx - w / 2, y, w, bh); ctx.restore();
         draw(hbox(cx - w / 2, y, w, bh, 161 + i, 1.2), 1, { c: i === 2 ? COL.sig2 : COL.ink2, a: aa, w: 1.5 }); label(lab, cx, y + bh / 2 + 13, { align: 'center', font: 'serif', size: 40, weight: 300, color: rgba(COL.ink, 1), a: aa }); });
-      if (shift > 0) { const x = 1360, y = 560; ctx.save(); ctx.translate(x, y - 190); ctx.scale(.9, .9); draw(WORLD.carTop, ape(51, .8, .3), { c: COL.ink, a: v, w: 2 }); ctx.restore();
-        [['perception', 0], ['planning', 1], ['control', 2]].forEach(([l, i]) => { const k = ap(51, .5, .6 + i * .3), yy = y + 230 - i * 92;
-          draw(hbox(x - 200 + i * 40, yy, 400 - i * 80, 76, 181 + i, 1), k, { c: i === 2 ? COL.sig : COL.ink2, a: v, w: 1.4 }); label(l, x, yy + 46, { align: 'center', font: 'mono', size: 22, color: INK2, a: v * k }); });
-        label('autonomous vehicles', x, y + 360, { align: 'center', font: 'mono', size: 18, color: INK3, a: v * ap(51, .5, 1.4) }); label('surgery', cx, base + 50, { align: 'center', font: 'mono', size: 18, color: SIG, a: v * ap(51, .5, 1.4) }); } } }
-  /* 52: the road again — less invasive, then more intelligent */
-  if (ST === 52) { const a = ap(52, .8), out = eio(ramp(age(52), 1.6, 3.2)), c = { x: lerp(960, 1520, out), y: lerp(540, 470, out), z: lerp(1, .74, out) };
-    cam(c, () => { const dr = 1;
-      draw(WORLD.roadE1, dr, { c: COL.ink2, a: .55 * a, w: 1.6 }); draw(WORLD.roadE2, dr, { c: COL.ink2, a: .55 * a, w: 1.6 });
+      const ar = ST > 50 ? 1 : ramp(age(50), 2.0, 2.8); draw(hline(cx + 340, base - 30, cx + 340, base - 3 * (bh + 14) + 10, 171, 0, 1), eo(ar), { c: COL.sig, a: v, w: 2 }); arrowHead(cx + 340, base - 3 * (bh + 14) + 10, -Math.PI / 2, 16, COL.sig, v * sm(ar * 4));
+      const e = ap(51, .6); if (e > 0) { const x = 1460, y = 560; ctx.save(); ctx.translate(x, y - 150); ctx.scale(.8, .8); draw(WORLD.carTop, ape(51, .7), { c: COL.ink, a: v, w: 2 }); ctx.restore();
+        [['perception', 0], ['planning', 1], ['control', 2]].forEach(([l, i]) => { const k = ape(51, .5, .3 + i * .3), yy = y + 160 - i * 70;
+          draw(hbox(x - 150 + i * 30, yy, 300 - i * 60, 58, 181 + i, 1), k, { c: i === 2 ? COL.sig : COL.ink2, a: v, w: 1.3 }); label(l, x, yy + 37, { align: 'center', font: 'mono', size: 20, color: INK2, a: v * k }); });
+        para('just like every embodied intelligent system before it.', 1460, 880, { size: 36, maxW: 520, align: 'center', color: INK2, a: v * ap(51, .6, 1.2) }); } } }
+  if (ST === 52) { const a = ap(52, .8), out = eio(ramp(age(52), 2.0, 3.6)), c = { x: lerp(960, 1300, out), y: lerp(540, 470, out), z: lerp(1, .8, out) };
+    cam(c, () => {
+      draw(WORLD.roadE1, 1, { c: COL.ink2, a: .55 * a, w: 1.6 }); draw(WORLD.roadE2, 1, { c: COL.ink2, a: .55 * a, w: 1.6 });
       ctx.save(); ctx.setLineDash([14, 16]); ctx.lineDashOffset = -TA * 18; ctx.beginPath(); tracePL(WORLD.roadC[0], 0, 1); ctx.strokeStyle = rgba(COL.ink3, .5 * a); ctx.lineWidth = 1.4; ctx.stroke(); ctx.restore();
       const u = eio(ramp(age(52), .3, 1.8)); draw(WORLD.roadC, u, { c: COL.sig, a, w: 3.2 });
-      STOPS2.forEach(su => { const p = plAt(WORLD.roadC[0], su); ring(p[0], p[1], 16, COL.sig, a * .8, 1.4); });
+      /* the three stops again, each with its picture and name below the road */
+      const names = ['Open surgery', 'Small incisions', 'Vascular highways'];
+      STOPS2.forEach((su, k) => { const p = plAt(WORLD.roadC[0], su), sa = a * ap(52, .5, .4 + k * .35); ring(p[0], p[1], 16, COL.sig, sa * .9, 1.4);
+        const by = 830; ctx.save(); ctx.setLineDash([3, 6]); ctx.strokeStyle = rgba(COL.ink3, sa * .7); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(p[0], p[1] + 20); ctx.lineTo(p[0], by - 120); ctx.stroke(); ctx.restore();
+        ctx.save(); ctx.translate(p[0] - 70, by - 112); ctx.scale(.7, .7); for (const it of WORLD.icons[k]) draw(it.sh, 1, { c: it.col, a: sa * it.a, w: 2 }); ctx.restore();
+        label(names[k], p[0], by + 40, { align: 'center', font: 'serif', weight: 300, size: 34, color: SIG, a: sa }); });
       const end = WORLD.road[WORLD.road.length - 1], nx = [PL(cat([[end[0] - 4, end[1]], [2160, end[1] - 30], [2400, 330], [2700, 120], [2980, -60]], false, 3))];
-      const k = ape(52, 1.6, 2.6); draw(nx, k, { c: COL.sig, a, w: 4, glow: 12 }); const h = k > 0 ? shapeHead(nx, k) : plAt(WORLD.roadC[0], u); dot(h[0], h[1], 10, COL.sig, a, 6 * (1 + .25 * Math.sin(TA * 3)));
-      label('less invasive', 1060, 1000, { font: 'serif', size: 54, weight: 300, align: 'center', color: INK2, a: a * ap(52, .6, 1.2) });
-      label('more intelligent', 2700, 210, { font: 'serif', size: 76, weight: 300, align: 'right', color: SIG, a: a * ap(52, .6, 3.6) }); });
+      const k = ape(52, 1.6, 3.0); draw(nx, k, { c: COL.sig, a, w: 4, glow: 12 }); const h = k > 0 ? shapeHead(nx, k) : plAt(WORLD.roadC[0], u); dot(h[0], h[1], 10, COL.sig, a, 6 * (1 + .25 * Math.sin(TA * 3)));
+      label('more intelligent', 2380, 210, { font: 'serif', size: 76, weight: 300, align: 'right', color: SIG, a: a * ap(52, .6, 3.8) }); });
     para('For the last 150 years, we made surgery progressively *less invasive.*', 120, 155, { size: 42, maxW: 1500, a: a * ap(52, .6, .4) });
-    para('The next era is about making it progressively *more intelligent.*', 120, 215, { size: 42, maxW: 1500, a: a * ap(52, .6, 2.8) }); }
-  /* 53–55: perceived, learnt, scaled — and the mark */
-  if (ST >= 53) { const a = ap(53, .6);
-    const one = ST === 53 ? 1 : 1 - ap(54, .5);
+    para('The next era is about making it progressively *more intelligent.*', 120, 215, { size: 42, maxW: 1500, a: a * ap(52, .6, 3.0) }); }
+  if (ST >= 53) { const a = ap(53, .6), one = ST === 53 ? 1 : 1 - ap(54, .5);
     if (one > 0) { personDraw(960, 640, 560, COL.ink, ramp(age(53), .2, 1.4), a * one * (1 - .7 * ap(53, .6, 2.6)), 1.8);
-      for (let k = 0; k < 3; k++) { const kk = ((TA * .45 + k / 3) % 1); ring(960, 560, 60 + 330 * kk, COL.sig, (1 - kk) * a * one * .6 * ap(53, .5, 1.2), 1.4); }
+      for (let k = 0; k < 3; k++) { const kk = (TA * .35 + k / 3) % 1; ring(960, 560, 60 + 330 * kk, COL.sig, (1 - kk) * a * one * .6 * ap(53, .5, 1.2), 1.4); }
       const dk = ap(53, .8, 2.6); if (dk > 0) { const s = 560 / 2.12, r = rnd(5);
-        for (const pl of WORLD.sil) for (let i = 0; i < pl.length; i += 3) { const p = pl[i], jx = (r() - .5) * 8 * dk + Math.sin(TA + i) * 1.2, jy = (r() - .5) * 8 * dk;
+        for (const pl of WORLD.sil) for (let i = 0; i < pl.length; i += 3) { const p = pl[i], jx = (r() - .5) * 8 * dk + Math.sin(TA * .8 + i) * 1.2, jy = (r() - .5) * 8 * dk + Math.cos(TA * .7 + i) * 1.2;
           dot(960 + p[0] * s + jx, 640 - p[1] * s + jy, 1.8, COL.sig, a * one * dk * .9); } } }
-    para('Because once surgery can be perceived, it can be *learnt.*', 960, 160, { size: 52, align: 'center', a: a * (ST === 53 ? ap(53, .6, .3) : 1 - ap(54, .4)) });
-    para('Once it can be learnt, it can be *scaled.*', 960, 160, { size: 52, align: 'center', a: vis(54, 55) });
-    const many = ST >= 54 ? ape(54, 1.6, .4) : 0, settle = ST >= 55 ? eio(ramp(age(55), .6, 3.6)) : 0;
+    para('Once surgery can be perceived,', 960, 150, { size: 54, align: 'center', a: a * (ST === 53 ? ap(53, .6, .3) : 1 - ap(54, .4)) });
+    para('it can be *learnt.*', 960, 220, { size: 54, align: 'center', a: a * (ST === 53 ? ap(53, .6, 2.4) : 1 - ap(54, .4)) });
+    para('And once it can be learnt…', 960, 150, { size: 54, align: 'center', a: vis(54, 55) });
+    para('it can be *scaled.*', 960, 220, { size: 54, align: 'center', a: ap(54, .6, 1.2) * (1 - ap(55, .45)) });
+    const many = ST >= 54 ? ape(54, 1.6, 1.2) : 0, settle = ST >= 55 ? eio(ramp(age(55), .6, 3.6)) : 0;
     if (many > 0) { const markH = 300, boxW = markH * 122.066 / 149.99, ox = W / 2 - boxW / 2, oy = H * .5 - markH / 2, kx = boxW / 64, ky = markH / 64;
       WORLD.crowd.forEach((c, i) => { const a0 = sm(many * 2.2 - i * .02); if (a0 <= .01) return;
         const gx = c.gx * W, gy = c.gy * H + Math.sin(TA * .7 + c.s * 21) * 4, x = gx + (ox + c.mx * kx - gx) * settle, y = gy + 60 + (oy + c.my * ky - gy - 60) * settle;
@@ -5702,17 +5700,44 @@ function closeAct() {
     if (ST >= 55) { const mi = ramp(age(55), 3.3, 4.1), nm = ramp(age(55), 4.2, 5.2); if (mi > 0) logoDraw(W / 2, H * .5, 150 * lerp(1.95, 1, eio(nm)), mi, nm, '#FC6452', '#FFFFFF', nm > .001); } }
 }
 
+function mosaicIntro() {
+  if (ST !== 41) return; const g = age(41), a = ap(41, .6);
+  const lg = sm(ramp(g, .3, 1.0)) * (1 - sm(ramp(g, 2.2, 2.9))), k = eio(ramp(g, 2.0, 3.0));
+  if (lg > .003) logoDraw(lerp(960, 120, k), lerp(520, 560, k), lerp(110, 40, k), lg, lg * (1 - k));
+  const vy = 560, x0 = -40, x1 = 1960, mid = x => vy + Math.sin(x / 300) * 22, half = x => 118 - (x - x0) * .018 + Math.sin(x / 70) * 6;
+  const tipX = lerp(100, 1500, eio(ramp(g, 2.6, 7.5))) + Math.sin(TA * .7) * 8;
+  /* walls appear where the instrument's pulses have reached */
+  for (const side of [-1, 1]) { ctx.save(); ctx.lineWidth = 1.8; ctx.lineCap = 'round';
+    for (let x = x0; x < x1; x += 10) { const near = cl(1 - (x - tipX - 260) / 120) * cl(ramp(g, 2.6, 3.2)); if (near <= .01) continue;
+      const y0 = mid(x) + side * half(x), y1 = mid(x + 10) + side * half(x + 10); ctx.strokeStyle = rgba(COL.ink, a * near * .85); ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x + 10, y1); ctx.stroke();
+      ctx.strokeStyle = rgba(COL.ink, a * near * .3); ctx.beginPath(); ctx.moveTo(x + 1.1, y0 - .9); ctx.lineTo(x + 11.1, y1 - .9); ctx.stroke(); } ctx.restore(); }
+  if (g > 2.6) { const pts = []; for (let x = x0; x <= tipX; x += 8) pts.push([x, mid(x)]); draw([PL(pts)], 1, { c: COL.sig, a, w: 2.6, ghost: false });
+    dot(tipX, mid(tipX), 7, COL.sig, a, 6); for (let j = 0; j < 3; j++) { const kk = (TA * .55 + j / 3) % 1; ring(tipX, mid(tipX), 14 + 230 * kk, COL.sig, (1 - kk) * .55 * a, 1.3); } }
+  para('At Mosaic, we build surgical instruments that can *perceive and navigate* human anatomy,', 120, 150, { size: 50, maxW: 1200, a: a * ap(41, .7, 2.6) });
+  para('starting with the vascular system.', 1800, 960, { size: 38, align: 'right', color: INK2, a: a * ap(41, .7, 3.6) });
+}
+
+function wireLine(u, roll, a, c) {
+  if (a <= .003) return; const N = TUN.N, ic = Math.floor(cl(u) * (N - 1)), pts = [];
+  for (let k = 3; k < 240; k += 3) { const i = Math.min(N - 1, ic + k), s = TUN.proj(u, TUN.pos[i], roll); if (!s) continue; pts.push([s[0], s[1] + 760 * .42 / s[2], s[2]]); }
+  pts.unshift([pts[0][0], H + 40, .1]);
+  ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  for (let k = 1; k < pts.length; k++) { const f = k / pts.length; ctx.strokeStyle = rgba(c, a * lerp(.55, .12, f)); ctx.lineWidth = lerp(2.6, .8, f);
+    ctx.beginPath(); ctx.moveTo(pts[k - 1][0], pts[k - 1][1]); ctx.lineTo(pts[k][0], pts[k][1]); ctx.stroke(); }
+  ctx.restore();
+}
+
 /* ======================= the frame ======================= */
 function v2frame() {
   ctx.setTransform(...BASE);
   bgNow = lerp(BGF, WHITE(ST), sm((TA - BGT0) / .9));
-  bodyAct(); roadAct(); vesselAct(); whiteAct(); loopAct(); closeAct();
+  bodyAct(); roadAct(); vesselAct(); whiteAct(); mosaicIntro(); samePath(); loopAct(); closeAct();
 }
 
 /* v2 in the deck: the deck's station drives the scenes; an ambient clock keeps them alive; a change of scene
    (or a step back) crossfades from the last frame. Stations 1–2 are the deck's own opening. */
 let op = 0, last = 0, snap = null, snapT = -1;
-const GROUP = st => st <= 6 ? 'road' : st <= 20 ? 'body' : st <= 23 ? 'vessel' : st <= 29 ? 'see' : st <= 33 ? 'scale' : st <= 34 ? 'q' : st <= 38 ? 'sense' : st <= 40 ? 'board' : st <= 41 ? 'first' : st <= 42 ? 'path' : st <= 49 ? 'loop' : st <= 51 ? 'stack' : st <= 52 ? 'road2' : 'close';
+const GROUP = st => st <= 6 ? 'road' : st <= 20 ? 'body' : st <= 23 ? 'vessel' : st <= 29 ? 'see' : st <= 33 ? 'scale' : st <= 34 ? 'q' : st <= 38 ? 'sense' : st <= 39 ? 'board' : st <= 40 ? 'first' : st <= 41 ? 'mosaic' : st <= 42 ? 'path' : st <= 49 ? 'loop' : st <= 51 ? 'stack' : st <= 52 ? 'road2' : 'close';
 function fit() { const dpr = Math.min(2, window.devicePixelRatio || 1), w = innerWidth, h = innerHeight;
   if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
   const s = Math.min(w / W, h / H); BASE = [s * dpr, 0, 0, s * dpr, (w - W * s) / 2 * dpr, (h - H * s) / 2 * dpr]; }
