@@ -11,6 +11,8 @@ import { StoreError } from "./store";
 /** Renderers: the deck file that draws a document, and the document a new presentation starts from. Paths are repository-relative. */
 export const RENDERERS: Record<string, { deckFile: string; templateContent: string; compose?: boolean; label: string }> = {
   "itw-keynote": { deckFile: "index.html", templateContent: "presentations/italian-tech-week/content/presentation.json", label: "The Room and the Vessel (V2 engine)" },
+  // the same deck and document with the animated story drawn over the stage from station 3 (header, rail, notes and opening are the deck's)
+  "itw-keynote-v2": { deckFile: "presentations/italian-tech-week-v2/index.html", templateContent: "presentations/italian-tech-week/content/presentation.json", label: "The Room and the Vessel (animated)" },
   // the same engine, starting empty: the composer's beats on a plain scene, with the keynote's tokens, motion and lockup
   "mosaic-deck": { deckFile: "index.html", templateContent: "presentations/italian-tech-week/content/presentation.json", compose: true, label: "A new deck (V2 engine)" }
 };
@@ -118,9 +120,14 @@ export async function archivePresentation(sb: SupabaseClient, admin: SupabaseCli
 
 /** A copy of an editable deck for the caller: a new presentation they own, whose draft is the source's *current* document
  *  (what the editor shows), with the source's pictures copied into the new presentation's own storage. */
-export async function copyPresentation(sb: SupabaseClient, admin: SupabaseClient, user: { id: string; email: string }, src: Presentation, sourceDoc: unknown): Promise<Presentation> {
+export async function copyPresentation(sb: SupabaseClient, admin: SupabaseClient, user: { id: string; email: string }, src: Presentation, sourceDoc: unknown, opts: { renderer?: string; title?: string } = {}): Promise<Presentation> {
   if (src.kind !== "deck") throw new StoreError(422, "only an editable deck can be copied");
-  const made = await createPresentation(admin, user, { kind: "deck", renderer: src.renderer || "itw-keynote", title: `Copy of ${src.title}`.slice(0, 140), description: src.description || undefined });
+  const from = src.renderer || "itw-keynote";
+  // a copy may move to another engine that reads the same document (the animated keynote reads the keynote's)
+  const renderer = opts.renderer || from;
+  if (!RENDERERS[renderer] || RENDERERS[renderer].templateContent !== RENDERERS[from]?.templateContent) throw new StoreError(422, "that engine cannot draw this deck's document");
+  const title = (opts.title?.trim() || `Copy of ${src.title}`).slice(0, 140);
+  const made = await createPresentation(admin, user, { kind: "deck", renderer, title, description: src.description || undefined });
   // the pictures: the same objects under the new presentation's folder, the library rows with them, the document pointing at them
   const { data: rows } = await admin.from("presentation_assets").select("storage_path, name, sha256, bytes, mime, width, height, kind").eq("presentation_id", src.id);
   for (const r of rows || []) {
@@ -132,7 +139,7 @@ export async function copyPresentation(sb: SupabaseClient, admin: SupabaseClient
   doc.id = made.slug; doc.title = made.title;
   const { error } = await admin.from("presentation_drafts").upsert({ presentation_id: made.id, document: doc, content_hash: contentHash(doc), based_on: null, updated_at: new Date().toISOString(), updated_by: user.id });
   if (error) throw new StoreError(500, error.message);
-  await sb.from("audit_events").insert({ presentation_id: made.id, actor_id: user.id, actor_email: user.email, action: "presentation.copied", detail: { from: src.slug } });
+  await sb.from("audit_events").insert({ presentation_id: made.id, actor_id: user.id, actor_email: user.email, action: "presentation.copied", detail: { from: src.slug, renderer } });
   return made;
 }
 

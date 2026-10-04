@@ -45,7 +45,7 @@ export function Library({ entries, me, canCreate }: { entries: LibraryEntry[]; m
   };
 
   const openHref = (p: LibraryEntry) => (p.kind === "deck" && p.role !== "viewer" ? `/presentations/${p.slug}/edit` : `/p/${p.slug}`);
-  const cover = (p: LibraryEntry) => (p.kind === "deck" && p.renderer === "itw-keynote" ? "/covers/italian-tech-week.jpg" : null);
+  const cover = (p: LibraryEntry) => (p.kind === "deck" && (p.renderer === "itw-keynote" || p.renderer === "itw-keynote-v2") ? "/covers/italian-tech-week.jpg" : null);
   const host = (u: string) => { try { return new URL(u).host.replace(/^www\./, ""); } catch { return u; } };
   const when = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
   const add = (m: Exclude<Mode, null>, label: string) => <button type="button" className={mode === m ? "primary" : ""} onClick={() => setMode(mode === m ? null : m)}>{label}</button>;
