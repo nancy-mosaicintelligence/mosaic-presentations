@@ -10,7 +10,7 @@ lib=open('lib.js').read()
 uri=lambda f:'data:image/'+('png' if f.endswith('.png') else 'jpeg')+';base64,'+base64.b64encode(open(f,'rb').read()).decode()
 glue=open('glue2.js').read().replace('__TL__',json.dumps(TL)).replace('__IMGA__',json.dumps(uri('img/fluoro1.jpg'))).replace('__IMGB__',json.dumps(uri('img/fluoro2.png'))).replace('__IMGV__',json.dumps(uri('img/vento_white.png')))
 bundle='\n<script>/* the v2 deck: station-driven scenes drawn over the stage */\n(function(){\n'+data+'\n'+open('ico.js').read()+'\n'+lib+'\n'+scenes+'\n'+open('v2.js').read()+'\n'+glue+'\n})();\n</script>\n'
-css='<style>#film{position:fixed;inset:0;width:100%;height:100%;z-index:10;pointer-events:none;visibility:hidden;opacity:0}</style>\n'
+css='<style>#film{position:fixed;inset:0;width:100%;height:100%;z-index:10;pointer-events:none;visibility:hidden;opacity:0}.acts p::before{display:none}.acts p{padding-left:0}</style>\n'
 assert d.count('</head>')==1 and d.count('<canvas id="fx"></canvas>')==1
 d=d.replace('</head>',css+'</head>',1).replace('<canvas id="fx"></canvas>','<canvas id="fx"></canvas><canvas id="film" aria-hidden="true"></canvas>',1)
 hook='function frame(now) {\n    requestAnimationFrame(frame);'
