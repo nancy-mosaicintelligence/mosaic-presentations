@@ -237,8 +237,8 @@ function vesselAct() {
   const dim = ST >= 22 ? (ST === 22 ? ramp(age(22), .4, 3) : 1) : 0;
   tunnel(a, { wire: 1, bright: d => 1 - dim * .82 * cl(1.2 - (1 - d) * .4) });
   scrim(90, 600, 820, 380, Math.max(vis(21, 23), vis(22, 23)));
-  para('Endovascular medicine is an extraordinary *access system*, but it came with an expensive tradeoff.', 120, 660, { size: 40, maxW: 760, a: ap(21, .6, 1.2) * (ST >= 22 ? .38 : 1) * (1 - ap(23, .4)) });
-  para('As the incision disappeared, *direct human perception* disappeared with it.', 120, 820, { size: 52, maxW: 780, a: vis(22, 23) });
+  para('Endovascular medicine is an extraordinary *access system*.', 120, 660, { size: 40, maxW: 760, a: ap(21, .6, 1.2) * (ST >= 22 ? .38 : 1) * (1 - ap(23, .4)) });
+  para('But it requires extraordinary skill.', 120, 820, { size: 52, maxW: 780, a: vis(22, 23) });
   operatorDiagram();
 }
 /* what the operator has to do: a metre away, millimetres wide, out of sight */
@@ -281,7 +281,6 @@ function whiteAct() {
       personDraw(px, py, ph, COL.dark, ape(30, 1.2, .2), v, 2); person(px, py, ph, COL.dark, v * ap(30, .5, 1.0), 2, 'surgeon');
       [[1590, .5], [1740, .42], [1860, .34]].forEach(([x, sz], i) => { const k = ap(30, .5, 2.2 + i * .25), f = ramp(age(30), 3.4 + i * .25, 4.4 + i * .25); if (k <= 0) return;
         ctx.save(); ctx.setLineDash([6, 7]); person(x, py + 40, ph * sz * 1.3, COL.dark, v * .5 * k * (1 - f), 1.3); ctx.restore(); });
-      para('So what makes endovascular surgery possible today is extreme human expertise:', 120, 300, { font: 'sans', size: 28, maxW: 740, color: DK2, a: v });
       para('We have created extraordinary medicine that is *extraordinarily difficult to scale.*', 120, 420, { size: 58, maxW: 800, color: DK, a: v * ap(30, .7, .5) }); } }
   { const v = vis(31, 34); if (v > .003) teamGrid(v); }
   { const v = vis(34, 35); if (v > .003) { para('So: What would it take to scale the knowledge of *the very best surgeons?*', 960, 230, { size: 52, maxW: 1100, align: 'center', color: DK, a: v });
